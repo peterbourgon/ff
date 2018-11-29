@@ -1,5 +1,7 @@
 # ff
 
-ff is a nearly-drop-in replacement for the Go standard library's package flag.
-Flag values can be populated from the commandline, a config file, or env vars. 
+ff stands for flags-first, and provides an opinionated way to populate a
+flag.FlagSet with configuration data from the environment. Specifically, it
+allows data to be parsed from commandline args, a configuration file, and
+environment variables, in that priority order.
 
