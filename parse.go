@@ -3,7 +3,6 @@ package ff
 import (
 	"bufio"
 	"flag"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -26,7 +25,6 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 	provided := map[string]bool{}
 	fs.Visit(func(f *flag.Flag) {
-		fmt.Fprintf(os.Stderr, "### Parse provided[%s] = true\n", f.Name)
 		provided[f.Name] = true
 	})
 
