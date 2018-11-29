@@ -99,7 +99,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 type Context struct {
 	configFile         string
 	configFileFlagName string
-	configParser       Parser
+	configParser       ConfigParser
 	envVarPrefix       string
 }
 
@@ -124,7 +124,7 @@ func WithConfigFileFlagName(name string) Option {
 
 // WithConfigParser tells parse how to interpret the config file provided via
 // WithConfigFileFlagName.
-func WithConfigParser(p Parser) Option {
+func WithConfigParser(p ConfigParser) Option {
 	return func(c *Context) {
 		c.configParser = p
 	}
@@ -132,18 +132,19 @@ func WithConfigParser(p Parser) Option {
 
 // WithEnvVarPrefix tells parse to look in the environment for variables with
 // the given prefix. Flag names are converted to environment variables by
-// capitalizing and replacing separator characters like `.` or `-` with `_`.
-// Additionally, if the env var value contains commas, each comma-delimited
-// token is treated as a separate instance of the associated flag name.
+// capitalizing them, and replacing separator characters like periods or hyphens
+// with underscores. Additionally, if the environment variable's value contains
+// commas, each comma-delimited token is treated as a separate instance of the
+// associated flag name.
 func WithEnvVarPrefix(prefix string) Option {
 	return func(c *Context) {
 		c.envVarPrefix = prefix
 	}
 }
 
-// Parser interprets the config file represented by the reader
-// and calls the set function for each discovered flag pair.
-type Parser func(r io.Reader, set func(name, value string) error) error
+// ConfigParser interprets the config file represented by the reader
+// and calls the set function for each parsed flag pair.
+type ConfigParser func(r io.Reader, set func(name, value string) error) error
 
 // PlainParser is a parser for config files in an extremely simple format. Each
 // line is tokenized as a single key/value pair. The first whitespace-delimited

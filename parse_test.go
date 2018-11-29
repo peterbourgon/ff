@@ -54,14 +54,14 @@ func TestParsePriority(t *testing.T) {
 		},
 		{
 			name: "file and env",
-			file: "s bar\ni 99\n\nd 34s",
+			file: "s bar\ni 99\n\nd 34s\n\n # comment line\n",
 			env:  map[string]string{"TEST_PARSE_S": "should be overridden", "TEST_PARSE_B": "true"},
 			want: want{"bar", 99, true, 34 * time.Second},
 		},
 		{
 			name: "args file env",
 			args: []string{"-s", "from arg", "-i", "100"},
-			file: "s from file\ni 200\n\nd 1m\n\n\n",
+			file: "s from file\ni 200 # comment\n\nd 1m\n\n\n",
 			env:  map[string]string{"TEST_PARSE_S": "from env", "TEST_PARSE_I": "300", "TEST_PARSE_B": "true", "TEST_PARSE_D": "1h"},
 			want: want{"from arg", 100, true, time.Minute},
 		},
