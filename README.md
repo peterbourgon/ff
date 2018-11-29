@@ -25,7 +25,7 @@ Then, call ff.Parse instead of fs.Parse.
 ```go
 	ff.Parse(fs, os.Args[1:],
 		ff.WithConfigFileFlag("config"),
-		ff.WithConfigParser(ff.PlainParser),
+		ff.WithConfigFileParser(ff.PlainParser),
 		ff.WithEnvVarPrefix("MY_PROGRAM"),
 	)
 ```
@@ -43,9 +43,9 @@ debug true
 It's simple to write your own config file parser.
 
 ```go
-// ConfigParser interprets the config file represented by the reader
+// ConfigFileParser interprets the config file represented by the reader
 // and calls the set function for each parsed flag pair.
-type ConfigParser func(r io.Reader, set func(name, value string) error) error
+type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
 ```
 
 Finally, it will look in the environment for variables with a `MY_PROGRAM`

@@ -36,14 +36,14 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		})
 	}
 
-	if c.configFile != "" && c.configParser != nil {
+	if c.configFile != "" && c.configFileParser != nil {
 		f, err := os.Open(c.configFile)
 		if err != nil {
 			return err
 		}
 		defer f.Close()
 
-		c.configParser(f, func(name, value string) error {
+		c.configFileParser(f, func(name, value string) error {
 			if fs.Lookup(name) == nil {
 				return errors.Errorf("config file flag %q not defined in flag set", name)
 			}
@@ -97,7 +97,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 type Context struct {
 	configFile         string
 	configFileFlagName string
-	configParser       ConfigParser
+	configFileParser   ConfigFileParser
 	envVarPrefix       string
 }
 
@@ -105,7 +105,7 @@ type Context struct {
 type Option func(*Context)
 
 // WithConfigFile tells parse to read the provided filename as a config file.
-// Requires WithConfigParser, and overrides WithConfigFileFlagName.
+// Requires WithConfigFileParser, and overrides WithConfigFileFlagName.
 func WithConfigFile(filename string) Option {
 	return func(c *Context) {
 		c.configFile = filename
@@ -113,18 +113,18 @@ func WithConfigFile(filename string) Option {
 }
 
 // WithConfigFileFlag tells parse to treat the flag with the given name as a
-// config file. Requires WithConfigParser, and is overridden by WithConfigFile.
+// config file. Requires WithConfigFileParser, and is overridden by WithConfigFile.
 func WithConfigFileFlag(flagname string) Option {
 	return func(c *Context) {
 		c.configFileFlagName = flagname
 	}
 }
 
-// WithConfigParser tells parse how to interpret the config file provided via
+// WithConfigFileParser tells parse how to interpret the config file provided via
 // WithConfigFileFlagName.
-func WithConfigParser(p ConfigParser) Option {
+func WithConfigFileParser(p ConfigFileParser) Option {
 	return func(c *Context) {
-		c.configParser = p
+		c.configFileParser = p
 	}
 }
 
@@ -140,9 +140,9 @@ func WithEnvVarPrefix(prefix string) Option {
 	}
 }
 
-// ConfigParser interprets the config file represented by the reader
+// ConfigFileParser interprets the config file represented by the reader
 // and calls the set function for each parsed flag pair.
-type ConfigParser func(r io.Reader, set func(name, value string) error) error
+type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
 
 // PlainParser is a parser for config files in an extremely simple format. Each
 // line is tokenized as a single key/value pair. The first whitespace-delimited
