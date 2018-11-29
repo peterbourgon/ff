@@ -87,7 +87,7 @@ func TestParsePriority(t *testing.T) {
 				f.Write([]byte(testcase.file))
 				f.Close()
 
-				options = append(options, WithConfigFile(f.Name()), WithConfigParser(PlainParser))
+				options = append(options, WithConfigFile(f.Name()), WithConfigFileParser(PlainParser))
 			}
 
 			if len(testcase.env) > 0 {
