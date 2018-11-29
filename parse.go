@@ -114,11 +114,11 @@ func WithConfigFile(filename string) Option {
 	}
 }
 
-// WithConfigFileFlagName tells parse to treat the flag with the given name as a
+// WithConfigFileFlag tells parse to treat the flag with the given name as a
 // config file. Requires WithConfigParser, and is overridden by WithConfigFile.
-func WithConfigFileFlagName(name string) Option {
+func WithConfigFileFlag(flagname string) Option {
 	return func(c *Context) {
-		c.configFileFlagName = name
+		c.configFileFlagName = flagname
 	}
 }
 
