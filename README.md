@@ -1,4 +1,4 @@
-# ff [![GoDoc](https://godoc.org/github.com/peterbourgon/ff?status.svg)](https://godoc.org/github.com/peterbourgon/ff) [![Travis CI](https://travis-ci.org/peterbourgon/ff.svg?branch=master)](https://travis-ci.org/peterbourgon/ff)
+# ff [![Latest Release](https://img.shields.io/github/release/peterbourgon/ff.svg?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) [![GoDoc](https://godoc.org/github.com/peterbourgon/ff?status.svg)](https://godoc.org/github.com/peterbourgon/ff) [![Travis CI](https://travis-ci.org/peterbourgon/ff.svg?branch=master)](https://travis-ci.org/peterbourgon/ff)
 
 ff stands for flags-first, and provides an opinionated way to populate a
 [flag.FlagSet](https://golang.org/pkg/flag#FlagSet) with configuration data from
