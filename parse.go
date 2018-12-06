@@ -149,7 +149,9 @@ type ConfigFileParser func(r io.Reader, set func(name, value string) error) erro
 // token in the line is interpreted as the flag name, and all remaining tokens
 // are interpreted as the value. Any leading hyphens on the flag name are
 // ignored.
-func PlainParser(r io.Reader, set func(name, value string) error) error {
+var PlainParser ConfigFileParser = plainParser
+
+func plainParser(r io.Reader, set func(name, value string) error) error {
 	s := bufio.NewScanner(r)
 	for s.Scan() {
 		line := strings.TrimSpace(s.Text())
