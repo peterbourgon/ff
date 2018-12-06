@@ -105,7 +105,7 @@ type Context struct {
 type Option func(*Context)
 
 // WithConfigFile tells parse to read the provided filename as a config file.
-// Requires WithConfigFileParser, and overrides WithConfigFileFlagName.
+// Requires WithConfigFileParser, and overrides WithConfigFileFlag.
 func WithConfigFile(filename string) Option {
 	return func(c *Context) {
 		c.configFile = filename
@@ -121,7 +121,7 @@ func WithConfigFileFlag(flagname string) Option {
 }
 
 // WithConfigFileParser tells parse how to interpret the config file provided via
-// WithConfigFileFlagName.
+// WithConfigFile or WithConfigFileFlag.
 func WithConfigFileParser(p ConfigFileParser) Option {
 	return func(c *Context) {
 		c.configFileParser = p
