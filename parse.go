@@ -29,11 +29,9 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	})
 
 	if c.configFile == "" && c.configFileFlagName != "" {
-		fs.VisitAll(func(f *flag.Flag) {
-			if f.Name == c.configFileFlagName {
-				c.configFile = f.Value.String()
-			}
-		})
+		if f := fs.Lookup(c.configFileFlagName); f != nil {
+			c.configFile = f.Value.String()
+		}
 	}
 
 	if c.configFile != "" && c.configFileParser != nil {
