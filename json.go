@@ -62,6 +62,7 @@ func stringifyValue(val interface{}) (string, error) {
 		return v.String(), nil
 	case bool:
 		return strconv.FormatBool(v), nil
+	default:
+		return "", errors.Errorf("could not convert %q (type %T) to string", val, val)
 	}
-	return "", errors.Errorf("could not convert %q (type %T) to string", val, val)
 }

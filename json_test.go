@@ -42,13 +42,13 @@ func TestJSONParser(t *testing.T) {
 			name: "Key with array of values",
 			args: []string{},
 			file: `
-                {
-                    "s": ["t", "s"],
-                    "i": ["11", "10"],
-                    "b": [false, true],
-                    "d": ["10m", "5s"]
-                }
-            `,
+				{
+					"s": ["t", "s"],
+					"i": ["11", "10"],
+					"b": [false, true],
+					"d": ["10m", "5s"]
+				}
+			`,
 			want: want{"s", 10, true, 5 * time.Second, ""},
 		},
 		{
