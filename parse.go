@@ -41,7 +41,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		}
 		defer f.Close()
 
-		c.configFileParser(f, func(name, value string) error {
+		err = c.configFileParser(f, func(name, value string) error {
 			if fs.Lookup(name) == nil {
 				return errors.Errorf("config file flag %q not defined in flag set", name)
 			}
@@ -56,6 +56,9 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
 
 	fs.Visit(func(f *flag.Flag) {
