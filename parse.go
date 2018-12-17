@@ -65,7 +65,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		provided[f.Name] = true
 	})
 
-	if c.envVarPrefix != "" {
+	if c.envVarPrefix != "" || c.envVarNoPrefix {
 		var errs []string
 		fs.VisitAll(func(f *flag.Flag) {
 			if provided[f.Name] {
@@ -76,7 +76,9 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 			{
 				key = strings.ToUpper(f.Name)
 				key = envVarReplacer.Replace(key)
-				key = strings.ToUpper(c.envVarPrefix) + "_" + key
+				if !c.envVarNoPrefix {
+					key = strings.ToUpper(c.envVarPrefix) + "_" + key
+				}
 			}
 			if value := os.Getenv(key); value != "" {
 				for _, individual := range strings.Split(value, ",") {
@@ -100,6 +102,7 @@ type Context struct {
 	configFileFlagName string
 	configFileParser   ConfigFileParser
 	envVarPrefix       string
+	envVarNoPrefix     bool
 }
 
 // Option controls some aspect of parse behavior.
@@ -138,6 +141,15 @@ func WithConfigFileParser(p ConfigFileParser) Option {
 func WithEnvVarPrefix(prefix string) Option {
 	return func(c *Context) {
 		c.envVarPrefix = prefix
+	}
+}
+
+// WithEnvVarNoPrefix tells parse to look in the environment for variables with
+// no prefix. See WithEnvVarPrefix for an explanation of how flag names are
+// converted to environment variables names.
+func WithEnvVarNoPrefix() Option {
+	return func(c *Context) {
+		c.envVarNoPrefix = true
 	}
 }
 
