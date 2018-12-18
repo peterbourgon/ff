@@ -81,10 +81,8 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 				}
 			}
 			if value := os.Getenv(key); value != "" {
-				for _, individual := range strings.Split(value, ",") {
-					if err := fs.Set(f.Name, strings.TrimSpace(individual)); err != nil {
-						errs = append(errs, errors.Wrapf(err, "error setting flag %q from env var %q", f.Name, key).Error())
-					}
+				if err := fs.Set(f.Name, strings.TrimSpace(value)); err != nil {
+					errs = append(errs, errors.Wrapf(err, "error setting flag %q from env var %q", f.Name, key).Error())
 				}
 			}
 		})
