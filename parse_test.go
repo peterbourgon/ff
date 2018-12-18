@@ -139,10 +139,6 @@ func (ii *strs) String() string {
 // Set is the method to set the flag value, part of the flag.Value interface.
 // Set's argument is a string to be parsed to set the flag.
 func (ii *strs) Set(value string) error {
-	if len(strings.TrimSpace(value)) == 0 {
-		return nil
-	}
-
 	*ii = strings.Split(value, ",")
 
 	return nil
