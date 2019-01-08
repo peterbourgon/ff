@@ -185,7 +185,7 @@ func PlainParser(r io.Reader, set func(name, value string) error) error {
 			name, value = line[:index], strings.TrimSpace(line[index:])
 		}
 
-		if i := strings.IndexRune(value, '#'); i >= 0 {
+		if i := strings.Index(value, " #"); i >= 0 {
 			value = strings.TrimSpace(value[:i])
 		}
 

@@ -78,7 +78,7 @@ func TestParsePriority(t *testing.T) {
 			var options []Option
 
 			if testcase.file != "" {
-				filename := filepath.Join(os.TempDir(), "TestParse"+fmt.Sprint(10000*rand.Intn(10000)))
+				filename := filepath.Join(os.TempDir(), "TestParsePriority"+fmt.Sprint(10000*rand.Intn(10000)))
 				f, err := os.Create(filename)
 				if err != nil {
 					t.Fatal(err)
@@ -114,6 +114,62 @@ func TestParsePriority(t *testing.T) {
 			}
 			if want, have := testcase.want.d, *d; want != have {
 				t.Errorf("d: want %s, have %s", want, have)
+			}
+		})
+	}
+}
+
+func TestParseIssue16(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		file string
+		want string
+	}{
+		{
+			name: "hash in value",
+			file: "foo bar#baz",
+			want: "bar#baz",
+		},
+		{
+			name: "EOL comment with space",
+			file: "foo bar # baz",
+			want: "bar",
+		},
+		{
+			name: "EOL comment no space",
+			file: "foo bar #baz",
+			want: "bar",
+		},
+		{
+			name: "only comment with space",
+			file: "# foo bar\n",
+			want: "",
+		},
+		{
+			name: "only comment no space",
+			file: "#foo bar\n",
+			want: "",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			fs := flag.NewFlagSet("test", flag.ExitOnError)
+			foo := fs.String("foo", "", "the value of foo")
+
+			filename := filepath.Join(os.TempDir(), "TestParseIssue16"+fmt.Sprint(10000*rand.Intn(10000)))
+			f, err := os.Create(filename)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(f.Name())
+			f.Write([]byte(testcase.file))
+			f.Close()
+
+			if err := Parse(fs, []string{}, WithConfigFile(filename), WithConfigFileParser(PlainParser)); err != nil {
+				t.Fatal(err)
+			}
+
+			if want, have := testcase.want, *foo; want != have {
+				t.Errorf("want %q, have %q", want, have)
 			}
 		})
 	}
