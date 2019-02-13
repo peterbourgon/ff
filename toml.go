@@ -1,11 +1,11 @@
 package ff
 
 import (
+	"fmt"
 	"io"
 	"strconv"
 
 	"github.com/BurntSushi/toml"
-	"github.com/pkg/errors"
 )
 
 // TOMLParser is a parser for TOML file format. Flags and their values are read
@@ -14,7 +14,7 @@ func TOMLParser(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	_, err := toml.DecodeReader(r, &m)
 	if err != nil {
-		return errors.Wrap(err, "error parsing TOML config")
+		return fmt.Errorf("error parsing TOML config: %v", err)
 	}
 	for key, val := range m {
 		value, err := valToStr(val)
@@ -41,6 +41,6 @@ func valToStr(val interface{}) (string, error) {
 	case float64:
 		return strconv.FormatFloat(v, 'g', -1, 64), nil
 	default:
-		return "", errors.Errorf("could not convert %q (type %T) to string", val, val)
+		return "", fmt.Errorf("could not convert %q (type %T) to string", val, val)
 	}
 }
