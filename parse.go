@@ -3,11 +3,10 @@ package ff
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // Parse the flags in the flag set from the provided (presumably commandline)
@@ -20,7 +19,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		return errors.Wrap(err, "error parsing commandline args")
+		return fmt.Errorf("error parsing commandline args: %v", err)
 	}
 
 	provided := map[string]bool{}
@@ -43,7 +42,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 		err = c.configFileParser(f, func(name, value string) error {
 			if fs.Lookup(name) == nil {
-				return errors.Errorf("config file flag %q not defined in flag set", name)
+				return fmt.Errorf("config file flag %q not defined in flag set", name)
 			}
 
 			if provided[name] {
@@ -51,7 +50,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 			}
 
 			if err := fs.Set(name, value); err != nil {
-				return errors.Wrapf(err, "error setting flag %q from config file", name)
+				return fmt.Errorf("error setting flag %q from config file: %v", name, err)
 			}
 
 			return nil
@@ -83,13 +82,13 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 			if value := os.Getenv(key); value != "" {
 				for _, individual := range strings.Split(value, ",") {
 					if err := fs.Set(f.Name, strings.TrimSpace(individual)); err != nil {
-						errs = append(errs, errors.Wrapf(err, "error setting flag %q from env var %q", f.Name, key).Error())
+						errs = append(errs, fmt.Sprintf("error setting flag %q from env var %q: %v", f.Name, key, err))
 					}
 				}
 			}
 		})
 		if len(errs) > 0 {
-			return errors.Errorf("error parsing env vars: %s", strings.Join(errs, "; "))
+			return fmt.Errorf("error parsing env vars: %s", strings.Join(errs, "; "))
 		}
 	}
 

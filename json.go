@@ -2,10 +2,9 @@ package ff
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"strconv"
-
-	"github.com/pkg/errors"
 )
 
 // JSONParser is a parser for config files in JSON format. Input should be
@@ -15,16 +14,14 @@ import (
 func JSONParser(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	d := json.NewDecoder(r)
-	// Must set UseNumber for stringifyValue to work
-	d.UseNumber()
-	err := d.Decode(&m)
-	if err != nil {
-		return errors.Wrap(err, "error parsing JSON config")
+	d.UseNumber() // must set UseNumber for stringifyValue to work
+	if err := d.Decode(&m); err != nil {
+		return fmt.Errorf("error parsing JSON config: %v", err)
 	}
 	for key, val := range m {
 		values, err := stringifySlice(val)
 		if err != nil {
-			return errors.Wrap(err, "error parsing JSON config")
+			return fmt.Errorf("error parsing JSON config: %v", err)
 		}
 		for _, value := range values {
 			if err := set(key, value); err != nil {
@@ -63,6 +60,6 @@ func stringifyValue(val interface{}) (string, error) {
 	case bool:
 		return strconv.FormatBool(v), nil
 	default:
-		return "", errors.Errorf("could not convert %q (type %T) to string", val, val)
+		return "", fmt.Errorf("could not convert %q (type %T) to string", val, val)
 	}
 }
