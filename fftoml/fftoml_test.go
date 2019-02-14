@@ -1,4 +1,4 @@
-package fftoml
+package fftoml_test
 
 import (
 	"flag"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/peterbourgon/ff"
+	"github.com/peterbourgon/ff/fftoml"
 )
 
 func TestParser(t *testing.T) {
@@ -75,7 +76,7 @@ func TestParser(t *testing.T) {
 				f.Write([]byte(testcase.file))
 				f.Close()
 
-				options = append(options, ff.WithConfigFile(f.Name()), ff.WithConfigFileParser(Parser))
+				options = append(options, ff.WithConfigFile(f.Name()), ff.WithConfigFileParser(fftoml.Parser))
 			}
 
 			err := ff.Parse(fs, testcase.args, options...)

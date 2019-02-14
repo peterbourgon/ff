@@ -1,4 +1,4 @@
-package fftoml // import "github.com/peterbourgon/ff/fftoml"
+package fftoml
 
 import (
 	"fmt"
