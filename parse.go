@@ -1,4 +1,4 @@
-package ff
+package ff // import "github.com/peterbourgon/ff"
 
 import (
 	"bufio"

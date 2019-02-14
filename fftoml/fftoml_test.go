@@ -1,4 +1,4 @@
-package ff
+package fftoml
 
 import (
 	"flag"
@@ -9,9 +9,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/peterbourgon/ff"
 )
 
-func TestTOMLParser(t *testing.T) {
+func TestParser(t *testing.T) {
 	type want struct {
 		s   string
 		i   int
@@ -62,7 +64,7 @@ func TestTOMLParser(t *testing.T) {
 				f = fs.Float64("f", 0.0, "float64")
 			)
 
-			var options []Option
+			var options []ff.Option
 			{
 				filename := filepath.Join(os.TempDir(), "TestParse"+fmt.Sprint(10000*rand.Intn(10000)))
 				f, err := os.Create(filename)
@@ -73,10 +75,10 @@ func TestTOMLParser(t *testing.T) {
 				f.Write([]byte(testcase.file))
 				f.Close()
 
-				options = append(options, WithConfigFile(f.Name()), WithConfigFileParser(TOMLParser))
+				options = append(options, ff.WithConfigFile(f.Name()), ff.WithConfigFileParser(Parser))
 			}
 
-			err := Parse(fs, testcase.args, options...)
+			err := ff.Parse(fs, testcase.args, options...)
 			if testcase.want.err == "" {
 				if err != nil {
 					t.Fatal(err)
