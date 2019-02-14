@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff/v2"
-	"github.com/peterbourgon/ff/v2/fftoml"
+	"github.com/peterbourgon/ff"
+	"github.com/peterbourgon/ff/fftoml"
 )
 
 func TestParser(t *testing.T) {
