@@ -1,4 +1,4 @@
-package ff
+package fftoml
 
 import (
 	"fmt"
@@ -8,9 +8,9 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// TOMLParser is a parser for TOML file format. Flags and their values are read
+// Parser is a parser for TOML file format. Flags and their values are read
 // from the key/value pairs defined in the config file
-func TOMLParser(r io.Reader, set func(name, value string) error) error {
+func Parser(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	_, err := toml.DecodeReader(r, &m)
 	if err != nil {
