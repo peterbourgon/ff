@@ -10,7 +10,7 @@ With everything enabled, the priority order is:
 
 1. Command line flags (highest priority)
 2. configuration file
-3. environment variables
+3. Environment variables (lowest priority)
 
 ## Usage
 
