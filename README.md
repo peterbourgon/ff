@@ -7,7 +7,8 @@ from the command line, but you can enable parsing from a configuration
 file and/or environmental variables.
 
 With everything enabled, the priority order is:
-1. command line flags
+
+1. Command line flags (highest priority)
 2. configuration file
 3. environment variables
 
