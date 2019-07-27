@@ -16,12 +16,12 @@ func JSONParser(r io.Reader, set func(name, value string) error) error {
 	d := json.NewDecoder(r)
 	d.UseNumber() // must set UseNumber for stringifyValue to work
 	if err := d.Decode(&m); err != nil {
-		return JSONParseError{err}
+		return JSONParseError{Inner: err}
 	}
 	for key, val := range m {
 		values, err := stringifySlice(val)
 		if err != nil {
-			return JSONParseError{err}
+			return JSONParseError{Inner: err}
 		}
 		for _, value := range values {
 			if err := set(key, value); err != nil {
@@ -60,7 +60,7 @@ func stringifyValue(val interface{}) (string, error) {
 	case bool:
 		return strconv.FormatBool(v), nil
 	default:
-		return "", StringConversionError{val}
+		return "", StringConversionError{Value: val}
 	}
 }
 

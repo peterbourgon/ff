@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
+	"github.com/peterbourgon/ff"
 )
 
 // Parser is a parser for TOML file format. Flags and their values are read
@@ -14,12 +15,12 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	_, err := toml.DecodeReader(r, &m)
 	if err != nil {
-		return ParseError{err}
+		return ParseError{Inner: err}
 	}
 	for key, val := range m {
 		value, err := valToStr(val)
 		if err != nil {
-			return ParseError{err}
+			return ParseError{Inner: err}
 		}
 		if err = set(key, value); err != nil {
 			return err
@@ -41,7 +42,7 @@ func valToStr(val interface{}) (string, error) {
 	case float64:
 		return strconv.FormatFloat(v, 'g', -1, 64), nil
 	default:
-		return "", StringConversionError{val}
+		return "", ff.StringConversionError{Value: val}
 	}
 }
 
@@ -59,15 +60,4 @@ func (e ParseError) Error() string {
 // xerrors.Is and xerrors.As to work with ParseErrors.
 func (e ParseError) Unwrap() error {
 	return e.Inner
-}
-
-// StringConversionError is returned when a value in a TOML config
-// can't be converted to a string, to be provided to a flag.
-type StringConversionError struct {
-	Value interface{}
-}
-
-// Error implements the error interface.
-func (e StringConversionError) Error() string {
-	return fmt.Sprintf("couldn't convert %q (type %T) to string", e.Value, e.Value)
 }

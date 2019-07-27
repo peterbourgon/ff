@@ -125,6 +125,7 @@ func TestParseIssue16(t *testing.T) {
 				ff.WithConfigFile(filename),
 				ff.WithConfigFileParser(ff.PlainParser),
 			)
+
 			want := fftest.Vars{S: testcase.want, D: time.Second}
 			if err := fftest.Compare(&want, vars); err != nil {
 				t.Fatal(err)
