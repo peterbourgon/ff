@@ -18,15 +18,37 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 		return ParseError{Inner: err}
 	}
 	for key, val := range m {
-		value, err := valToStr(val)
+		values, err := valsToStrs(val)
 		if err != nil {
 			return ParseError{Inner: err}
 		}
-		if err = set(key, value); err != nil {
-			return err
+		for _, value := range values {
+			if err = set(key, value); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+func valsToStrs(val interface{}) ([]string, error) {
+	if vals, ok := val.([]interface{}); ok {
+		ss := make([]string, len(vals))
+		for i := range vals {
+			s, err := valToStr(vals[i])
+			if err != nil {
+				return nil, err
+			}
+			ss[i] = s
+		}
+		return ss, nil
+	}
+	s, err := valToStr(val)
+	if err != nil {
+		return nil, err
+	}
+	return []string{s}, nil
+
 }
 
 func valToStr(val interface{}) (string, error) {
