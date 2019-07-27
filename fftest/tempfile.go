@@ -14,7 +14,7 @@ import (
 func CreateTempFile(t *testing.T, content string) (filename string, cleanup func()) {
 	t.Helper()
 
-	filename = filepath.Join(os.TempDir(), "fftest_"+fmt.Sprint(10000*rand.Intn(10000)))
+	filename = filepath.Join(os.TempDir(), "fftest_"+fmt.Sprintf("%x", 1e9+rand.Intn(1e9)))
 	f, err := os.Create(filename)
 	if err != nil {
 		t.Fatal(err)
@@ -22,5 +22,10 @@ func CreateTempFile(t *testing.T, content string) (filename string, cleanup func
 
 	f.Write([]byte(content))
 	f.Close()
-	return f.Name(), func() { os.Remove(f.Name()) }
+
+	return f.Name(), func() {
+		if err := os.Remove(f.Name()); err != nil {
+			t.Errorf("os.Remove(%q): %v", f.Name(), err)
+		}
+	}
 }

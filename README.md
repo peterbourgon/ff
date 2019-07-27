@@ -47,7 +47,7 @@ refresh 30s
 debug true
 ```
 
-You can also use the JSONParser, which expects a JSON object.
+You could also use the JSONParser, which expects a JSON object.
 
 ```json
 {
@@ -57,7 +57,7 @@ You can also use the JSONParser, which expects a JSON object.
 }
 ```
 
-Or, you can write your own config file parser.
+Or, you could write your own config file parser.
 
 ```go
 // ConfigFileParser interprets the config file represented by the reader
