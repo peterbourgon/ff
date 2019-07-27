@@ -29,14 +29,14 @@ func TestParseBasics(t *testing.T) {
 		},
 		{
 			name: "env only",
-			env:  map[string]string{"TEST_PARSE_S": "baz", "TEST_PARSE_D": "100s"},
-			want: fftest.Vars{S: "baz", I: 0, B: false, D: 100 * time.Second},
+			env:  map[string]string{"TEST_PARSE_S": "baz", "TEST_PARSE_F": "0.99", "TEST_PARSE_D": "100s"},
+			want: fftest.Vars{S: "baz", F: 0.99, D: 100 * time.Second},
 		},
 		{
 			name: "args and file",
 			args: []string{"-s", "foo", "-i", "1234"},
 			file: "\ns should be overridden\n\nd 3s\n",
-			want: fftest.Vars{S: "foo", I: 1234, B: false, D: 3 * time.Second},
+			want: fftest.Vars{S: "foo", I: 1234, D: 3 * time.Second},
 		},
 		{
 			name: "args and env",
@@ -53,9 +53,9 @@ func TestParseBasics(t *testing.T) {
 		{
 			name: "args file env",
 			args: []string{"-s", "from arg", "-i", "100"},
-			file: "s from file\ni 200 # comment\n\nd 1m\n\n\n",
-			env:  map[string]string{"TEST_PARSE_S": "from env", "TEST_PARSE_I": "300", "TEST_PARSE_B": "true", "TEST_PARSE_D": "1h"},
-			want: fftest.Vars{S: "from arg", I: 100, B: true, D: time.Minute},
+			file: "s from file\ni 200 # comment\n\nd 1m\nf 2.3\n\n",
+			env:  map[string]string{"TEST_PARSE_S": "from env", "TEST_PARSE_I": "300", "TEST_PARSE_F": "0.15", "TEST_PARSE_B": "true", "TEST_PARSE_D": "1h"},
+			want: fftest.Vars{S: "from arg", I: 100, F: 2.3, B: true, D: time.Minute},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -125,8 +125,8 @@ func TestParseIssue16(t *testing.T) {
 				ff.WithConfigFile(filename),
 				ff.WithConfigFileParser(ff.PlainParser),
 			)
-			want := &fftest.Vars{S: testcase.want, D: time.Second}
-			if err := fftest.Compare(want, vars); err != nil {
+			want := fftest.Vars{S: testcase.want, D: time.Second}
+			if err := fftest.Compare(&want, vars); err != nil {
 				t.Fatal(err)
 			}
 		})
