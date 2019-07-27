@@ -45,7 +45,7 @@ func TestJSONParser(t *testing.T) {
 			name: "bad JSON file",
 			args: []string{},
 			file: `{`,
-			want: fftest.Vars{D: 1 * time.Second, ParseError: io.ErrUnexpectedEOF},
+			want: fftest.Vars{D: 1 * time.Second, ParseErrorIs: io.ErrUnexpectedEOF},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {

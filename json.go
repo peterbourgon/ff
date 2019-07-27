@@ -25,7 +25,7 @@ func JSONParser(r io.Reader, set func(name, value string) error) error {
 		}
 		for _, value := range values {
 			if err := set(key, value); err != nil {
-				return JSONParseError{err}
+				return err
 			}
 		}
 	}
