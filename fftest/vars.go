@@ -34,24 +34,24 @@ type Vars struct {
 	B bool
 	D time.Duration
 
-	// ParseError is assigned as the result of Parse in test cases.
+	// ParseError should be assigned as the result of Parse in tests.
 	ParseError error
 
 	// If a test case expects an input to generate a parse error,
 	// it can specify that error here. The Compare helper will
 	// look for it using xerrors.Is.
-	ParseErrorIs error
+	WantParseErrorIs error
 
 	// If a test case expects an input to generate a parse error,
 	// it can specify part of that error string here. The Compare
 	// helper will look for it using strings.Contains.
-	ParseErrorString string
+	WantParseErrorString string
 }
 
 // Compare one set of vars with another
 // and return an error on any difference.
 func Compare(want, have *Vars) error {
-	wantParseError := want.ParseErrorIs != nil || want.ParseErrorString != ""
+	wantParseError := want.WantParseErrorIs != nil || want.WantParseErrorString != ""
 	if wantParseError && have.ParseError == nil {
 		return fmt.Errorf("want error (%v), have none", want)
 	}
@@ -59,11 +59,11 @@ func Compare(want, have *Vars) error {
 		return fmt.Errorf("want clean parse, have error (%v)", have)
 	}
 
-	if want.ParseErrorIs != nil && have.ParseError != nil && !xerrors.Is(have.ParseError, want.ParseErrorIs) {
-		return fmt.Errorf("want wrapped error (%#+v), have error (%#+v)", want.ParseErrorIs, have.ParseError)
+	if want.WantParseErrorIs != nil && have.ParseError != nil && !xerrors.Is(have.ParseError, want.WantParseErrorIs) {
+		return fmt.Errorf("want wrapped error (%#+v), have error (%#+v)", want.WantParseErrorIs, have.ParseError)
 	}
-	if want.ParseErrorString != "" && have.ParseError != nil && !strings.Contains(have.ParseError.Error(), want.ParseErrorString) {
-		return fmt.Errorf("want error string (%q), have error (%v)", want.ParseErrorString, have.ParseError)
+	if want.WantParseErrorString != "" && have.ParseError != nil && !strings.Contains(have.ParseError.Error(), want.WantParseErrorString) {
+		return fmt.Errorf("want error string (%q), have error (%v)", want.WantParseErrorString, have.ParseError)
 	}
 
 	if want.S != have.S {
