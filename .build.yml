@@ -11,4 +11,5 @@ tasks:
         sudo ln -s /usr/local/go/bin/go /usr/bin/go
         go env
     - test: |
-        go test -race -v github.com/peterbourgon/ff/...
+        cd ff
+        go test -race -v ./...
