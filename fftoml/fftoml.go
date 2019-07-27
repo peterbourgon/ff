@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
+	"github.com/peterbourgon/ff"
 )
 
 // Parser is a parser for TOML file format. Flags and their values are read
@@ -14,12 +15,12 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	_, err := toml.DecodeReader(r, &m)
 	if err != nil {
-		return fmt.Errorf("error parsing TOML config: %v", err)
+		return ParseError{Inner: err}
 	}
 	for key, val := range m {
 		value, err := valToStr(val)
 		if err != nil {
-			return err
+			return ParseError{Inner: err}
 		}
 		if err = set(key, value); err != nil {
 			return err
@@ -41,6 +42,22 @@ func valToStr(val interface{}) (string, error) {
 	case float64:
 		return strconv.FormatFloat(v, 'g', -1, 64), nil
 	default:
-		return "", fmt.Errorf("could not convert %q (type %T) to string", val, val)
+		return "", ff.StringConversionError{Value: val}
 	}
+}
+
+// ParseError wraps all errors originating from the TOML parser.
+type ParseError struct {
+	Inner error
+}
+
+// Error implenents the error interface.
+func (e ParseError) Error() string {
+	return fmt.Sprintf("error parsing TOML config: %v", e.Inner)
+}
+
+// Unwrap implements the xerrors.Wrapper interface, allowing
+// xerrors.Is and xerrors.As to work with ParseErrors.
+func (e ParseError) Unwrap() error {
+	return e.Inner
 }

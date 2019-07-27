@@ -16,12 +16,12 @@ func JSONParser(r io.Reader, set func(name, value string) error) error {
 	d := json.NewDecoder(r)
 	d.UseNumber() // must set UseNumber for stringifyValue to work
 	if err := d.Decode(&m); err != nil {
-		return fmt.Errorf("error parsing JSON config: %v", err)
+		return JSONParseError{Inner: err}
 	}
 	for key, val := range m {
 		values, err := stringifySlice(val)
 		if err != nil {
-			return fmt.Errorf("error parsing JSON config: %v", err)
+			return JSONParseError{Inner: err}
 		}
 		for _, value := range values {
 			if err := set(key, value); err != nil {
@@ -60,6 +60,33 @@ func stringifyValue(val interface{}) (string, error) {
 	case bool:
 		return strconv.FormatBool(v), nil
 	default:
-		return "", fmt.Errorf("could not convert %q (type %T) to string", val, val)
+		return "", StringConversionError{Value: val}
 	}
+}
+
+// JSONParseError wraps all errors originating from the JSONParser.
+type JSONParseError struct {
+	Inner error
+}
+
+// Error implenents the error interface.
+func (e JSONParseError) Error() string {
+	return fmt.Sprintf("error parsing JSON config: %v", e.Inner)
+}
+
+// Unwrap implements the xerrors.Wrapper interface, allowing
+// xerrors.Is and xerrors.As to work with JSONParseErrors.
+func (e JSONParseError) Unwrap() error {
+	return e.Inner
+}
+
+// StringConversionError is returned when a value in a JSON config
+// can't be converted to a string, to be provided to a flag.
+type StringConversionError struct {
+	Value interface{}
+}
+
+// Error implements the error interface.
+func (e StringConversionError) Error() string {
+	return fmt.Sprintf("couldn't convert %q (type %T) to string", e.Value, e.Value)
 }
