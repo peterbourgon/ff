@@ -36,10 +36,11 @@ func TestJSONParser(t *testing.T) {
 					"s": ["a", "bb"],
 					"i": ["10", "11", "12"],
 					"b": [false, true],
-					"d": ["10m", "5s"]
+					"d": ["10m", "5s"],
+					"x": ["a", "B", "👍"]
 				}
 			`,
-			want: fftest.Vars{S: "bb", I: 12, B: true, D: 5 * time.Second},
+			want: fftest.Vars{S: "bb", I: 12, B: true, D: 5 * time.Second, X: []string{"a", "B", "👍"}},
 		},
 		{
 			name: "bad JSON file",

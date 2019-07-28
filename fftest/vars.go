@@ -3,6 +3,7 @@ package fftest
 import (
 	"flag"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ func NewPair() (*flag.FlagSet, *Vars) {
 	fs.Float64Var(&v.F, "f", 0., "float64")
 	fs.BoolVar(&v.B, "b", false, "bool")
 	fs.DurationVar(&v.D, "d", time.Second, "time.Duration")
+	fs.Var(&v.X, "x", "collection of strings (repeatable)")
 
 	return fs, &v
 }
@@ -33,6 +35,7 @@ type Vars struct {
 	F float64
 	B bool
 	D time.Duration
+	X StringSlice
 
 	// ParseError should be assigned as the result of Parse in tests.
 	ParseError error
@@ -81,6 +84,28 @@ func Compare(want, have *Vars) error {
 	if want.D != have.D {
 		return fmt.Errorf("D: want %s, have %s", want.D, have.D)
 	}
+	if !reflect.DeepEqual(want.X, have.X) {
+		return fmt.Errorf("X: want %v, have %v", want.X, have.X)
+	}
 
 	return nil
+}
+
+// StringSlice is a flag.Value that collects each Set string
+// into a slice, allowing for repeated flags.
+type StringSlice []string
+
+// Set implements flag.Value and appends the string to the slice.
+func (ss *StringSlice) Set(s string) error {
+	(*ss) = append(*ss, s)
+	return nil
+}
+
+// String implements flag.Value and returns the list of
+// strings, or "..." if no strings have been added.
+func (ss *StringSlice) String() string {
+	if len(*ss) <= 0 {
+		return "..."
+	}
+	return strings.Join(*ss, ", ")
 }

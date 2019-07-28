@@ -28,8 +28,9 @@ func TestParser(t *testing.T) {
 			f = 3.14e10
 			b = true
 			d = "5s"
+			x = ["1", "a", "👍"]
 			`,
-			want: fftest.Vars{S: "s", I: 10, F: 3.14e10, B: true, D: 5 * time.Second},
+			want: fftest.Vars{S: "s", I: 10, F: 3.14e10, B: true, D: 5 * time.Second, X: []string{"1", "a", "👍"}},
 		},
 		{
 			name: "bad TOML file",
