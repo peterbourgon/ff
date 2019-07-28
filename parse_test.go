@@ -74,20 +74,20 @@ func TestParseBasics(t *testing.T) {
 			var options []ff.Option
 
 			if testcase.file != "" {
-				filename, cleanup := fftest.CreateTempFile(t, testcase.file)
+				filename, cleanup := fftest.TempFile(t, testcase.file)
 				defer cleanup()
 				options = append(options, ff.WithConfigFile(filename), ff.WithConfigFileParser(ff.PlainParser))
 			}
 
 			if len(testcase.env) > 0 {
 				for k, v := range testcase.env {
+					defer os.Setenv(k, os.Getenv(k))
 					os.Setenv(k, v)
-					defer os.Setenv(k, "")
 				}
 				options = append(options, ff.WithEnvVarPrefix("TEST_PARSE"))
 			}
 
-			fs, vars := fftest.NewPair()
+			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, testcase.args, options...)
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
@@ -129,10 +129,10 @@ func TestParseIssue16(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			filename, cleanup := fftest.CreateTempFile(t, testcase.file)
+			filename, cleanup := fftest.TempFile(t, testcase.file)
 			defer cleanup()
 
-			fs, vars := fftest.NewPair()
+			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(filename),
 				ff.WithConfigFileParser(ff.PlainParser),

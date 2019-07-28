@@ -10,11 +10,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// NewPair returns a predefined flag set, and a predefined set of variables that
+// Pair returns a predefined flag set, and a predefined set of variables that
 // have been registered into it. Tests can call parse on the flag set with a
 // variety of flags, config files, and env vars, and check the resulting effect
 // on the vars.
-func NewPair() (*flag.FlagSet, *Vars) {
+func Pair() (*flag.FlagSet, *Vars) {
 	fs := flag.NewFlagSet("fftest", flag.ContinueOnError)
 
 	var v Vars
@@ -54,12 +54,14 @@ type Vars struct {
 // Compare one set of vars with another
 // and return an error on any difference.
 func Compare(want, have *Vars) error {
-	wantParseError := want.WantParseErrorIs != nil || want.WantParseErrorString != ""
-	if wantParseError && have.ParseError == nil {
-		return fmt.Errorf("want error (%v), have none", want)
+	if want.WantParseErrorIs != nil && have.ParseError == nil {
+		return fmt.Errorf("want error (%v), have none", want.WantParseErrorIs)
 	}
-	if !wantParseError && have.ParseError != nil {
-		return fmt.Errorf("want clean parse, have error (%v)", have)
+	if want.WantParseErrorString != "" && have.ParseError == nil {
+		return fmt.Errorf("want error (%q), have none", want.WantParseErrorString)
+	}
+	if want.WantParseErrorIs == nil && want.WantParseErrorString == "" && have.ParseError != nil {
+		return fmt.Errorf("want clean parse, have error (%v)", have.ParseError)
 	}
 
 	if want.WantParseErrorIs != nil && have.ParseError != nil && !xerrors.Is(have.ParseError, want.WantParseErrorIs) {

@@ -39,10 +39,10 @@ func TestParser(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			filename, cleanup := fftest.CreateTempFile(t, testcase.file)
+			filename, cleanup := fftest.TempFile(t, testcase.file)
 			defer cleanup()
 
-			fs, vars := fftest.NewPair()
+			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(filename),
 				ff.WithConfigFileParser(fftoml.Parser),

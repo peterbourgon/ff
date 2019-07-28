@@ -50,10 +50,10 @@ func TestJSONParser(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			filename, cleanup := fftest.CreateTempFile(t, testcase.file)
+			filename, cleanup := fftest.TempFile(t, testcase.file)
 			defer cleanup()
 
-			fs, vars := fftest.NewPair()
+			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, testcase.args,
 				ff.WithConfigFile(filename),
 				ff.WithConfigFileParser(ff.JSONParser),
