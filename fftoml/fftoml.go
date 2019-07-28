@@ -1,3 +1,4 @@
+// Package fftoml provides a TOML config file paser.
 package fftoml
 
 import (
