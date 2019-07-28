@@ -80,7 +80,7 @@ func (e JSONParseError) Unwrap() error {
 	return e.Inner
 }
 
-// StringConversionError is returned when a value in a JSON config
+// StringConversionError is returned when a value in a config file
 // can't be converted to a string, to be provided to a flag.
 type StringConversionError struct {
 	Value interface{}

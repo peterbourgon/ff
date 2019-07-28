@@ -1,29 +1,29 @@
-package fftoml
+package ffyaml
 
 import (
 	"fmt"
 	"io"
 	"strconv"
 
-	"github.com/BurntSushi/toml"
 	"github.com/peterbourgon/ff"
+	"gopkg.in/yaml.v2"
 )
 
-// Parser is a parser for TOML file format. Flags and their values are read
+// Parser is a parser for YAML file format. Flags and their values are read
 // from the key/value pairs defined in the config file.
 func Parser(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
-	_, err := toml.DecodeReader(r, &m)
-	if err != nil {
-		return ParseError{Inner: err}
+	d := yaml.NewDecoder(r)
+	if err := d.Decode(&m); err != nil && err != io.EOF {
+		return ParseError{err}
 	}
 	for key, val := range m {
 		values, err := valsToStrs(val)
 		if err != nil {
-			return ParseError{Inner: err}
+			return ParseError{err}
 		}
 		for _, value := range values {
-			if err = set(key, value); err != nil {
+			if err := set(key, value); err != nil {
 				return err
 			}
 		}
@@ -53,12 +53,16 @@ func valsToStrs(val interface{}) ([]string, error) {
 
 func valToStr(val interface{}) (string, error) {
 	switch v := val.(type) {
+	case byte:
+		return string([]byte{v}), nil
 	case string:
 		return v, nil
 	case bool:
 		return strconv.FormatBool(v), nil
 	case uint64:
 		return strconv.FormatUint(v, 10), nil
+	case int:
+		return strconv.Itoa(v), nil
 	case int64:
 		return strconv.FormatInt(v, 10), nil
 	case float64:
@@ -75,7 +79,7 @@ type ParseError struct {
 
 // Error implenents the error interface.
 func (e ParseError) Error() string {
-	return fmt.Sprintf("error parsing TOML config: %v", e.Inner)
+	return fmt.Sprintf("error parsing YAML config: %v", e.Inner)
 }
 
 // Unwrap implements the xerrors.Wrapper interface, allowing
