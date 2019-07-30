@@ -73,7 +73,7 @@ func valToStr(val interface{}) (string, error) {
 	}
 }
 
-// ParseError wraps all errors originating from the TOML parser.
+// ParseError wraps all errors originating from the YAML parser.
 type ParseError struct {
 	Inner error
 }
