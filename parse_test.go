@@ -69,6 +69,11 @@ func TestParseBasics(t *testing.T) {
 			args: []string{"-s", "s.arg.1", "-s", "s.arg.2", "-x", "x.arg.1", "-x", "x.arg.2"},
 			want: fftest.Vars{S: "s.arg.2", D: time.Second, X: []string{"x.arg.1", "x.arg.2"}}, // highest prio wins and no others are called
 		},
+		{
+			name: "PlainParser solo bool",
+			file: "b\ns x\n",
+			want: fftest.Vars{S: "x", D: time.Second, B: true},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			var options []ff.Option
