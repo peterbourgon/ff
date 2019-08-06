@@ -20,7 +20,7 @@ func TestJSONParser(t *testing.T) {
 			name: "empty input",
 			args: []string{},
 			file: `{}`,
-			want: fftest.Vars{D: time.Second},
+			want: fftest.Vars{},
 		},
 		{
 			name: "basic KV pairs",
@@ -46,7 +46,7 @@ func TestJSONParser(t *testing.T) {
 			name: "bad JSON file",
 			args: []string{},
 			file: `{`,
-			want: fftest.Vars{D: 1 * time.Second, WantParseErrorIs: io.ErrUnexpectedEOF},
+			want: fftest.Vars{WantParseErrorIs: io.ErrUnexpectedEOF},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {

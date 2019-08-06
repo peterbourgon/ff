@@ -22,7 +22,7 @@ func Pair() (*flag.FlagSet, *Vars) {
 	fs.IntVar(&v.I, "i", 0, "int")
 	fs.Float64Var(&v.F, "f", 0., "float64")
 	fs.BoolVar(&v.B, "b", false, "bool")
-	fs.DurationVar(&v.D, "d", time.Second, "time.Duration")
+	fs.DurationVar(&v.D, "d", 0*time.Second, "time.Duration")
 	fs.Var(&v.X, "x", "collection of strings (repeatable)")
 
 	return fs, &v

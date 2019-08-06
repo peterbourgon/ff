@@ -18,6 +18,11 @@ func TestParseBasics(t *testing.T) {
 		want fftest.Vars
 	}{
 		{
+			name: "empty",
+			args: []string{},
+			want: fftest.Vars{},
+		},
+		{
 			name: "args only",
 			args: []string{"-s", "foo", "-i", "123", "-b", "-d", "24m"},
 			want: fftest.Vars{S: "foo", I: 123, B: true, D: 24 * time.Minute},
@@ -42,7 +47,7 @@ func TestParseBasics(t *testing.T) {
 			name: "env and args",
 			env:  map[string]string{"TEST_PARSE_S": "should be overridden", "TEST_PARSE_B": "true"},
 			args: []string{"-s", "explicit wins", "-i", "7"},
-			want: fftest.Vars{S: "explicit wins", I: 7, B: true, D: time.Second},
+			want: fftest.Vars{S: "explicit wins", I: 7, B: true},
 		},
 		{
 			name: "env and file",
@@ -67,12 +72,12 @@ func TestParseBasics(t *testing.T) {
 			env:  map[string]string{"TEST_PARSE_S": "s.env", "TEST_PARSE_X": "x.env.1"},
 			file: "s s.file.1\ns s.file.2\n\nx x.file.1\nx x.file.2",
 			args: []string{"-s", "s.arg.1", "-s", "s.arg.2", "-x", "x.arg.1", "-x", "x.arg.2"},
-			want: fftest.Vars{S: "s.arg.2", D: time.Second, X: []string{"x.arg.1", "x.arg.2"}}, // highest prio wins and no others are called
+			want: fftest.Vars{S: "s.arg.2", X: []string{"x.arg.1", "x.arg.2"}}, // highest prio wins and no others are called
 		},
 		{
 			name: "PlainParser solo bool",
 			file: "b\ns x\n",
-			want: fftest.Vars{S: "x", D: time.Second, B: true},
+			want: fftest.Vars{S: "x", B: true},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -143,7 +148,7 @@ func TestParseIssue16(t *testing.T) {
 				ff.WithConfigFileParser(ff.PlainParser),
 			)
 
-			want := fftest.Vars{S: testcase.want, D: time.Second}
+			want := fftest.Vars{S: testcase.want}
 			if err := fftest.Compare(&want, vars); err != nil {
 				t.Fatal(err)
 			}

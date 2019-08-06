@@ -18,7 +18,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "empty input",
 			file: ``,
-			want: fftest.Vars{D: time.Second},
+			want: fftest.Vars{},
 		},
 		{
 			name: "basic KV pairs",
@@ -28,37 +28,37 @@ func TestParser(t *testing.T) {
 		{
 			name: "invalid prefix",
 			file: "\ti: 123\ns: foo\n",
-			want: fftest.Vars{D: time.Second, WantParseErrorString: "found character that cannot start any token"},
+			want: fftest.Vars{WantParseErrorString: "found character that cannot start any token"},
 		},
 		{
 			name: "no value",
 			file: "i: 123\ns:\n",
-			want: fftest.Vars{I: 123, D: time.Second, WantParseErrorIs: ff.StringConversionError{}},
+			want: fftest.Vars{I: 123, WantParseErrorIs: ff.StringConversionError{}},
 		},
 		{
 			name: "no file",
 			file: ``,
-			want: fftest.Vars{D: time.Second},
+			want: fftest.Vars{},
 		},
 		{
 			name: "basic arrays",
 			file: "s: ['a', 'b', 'c']\n\nx: ['a', 'b', 'c']",
-			want: fftest.Vars{S: "c", D: time.Second, X: []string{"a", "b", "c"}},
+			want: fftest.Vars{S: "c", X: []string{"a", "b", "c"}},
 		},
 		{
 			name: "multiline arrays",
 			file: "s:\n  - a\n  - b\n  - c\nx:\n  - d\n  - e\n  - f\n",
-			want: fftest.Vars{S: "c", D: time.Second, X: []string{"d", "e", "f"}},
+			want: fftest.Vars{S: "c", X: []string{"d", "e", "f"}},
 		},
 		{
 			name: "line break arrays",
 			file: "x: [\"first string\", \"second\n string\", \"third\"]\n",
-			want: fftest.Vars{D: time.Second, X: []string{"first string", "second string", "third"}},
+			want: fftest.Vars{X: []string{"first string", "second string", "third"}},
 		},
 		{
 			name: "unquoted strings in arrays",
 			file: "x: [one, two, three]",
-			want: fftest.Vars{D: time.Second, X: []string{"one", "two", "three"}},
+			want: fftest.Vars{X: []string{"one", "two", "three"}},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
