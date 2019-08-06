@@ -33,7 +33,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "no value",
 			file: "i: 123\ns:\n",
-			want: fftest.Vars{I: 123, WantParseErrorIs: ff.StringConversionError{}},
+			want: fftest.Vars{WantParseErrorIs: ff.StringConversionError{}},
 		},
 		{
 			name: "no file",

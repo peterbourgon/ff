@@ -54,21 +54,28 @@ type Vars struct {
 // Compare one set of vars with another
 // and return an error on any difference.
 func Compare(want, have *Vars) error {
-	if want.WantParseErrorIs != nil && have.ParseError == nil {
-		return fmt.Errorf("want error (%v), have none", want.WantParseErrorIs)
-	}
-	if want.WantParseErrorString != "" && have.ParseError == nil {
-		return fmt.Errorf("want error (%q), have none", want.WantParseErrorString)
-	}
-	if want.WantParseErrorIs == nil && want.WantParseErrorString == "" && have.ParseError != nil {
-		return fmt.Errorf("want clean parse, have error (%v)", have.ParseError)
-	}
+	if want.WantParseErrorIs != nil || want.WantParseErrorString != "" {
+		if want.WantParseErrorIs != nil && have.ParseError == nil {
+			return fmt.Errorf("want error (%v), have none", want.WantParseErrorIs)
+		}
 
-	if want.WantParseErrorIs != nil && have.ParseError != nil && !xerrors.Is(have.ParseError, want.WantParseErrorIs) {
-		return fmt.Errorf("want wrapped error (%#+v), have error (%#+v)", want.WantParseErrorIs, have.ParseError)
-	}
-	if want.WantParseErrorString != "" && have.ParseError != nil && !strings.Contains(have.ParseError.Error(), want.WantParseErrorString) {
-		return fmt.Errorf("want error string (%q), have error (%v)", want.WantParseErrorString, have.ParseError)
+		if want.WantParseErrorString != "" && have.ParseError == nil {
+			return fmt.Errorf("want error (%q), have none", want.WantParseErrorString)
+		}
+
+		if want.WantParseErrorIs == nil && want.WantParseErrorString == "" && have.ParseError != nil {
+			return fmt.Errorf("want clean parse, have error (%v)", have.ParseError)
+		}
+
+		if want.WantParseErrorIs != nil && have.ParseError != nil && !xerrors.Is(have.ParseError, want.WantParseErrorIs) {
+			return fmt.Errorf("want wrapped error (%#+v), have error (%#+v)", want.WantParseErrorIs, have.ParseError)
+		}
+
+		if want.WantParseErrorString != "" && have.ParseError != nil && !strings.Contains(have.ParseError.Error(), want.WantParseErrorString) {
+			return fmt.Errorf("want error string (%q), have error (%v)", want.WantParseErrorString, have.ParseError)
+		}
+
+		return nil
 	}
 
 	if want.S != have.S {
