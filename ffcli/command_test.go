@@ -10,7 +10,7 @@ import (
 	"github.com/peterbourgon/ff/fftest"
 )
 
-func TestCommandParseAndRun(t *testing.T) {
+func TestCommandRun(t *testing.T) {
 	for _, testcase := range []struct {
 		name     string
 		args     []string
@@ -92,7 +92,7 @@ func TestCommandParseAndRun(t *testing.T) {
 			foo := &ffcli.Command{
 				Name:    "foo",
 				FlagSet: foofs,
-				Main:    func(args []string) error { fooargs = args; return nil },
+				Exec:    func(args []string) error { fooargs = args; return nil },
 			}
 
 			barfs, barvars := fftest.Pair()
@@ -100,7 +100,7 @@ func TestCommandParseAndRun(t *testing.T) {
 			bar := &ffcli.Command{
 				Name:    "bar",
 				FlagSet: barfs,
-				Main:    func(args []string) error { barargs = args; return nil },
+				Exec:    func(args []string) error { barargs = args; return nil },
 			}
 
 			rootfs, rootvars := fftest.Pair()
@@ -108,10 +108,10 @@ func TestCommandParseAndRun(t *testing.T) {
 			root := &ffcli.Command{
 				FlagSet:     rootfs,
 				Subcommands: []*ffcli.Command{foo, bar},
-				Main:        func(args []string) error { rootargs = args; return nil },
+				Exec:        func(args []string) error { rootargs = args; return nil },
 			}
 
-			err := root.ParseAndRun(testcase.args, testcase.options...)
+			err := root.Run(testcase.args, testcase.options...)
 
 			assertNoError(t, err)
 			assertNoError(t, fftest.Compare(&testcase.rootvars, rootvars))
