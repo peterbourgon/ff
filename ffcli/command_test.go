@@ -16,109 +16,126 @@ func TestCommandRun(t *testing.T) {
 		args     []string
 		options  []ff.Option
 		rootvars fftest.Vars
+		rootran  bool
 		rootargs []string
 		foovars  fftest.Vars
+		fooran   bool
 		fooargs  []string
 		barvars  fftest.Vars
+		barran   bool
 		barargs  []string
 	}{
-		/*{ // should work but doesn't!! :[
-			name:     "root",
-			rootargs: []string{},
-		}*/
+		{
+			name:    "root",
+			rootran: true,
+		},
 		{
 			name:     "root flags",
 			args:     []string{"-s", "123", "-b"},
 			rootvars: fftest.Vars{S: "123", B: true},
-			rootargs: []string{},
+			rootran:  true,
 		},
 		{
 			name:     "root args",
 			args:     []string{"hello"},
+			rootran:  true,
 			rootargs: []string{"hello"},
 		},
 		{
 			name:     "root flags args",
 			args:     []string{"-i=123", "hello world"},
 			rootvars: fftest.Vars{I: 123},
+			rootran:  true,
 			rootargs: []string{"hello world"},
 		},
 		{
 			name:     "root flags -- args",
 			args:     []string{"-f", "1.23", "--", "hello", "world"},
 			rootvars: fftest.Vars{F: 1.23},
+			rootran:  true,
 			rootargs: []string{"hello", "world"},
 		},
 		{
-			name:    "root foo",
-			args:    []string{"foo"},
-			fooargs: []string{},
+			name:   "root foo",
+			args:   []string{"foo"},
+			fooran: true,
 		},
 		{
 			name:     "root flags foo",
 			args:     []string{"-s", "OK", "-d", "10m", "foo"},
 			rootvars: fftest.Vars{S: "OK", D: 10 * time.Minute},
-			fooargs:  []string{},
+			fooran:   true,
 		},
 		{
 			name:     "root flags foo flags",
 			args:     []string{"-s", "OK", "-d", "10m", "foo", "-s", "Yup"},
 			rootvars: fftest.Vars{S: "OK", D: 10 * time.Minute},
 			foovars:  fftest.Vars{S: "Yup"},
-			fooargs:  []string{},
+			fooran:   true,
 		},
 		{
 			name:     "root flags foo flags args",
 			args:     []string{"-f=0.99", "foo", "-f", "1.01", "verb", "noun", "adjective adjective"},
 			rootvars: fftest.Vars{F: 0.99},
 			foovars:  fftest.Vars{F: 1.01},
+			fooran:   true,
 			fooargs:  []string{"verb", "noun", "adjective adjective"},
 		},
 		{
 			name:     "root flags foo args",
 			args:     []string{"-f=0.99", "foo", "abc", "def", "ghi"},
 			rootvars: fftest.Vars{F: 0.99},
+			fooran:   true,
 			fooargs:  []string{"abc", "def", "ghi"},
 		},
 		{
 			name:    "root bar -- args",
 			args:    []string{"bar", "--", "argument", "list"},
+			barran:  true,
 			barargs: []string{"argument", "list"},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			foofs, foovars := fftest.Pair()
 			var fooargs []string
+			var fooran bool
 			foo := &ffcli.Command{
 				Name:    "foo",
 				FlagSet: foofs,
-				Exec:    func(args []string) error { fooargs = args; return nil },
+				Exec:    func(args []string) error { fooran, fooargs = true, args; return nil },
 			}
 
 			barfs, barvars := fftest.Pair()
 			var barargs []string
+			var barran bool
 			bar := &ffcli.Command{
 				Name:    "bar",
 				FlagSet: barfs,
-				Exec:    func(args []string) error { barargs = args; return nil },
+				Exec:    func(args []string) error { barran, barargs = true, args; return nil },
 			}
 
 			rootfs, rootvars := fftest.Pair()
 			var rootargs []string
+			var rootran bool
 			root := &ffcli.Command{
 				FlagSet:     rootfs,
 				Subcommands: []*ffcli.Command{foo, bar},
-				Exec:        func(args []string) error { rootargs = args; return nil },
+				Exec:        func(args []string) error { rootran, rootargs = true, args; return nil },
 			}
 
 			err := root.Run(testcase.args, testcase.options...)
-
 			assertNoError(t, err)
+
 			assertNoError(t, fftest.Compare(&testcase.rootvars, rootvars))
+			assertBool(t, testcase.rootran, rootran)
 			assertStringSlice(t, testcase.rootargs, rootargs)
+
 			assertNoError(t, fftest.Compare(&testcase.foovars, foovars))
+			assertBool(t, testcase.fooran, fooran)
 			assertStringSlice(t, testcase.fooargs, fooargs)
+
 			assertNoError(t, fftest.Compare(&testcase.barvars, barvars))
+			assertBool(t, testcase.barran, barran)
 			assertStringSlice(t, testcase.barargs, barargs)
 		})
 	}
@@ -147,7 +164,10 @@ func assertBool(t *testing.T, want, have bool) {
 
 func assertStringSlice(t *testing.T, want, have []string) {
 	t.Helper()
+	if len(want) == 0 && len(have) == 0 {
+		return // consider []string{} and []string(nil) equivalent
+	}
 	if !reflect.DeepEqual(want, have) {
-		t.Fatalf("want %v, have %v", want, have)
+		t.Fatalf("want %#+v, have %#+v", want, have)
 	}
 }
