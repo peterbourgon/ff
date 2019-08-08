@@ -17,13 +17,13 @@ func main() {
 	log.SetFlags(0)
 
 	var (
-		globalfs        = flag.NewFlagSet("objectctl", flag.ExitOnError)
-		globalToken     = globalfs.String("token", "", "access token (required; or via OBJECTCTL_TOKEN)")
-		createfs        = flag.NewFlagSet("create", flag.ExitOnError)
-		createPrecision = createfs.Float64("precision", 0.50, "precision of created object")
+		globalFlags     = flag.NewFlagSet("objectctl", flag.ExitOnError)
+		globalToken     = globalFlags.String("token", "", "access token (required; or via OBJECTCTL_TOKEN)")
+		createFlags     = flag.NewFlagSet("create", flag.ExitOnError)
+		createPrecision = createFlags.Float64("precision", 0.50, "precision of created object")
 	)
 
-	cache := &cache{
+	objectCache := &cache{
 		token: "SECRET",
 	}
 
@@ -31,12 +31,12 @@ func main() {
 		Name:      "create",
 		Usage:     "objectctl create [flags] <object ID>",
 		ShortHelp: "create an object",
-		FlagSet:   createfs,
+		FlagSet:   createFlags,
 		Exec: func(args []string) error {
 			if len(args) != 1 {
 				return xerrors.New("create requires 1 argument")
 			}
-			return cache.create(*globalToken, args[0], *createPrecision)
+			return objectCache.create(*globalToken, args[0], *createPrecision)
 		},
 	}
 
@@ -51,15 +51,15 @@ func main() {
 		`, 60),
 		Exec: func(args []string) error {
 			if len(args) <= 0 {
-				return cache.deleteAll(*globalToken)
+				return objectCache.deleteAll(*globalToken)
 			}
-			return cache.delete(*globalToken, args[0])
+			return objectCache.delete(*globalToken, args[0])
 		},
 	}
 
 	root := &ffcli.Command{
 		Usage:   "objectctl [global flags] <subcommand> [flags] [args...]",
-		FlagSet: globalfs,
+		FlagSet: globalFlags,
 		Options: []ff.Option{ff.WithEnvVarPrefix("OBJECTCTL")},
 		LongHelp: collapse(`
 			Manipulate objects in some kind of theoretical object store.
@@ -68,7 +68,9 @@ func main() {
 			could go here.
 		`, 78),
 		Subcommands: []*ffcli.Command{create, delete},
-		Exec:        func([]string) error { return xerrors.New("specify a subcommand") },
+		Exec: func([]string) error {
+			return xerrors.New("specify a subcommand")
+		},
 	}
 
 	if err := root.Run(os.Args[1:]); err != nil {
