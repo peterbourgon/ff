@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff"
 	"github.com/peterbourgon/ff/ffcli"
 	"github.com/peterbourgon/ff/fftest"
 )
@@ -14,7 +13,6 @@ func TestCommandRun(t *testing.T) {
 	for _, testcase := range []struct {
 		name     string
 		args     []string
-		options  []ff.Option
 		rootvars fftest.Vars
 		rootran  bool
 		rootargs []string
@@ -123,7 +121,7 @@ func TestCommandRun(t *testing.T) {
 				Exec:        func(args []string) error { rootran, rootargs = true, args; return nil },
 			}
 
-			err := root.Run(testcase.args, testcase.options...)
+			err := root.Run(testcase.args)
 			assertNoError(t, err)
 
 			assertNoError(t, fftest.Compare(&testcase.rootvars, rootvars))

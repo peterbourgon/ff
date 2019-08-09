@@ -11,44 +11,64 @@ import (
 )
 
 // Command combines a main function with a flag.FlagSet, and zero or more
-// subcommands. A commandline program of the form
-//
-//    command [flags] (subcommand [flags] ...) [--] args
-//
-// can be represented as a declarative tree of commands.
+// sub-commands. A commandline program can be represented as a declarative tree
+// of commands.
 type Command struct {
-	Name        string
-	Usage       string
-	ShortHelp   string
-	LongHelp    string
-	FlagSet     *flag.FlagSet
-	Options     []ff.Option // applied only to this command
+	// Name of the command. Used for sub-command matching, and as a replacement
+	// for Usage, if no Usage string is provided. Required for sub-commands,
+	// optional for the root command.
+	Name string
+
+	// Usage for this command. Printed at the top of the help output.
+	// Recommended but not required. Should be one line of the form
+	//
+	//     cmd [flags] subcmd [flags] <required> [<optional> ...]
+	//
+	Usage string
+
+	// ShortHelp is printed next to the command name when it appears as a
+	// sub-command, in the help output of its parent command. Recommended.
+	ShortHelp string
+
+	// LongHelp is printed in the help output, after usage and before flags.
+	// Typically a paragraph or more of prose-like text, providing more explicit
+	// context and guidance than what is implied by flags and arguments.
+	// Optional.
+	LongHelp string
+
+	// FlagSet associated with this command. Optional.
+	FlagSet *flag.FlagSet
+
+	// Options provided to ff.Parse when parsing arguments for this command.
+	// Optional.
+	Options []ff.Option
+
+	// Subcommands accessible underneath or after this command. Optional.
 	Subcommands []*Command
-	Exec        func(args []string) error
+
+	// Exec is invoked if its command has been determined to be the terminal
+	// command selected by the arguments provided to Run. The args passed to
+	// Exec are the args left over after flags parsing. Optional.
+	Exec func(args []string) error
 }
 
-// Run parses the commandline arguments for this command and all subcommands
+// Run parses the commandline arguments for this command and all sub-commands
 // recursively, and invokes the Exec function for the terminal command, if it's
 // defined.
-//
-// Any options passed to Run are provided to every visited command during
-// ff.Parse. To provide options to only a specific command, declare them in the
-// Options field for that command. Options declared for specific commands take
-// precedence over options passed to Run.
-func (c *Command) Run(args []string, options ...ff.Option) error {
+func (c *Command) Run(args []string) error {
 	if c.FlagSet == nil {
 		c.FlagSet = flag.NewFlagSet(c.Name, flag.ExitOnError) // TODO(pb)
 	}
 
 	c.FlagSet.Usage = c.usage
-	if err := ff.Parse(c.FlagSet, args, append(options, c.Options...)...); err != nil {
+	if err := ff.Parse(c.FlagSet, args, c.Options...); err != nil {
 		return err
 	}
 
 	if len(c.FlagSet.Args()) > 0 {
 		for _, subcommand := range c.Subcommands {
 			if strings.EqualFold(c.FlagSet.Args()[0], subcommand.Name) {
-				return subcommand.Run(c.FlagSet.Args()[1:], options...)
+				return subcommand.Run(c.FlagSet.Args()[1:])
 			}
 		}
 	}
