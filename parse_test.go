@@ -74,6 +74,11 @@ func TestParseBasics(t *testing.T) {
 			file: "b\ns x\n",
 			want: fftest.Vars{S: "x", D: time.Second, B: true},
 		},
+		{
+			name: "PlainParser string with spaces",
+			file: "s i am the very model of a modern major general",
+			want: fftest.Vars{S: "i am the very model of a modern major general", D: time.Second},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			var options []ff.Option
