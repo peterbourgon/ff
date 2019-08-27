@@ -18,7 +18,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "empty input",
 			file: ``,
-			want: fftest.Vars{D: time.Second},
+			want: fftest.Vars{},
 		},
 		{
 			name: "basic KV pairs",
@@ -35,7 +35,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "bad TOML file",
 			file: `{`,
-			want: fftest.Vars{D: time.Second, WantParseErrorString: "bare keys cannot contain '{'"},
+			want: fftest.Vars{WantParseErrorString: "bare keys cannot contain '{'"},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
