@@ -123,15 +123,12 @@ func TestCommandRun(t *testing.T) {
 
 			err := root.Run(testcase.args)
 			assertNoError(t, err)
-
 			assertNoError(t, fftest.Compare(&testcase.rootvars, rootvars))
 			assertBool(t, testcase.rootran, rootran)
 			assertStringSlice(t, testcase.rootargs, rootargs)
-
 			assertNoError(t, fftest.Compare(&testcase.foovars, foovars))
 			assertBool(t, testcase.fooran, fooran)
 			assertStringSlice(t, testcase.fooargs, fooargs)
-
 			assertNoError(t, fftest.Compare(&testcase.barvars, barvars))
 			assertBool(t, testcase.barran, barran)
 			assertStringSlice(t, testcase.barargs, barargs)

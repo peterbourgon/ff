@@ -36,17 +36,19 @@ type Command struct {
 	// Optional.
 	LongHelp string
 
-	// FlagSet associated with this command. Optional.
+	// FlagSet associated with this command. Optional, but if none is provided,
+	// an empty FlagSet will be defined and attached during Run, so that the -h
+	// flag works as expected.
 	FlagSet *flag.FlagSet
 
 	// Options provided to ff.Parse when parsing arguments for this command.
 	// Optional.
 	Options []ff.Option
 
-	// Subcommands accessible underneath or after this command. Optional.
+	// Subcommands accessible underneath (i.e. after) this command. Optional.
 	Subcommands []*Command
 
-	// Exec is invoked if its command has been determined to be the terminal
+	// Exec is invoked if this command has been determined to be the terminal
 	// command selected by the arguments provided to Run. The args passed to
 	// Exec are the args left over after flags parsing. Optional.
 	Exec func(args []string) error
@@ -57,7 +59,7 @@ type Command struct {
 // defined.
 func (c *Command) Run(args []string) error {
 	if c.FlagSet == nil {
-		c.FlagSet = flag.NewFlagSet(c.Name, flag.ExitOnError) // TODO(pb)
+		c.FlagSet = flag.NewFlagSet(c.Name, flag.ExitOnError)
 	}
 
 	c.FlagSet.Usage = c.usage
