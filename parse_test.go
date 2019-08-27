@@ -82,7 +82,7 @@ func TestParseBasics(t *testing.T) {
 		{
 			name: "PlainParser string with spaces",
 			file: "s i am the very model of a modern major general",
-			want: fftest.Vars{S: "i am the very model of a modern major general", D: time.Second},
+			want: fftest.Vars{S: "i am the very model of a modern major general"},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
