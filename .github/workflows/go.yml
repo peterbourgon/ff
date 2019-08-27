@@ -1,0 +1,19 @@
+name: Go
+on: [push]
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    steps:
+    - name: Set up latest Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.x
+      id: go
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+    - name: Test
+      run: go test -v -race ./...
