@@ -69,3 +69,9 @@ Finally, it will look in the environment for variables with a `MY_PROGRAM`
 prefix. Flag names are capitalized, and separator characters are converted to
 underscores. In this case, for example, `MY_PROGRAM_LISTEN_ADDR` would match to
 `listen-addr`.
+
+## ffcli
+
+Building a commandline application in the style of `kubectl` or `docker`?
+Consider [package ffcli](https://godoc.org/github.com/peterbourgon/ff/ffcli).
+
