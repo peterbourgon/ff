@@ -68,6 +68,11 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: "bar", D: time.Hour, X: []string{"1", "2", "3"}},
 		},
 		{
+			name: "repeated env vars",
+			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
+			want: fftest.Vars{S: "three", X: []string{"one", "two", "three"}},
+		},
+		{
 			name: "priority repeats",
 			env:  map[string]string{"TEST_PARSE_S": "s.env", "TEST_PARSE_X": "x.env.1"},
 			file: "s s.file.1\ns s.file.2\n\nx x.file.1\nx x.file.2",
