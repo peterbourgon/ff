@@ -1,7 +1,12 @@
 package ffcli_test
 
 import (
+	"bytes"
+	"context"
+	"flag"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -100,7 +105,7 @@ func TestCommandRun(t *testing.T) {
 			foo := &ffcli.Command{
 				Name:    "foo",
 				FlagSet: foofs,
-				Exec:    func(args []string) error { fooran, fooargs = true, args; return nil },
+				Exec:    func(_ context.Context, args []string) error { fooran, fooargs = true, args; return nil },
 			}
 
 			barfs, barvars := fftest.Pair()
@@ -109,7 +114,7 @@ func TestCommandRun(t *testing.T) {
 			bar := &ffcli.Command{
 				Name:    "bar",
 				FlagSet: barfs,
-				Exec:    func(args []string) error { barran, barargs = true, args; return nil },
+				Exec:    func(_ context.Context, args []string) error { barran, barargs = true, args; return nil },
 			}
 
 			rootfs, rootvars := fftest.Pair()
@@ -118,10 +123,10 @@ func TestCommandRun(t *testing.T) {
 			root := &ffcli.Command{
 				FlagSet:     rootfs,
 				Subcommands: []*ffcli.Command{foo, bar},
-				Exec:        func(args []string) error { rootran, rootargs = true, args; return nil },
+				Exec:        func(_ context.Context, args []string) error { rootran, rootargs = true, args; return nil },
 			}
 
-			err := root.Run(testcase.args)
+			err := root.Run(context.Background(), testcase.args)
 			assertNoError(t, err)
 			assertNoError(t, fftest.Compare(&testcase.rootvars, rootvars))
 			assertBool(t, testcase.rootran, rootran)
@@ -136,10 +141,105 @@ func TestCommandRun(t *testing.T) {
 	}
 }
 
+func TestUsageFunc(t *testing.T) {
+	for _, testcase := range []struct {
+		name      string
+		usageFunc func(*ffcli.Command) string
+		output    string
+	}{
+		{
+			name:      "nil",
+			usageFunc: nil,
+			output:    defaultUsageFuncOutput,
+		},
+		{
+			name:      "DefaultUsageFunc",
+			usageFunc: ffcli.DefaultUsageFunc,
+			output:    defaultUsageFuncOutput,
+		},
+		{
+			name:      "custom",
+			usageFunc: func(*ffcli.Command) string { return "🍰" },
+			output:    "🍰\n",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			fs, _ := fftest.Pair()
+			var buf bytes.Buffer
+			fs.SetOutput(&buf)
+
+			command := &ffcli.Command{
+				Name:      "TestUsageFunc",
+				Usage:     "TestUsageFunc [flags] <args>",
+				ShortHelp: "Some short help.",
+				LongHelp:  "Some long help.",
+				FlagSet:   fs,
+				UsageFunc: testcase.usageFunc,
+			}
+
+			err := command.Run(context.Background(), []string{"-h"})
+			assertError(t, flag.ErrHelp, err)
+			assertString(t, testcase.output, buf.String())
+		})
+	}
+}
+
+func ExampleCommand_Postparse() {
+	// Assume our CLI will use some client that requires a token.
+	type FooClient struct {
+		token string
+	}
+
+	// It'll have a constructor.
+	NewFooClient := func(token string) *FooClient {
+		return &FooClient{token: token}
+	}
+
+	// We would define that token in the root command's FlagSet.
+	var (
+		rootFlagSet = flag.NewFlagSet("mycommand", flag.ExitOnError)
+		token       = rootFlagSet.String("token", "", "API token")
+	)
+
+	// Create a placeholder client.
+	var client *FooClient
+
+	// That client will be usable by subcommands...
+	foo := &ffcli.Command{
+		Name: "foo",
+		Exec: func(context.Context, []string) error {
+			fmt.Printf("subcommand foo can use the client: %v", client)
+			return nil
+		},
+	}
+
+	// ...as long as we set it up in the root command's Postparse.
+	root := &ffcli.Command{
+		FlagSet: rootFlagSet,
+		Postparse: func(context.Context) error {
+			client = NewFooClient(*token)
+			return nil
+		},
+		Subcommands: []*ffcli.Command{foo},
+	}
+
+	root.Run(context.Background(), []string{"-token", "SECRETKEY", "foo"})
+
+	// Output:
+	// subcommand foo can use the client: &{SECRETKEY}
+}
+
 func assertNoError(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func assertError(t *testing.T, want, have error) {
+	t.Helper()
+	if want != have {
+		t.Fatalf("want %v, have %v", want, have)
 	}
 }
 
@@ -166,3 +266,18 @@ func assertStringSlice(t *testing.T, want, have []string) {
 		t.Fatalf("want %#+v, have %#+v", want, have)
 	}
 }
+
+var defaultUsageFuncOutput = strings.TrimSpace(`
+USAGE
+  TestUsageFunc [flags] <args>
+
+Some long help.
+
+FLAGS
+  -b false  bool
+  -d 0s     time.Duration
+  -f 0      float64
+  -i 0      int
+  -s ...    string
+  -x ...    collection of strings (repeatable)
+`) + "\n"
