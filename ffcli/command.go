@@ -1,6 +1,7 @@
 package ffcli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -52,12 +53,26 @@ type Command struct {
 	// command selected by the arguments provided to Run. The args passed to
 	// Exec are the args left over after flags parsing. Optional.
 	Exec func(args []string) error
+
+	// ExecContext is invoked if this command has been determined to be
+	// the terminal command selected by the arguments provided to
+	// RunContext. The args passed to ExecContext are the context passed
+	// to RunContext and the args left over after flags parsing.
+	// Optional.
+	ExecContext func(ctx context.Context, args []string) error
 }
 
 // Run parses the commandline arguments for this command and all sub-commands
 // recursively, and invokes the Exec function for the terminal command, if it's
 // defined.
 func (c *Command) Run(args []string) error {
+	return c.RunContext(nil, args)
+}
+
+// RunContext parses the commandline arguments for this command and all sub-commands
+// recursively, and invokes the ExecContext function for the terminal command, if it's
+// defined.
+func (c *Command) RunContext(ctx context.Context, args []string) error {
 	if c.FlagSet == nil {
 		c.FlagSet = flag.NewFlagSet(c.Name, flag.ExitOnError)
 	}
@@ -70,13 +85,16 @@ func (c *Command) Run(args []string) error {
 	if len(c.FlagSet.Args()) > 0 {
 		for _, subcommand := range c.Subcommands {
 			if strings.EqualFold(c.FlagSet.Args()[0], subcommand.Name) {
-				return subcommand.Run(c.FlagSet.Args()[1:])
+				return subcommand.RunContext(ctx, c.FlagSet.Args()[1:])
 			}
 		}
 	}
 
-	if c.Exec != nil {
+	if ctx == nil && c.Exec != nil {
 		return c.Exec(c.FlagSet.Args())
+	}
+	if ctx != nil && c.ExecContext != nil {
+		return c.ExecContext(ctx, c.FlagSet.Args())
 	}
 
 	return nil
