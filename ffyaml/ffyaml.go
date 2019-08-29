@@ -19,43 +19,44 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 		return ParseError{err}
 	}
 	for key, val := range m {
-		values, err := valsToStrs(val)
+		err := setup(key, val, set)
 		if err != nil {
 			return ParseError{err}
-		}
-		for _, value := range values {
-			if err := set(key, value); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
 }
 
-func valsToStrs(val interface{}) ([]string, error) {
-	if vals, ok := val.([]interface{}); ok {
-		ss := make([]string, len(vals))
-		for i := range vals {
-			s, err := valToStr(vals[i])
+func setup(key string, val interface{}, set func(name, value string) error) error {
+	if obj, ok := val.(map[string]interface{}); ok {
+		for sub, val := range obj {
+			err := setup(join(key, sub), val, set)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			ss[i] = s
 		}
-		return ss, nil
+		return nil
+	}
+	if vals, ok := val.([]interface{}); ok {
+		for _, val := range vals {
+			err := setup(key, val, set)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 	s, err := valToStr(val)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return []string{s}, nil
-
+	return set(key, s)
 }
 
 func valToStr(val interface{}) (string, error) {
 	switch v := val.(type) {
 	case byte:
-		return string([]byte{v}), nil
+		return string(v), nil
 	case string:
 		return v, nil
 	case bool:
@@ -87,4 +88,8 @@ func (e ParseError) Error() string {
 // xerrors.Is and xerrors.As to work with ParseErrors.
 func (e ParseError) Unwrap() error {
 	return e.Inner
+}
+
+func join(a, b string) string {
+	return a + "." + b
 }

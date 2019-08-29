@@ -95,6 +95,27 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	return nil
 }
 
+func join(a, b string) string {
+	return a + "." + b
+}
+
+// Subset registers new flag subset with given prefix within given flag
+// superset. It calls setup function to let caller register needed flags within
+// created subset.
+func Subset(super *flag.FlagSet, prefix string, setup func(sub *flag.FlagSet)) (err error) {
+	sub := flag.NewFlagSet(prefix, 0)
+	setup(sub)
+	sub.VisitAll(func(f *flag.Flag) {
+		name := join(prefix, f.Name)
+		if super.Lookup(name) != nil && err == nil {
+			err = fmt.Errorf("flag %q already exists in a super set", name)
+			return
+		}
+		super.Var(f.Value, name, f.Usage)
+	})
+	return
+}
+
 // Context contains private fields used during parsing.
 type Context struct {
 	configFile         string

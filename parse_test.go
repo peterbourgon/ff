@@ -1,6 +1,7 @@
 package ff_test
 
 import (
+	"flag"
 	"os"
 	"testing"
 	"time"
@@ -158,5 +159,74 @@ func TestParseIssue16(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+func TestSubset(t *testing.T) {
+	for _, testcase := range []struct {
+		name  string
+		super []string
+		sub   []string
+		err   bool
+		want  []string
+	}{
+		{
+			name:  "normal case",
+			super: []string{"foo"},
+			sub:   []string{"foo"},
+			want: []string{
+				"foo",
+				"sub.foo",
+			},
+		},
+		{
+			name:  "clash case",
+			super: []string{"sub.foo"},
+			sub:   []string{"foo"},
+			err:   true,
+			want:  []string{"sub.foo"},
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			super := flag.NewFlagSet("super", 0)
+			for _, name := range testcase.super {
+				super.String(name, "", name+" flag")
+			}
+			err := ff.Subset(super, "sub", func(sub *flag.FlagSet) {
+				for _, name := range testcase.sub {
+					sub.String(name, "", name+" flag")
+				}
+			})
+			if testcase.err && err == nil {
+				t.Fatalf("want error got nothing")
+			}
+			if !testcase.err && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			wantFlags(t, super, testcase.want...)
+		})
+	}
+}
+
+func wantFlags(t *testing.T, fs *flag.FlagSet, want ...string) {
+	var have []string
+	fs.VisitAll(func(f *flag.Flag) {
+		have = append(have, f.Name)
+	})
+	m := make(map[string]int, len(want))
+	for _, name := range want {
+		m[name]++
+	}
+	for _, name := range have {
+		m[name]--
+	}
+	for name, n := range m {
+		switch n {
+		case 0: // OK
+		case +1:
+			t.Errorf("flag %q does not exist", name)
+		case -1:
+			t.Errorf("unexpected flag %q", name)
+		}
 	}
 }

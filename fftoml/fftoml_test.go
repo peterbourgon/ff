@@ -1,6 +1,7 @@
 package fftoml_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -33,6 +34,14 @@ func TestParser(t *testing.T) {
 			want: fftest.Vars{S: "s", I: 10, F: 3.14e10, B: true, D: 5 * time.Second, X: []string{"1", "a", "👍"}},
 		},
 		{
+			name: "sub value",
+			file: `
+			[sub]
+			s = "hello"
+			`,
+			want: fftest.Vars{SubS: "hello"},
+		},
+		{
 			name: "bad TOML file",
 			file: `{`,
 			want: fftest.Vars{WantParseErrorString: "bare keys cannot contain '{'"},
@@ -47,6 +56,7 @@ func TestParser(t *testing.T) {
 				ff.WithConfigFile(filename),
 				ff.WithConfigFileParser(fftoml.Parser),
 			)
+			fmt.Println(vars)
 
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)

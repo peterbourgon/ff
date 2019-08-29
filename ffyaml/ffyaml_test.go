@@ -60,6 +60,11 @@ func TestParser(t *testing.T) {
 			file: "x: [one, two, three]",
 			want: fftest.Vars{X: []string{"one", "two", "three"}},
 		},
+		{
+			name: "sub string",
+			file: "sub.s: hello",
+			want: fftest.Vars{SubS: "hello"},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			filename, cleanup := fftest.TempFile(t, testcase.file)
