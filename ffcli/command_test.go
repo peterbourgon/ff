@@ -141,26 +141,36 @@ func TestCommandRun(t *testing.T) {
 	}
 }
 
-func TestUsageFunc(t *testing.T) {
+func TestHelpUsage(t *testing.T) {
 	for _, testcase := range []struct {
 		name      string
 		usageFunc func(*ffcli.Command) string
+		exec      func(context.Context, []string) error
+		args      []string
 		output    string
 	}{
 		{
-			name:      "nil",
-			usageFunc: nil,
-			output:    defaultUsageFuncOutput,
+			name:   "nil",
+			args:   []string{"-h"},
+			output: defaultUsageFuncOutput,
 		},
 		{
 			name:      "DefaultUsageFunc",
 			usageFunc: ffcli.DefaultUsageFunc,
+			args:      []string{"-h"},
 			output:    defaultUsageFuncOutput,
 		},
 		{
-			name:      "custom",
+			name:      "custom usage",
 			usageFunc: func(*ffcli.Command) string { return "🍰" },
+			args:      []string{"-h"},
 			output:    "🍰\n",
+		},
+		{
+			name:      "ErrHelp",
+			usageFunc: func(*ffcli.Command) string { return "👹" },
+			exec:      func(context.Context, []string) error { return flag.ErrHelp },
+			output:    "👹\n",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -175,9 +185,10 @@ func TestUsageFunc(t *testing.T) {
 				LongHelp:  "Some long help.",
 				FlagSet:   fs,
 				UsageFunc: testcase.usageFunc,
+				Exec:      testcase.exec,
 			}
 
-			err := command.Run(context.Background(), []string{"-h"})
+			err := command.Run(context.Background(), testcase.args)
 			assertError(t, flag.ErrHelp, err)
 			assertString(t, testcase.output, buf.String())
 		})

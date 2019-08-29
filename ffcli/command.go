@@ -64,6 +64,9 @@ type Command struct {
 	// Exec is invoked if this command has been determined to be the terminal
 	// command selected by the arguments provided to Run. The args passed to
 	// Exec are the args left over after flags parsing. Optional.
+	//
+	// If Exec returns flag.ErrHelp, Run will behave as if -h were passed and
+	// emit the complete usage output.
 	Exec func(ctx context.Context, args []string) error
 }
 
@@ -102,7 +105,11 @@ func (c *Command) Run(ctx context.Context, args []string) error {
 	}
 
 	if c.Exec != nil {
-		return c.Exec(ctx, c.FlagSet.Args())
+		err := c.Exec(ctx, c.FlagSet.Args())
+		if err == flag.ErrHelp {
+			c.FlagSet.Usage()
+		}
+		return err
 	}
 
 	return nil
