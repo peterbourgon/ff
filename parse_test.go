@@ -69,11 +69,6 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: "bar", D: time.Hour, X: []string{"1", "2", "3"}},
 		},
 		{
-			name: "repeated env vars",
-			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
-			want: fftest.Vars{S: "three", X: []string{"one", "two", "three"}},
-		},
-		{
 			name: "priority repeats",
 			env:  map[string]string{"TEST_PARSE_S": "s.env", "TEST_PARSE_X": "x.env.1"},
 			file: "testdata/5.conf",
@@ -91,15 +86,15 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: "i am the very model of a modern major general"},
 		},
 		{
-			name: "EnvVarIgnoreCommas default",
-			env:  map[string]string{"TEST_PARSE_X": "a, b ,c "},
-			want: fftest.Vars{X: []string{"a", " b ", "c "}},
+			name: "default comma behavior",
+			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
+			want: fftest.Vars{S: "three", X: []string{"one", "two", "three"}},
 		},
 		{
-			name: "EnvVarIgnoreCommas true",
-			env:  map[string]string{"TEST_PARSE_X": "a, b ,c "},
+			name: "WithEnvVarIgnoreCommas",
+			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
 			opts: []ff.Option{ff.WithEnvVarIgnoreCommas(true)},
-			want: fftest.Vars{X: []string{"a, b ,c "}},
+			want: fftest.Vars{S: "one,two,three", X: []string{"one,two,three"}},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
