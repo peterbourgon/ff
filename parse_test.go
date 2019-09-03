@@ -96,6 +96,11 @@ func TestParseBasics(t *testing.T) {
 			opts: []ff.Option{ff.WithEnvVarIgnoreCommas(true)},
 			want: fftest.Vars{S: "one,two,three", X: []string{"one,two,three"}},
 		},
+		{
+			name: "env var comma whitespace",
+			env:  map[string]string{"TEST_PARSE_S": "one, two, three ", "TEST_PARSE_X": "one, two, three "},
+			want: fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			if testcase.file != "" {
