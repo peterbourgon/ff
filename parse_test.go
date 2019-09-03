@@ -15,6 +15,7 @@ func TestParseBasics(t *testing.T) {
 		env  map[string]string
 		file string
 		args []string
+		opts []ff.Option
 		want fftest.Vars
 	}{
 		{
@@ -89,12 +90,21 @@ func TestParseBasics(t *testing.T) {
 			file: "testdata/spaces.conf",
 			want: fftest.Vars{S: "i am the very model of a modern major general"},
 		},
+		{
+			name: "EnvVarIgnoreCommas default",
+			env:  map[string]string{"TEST_PARSE_X": "a, b ,c "},
+			want: fftest.Vars{X: []string{"a", " b ", "c "}},
+		},
+		{
+			name: "EnvVarIgnoreCommas true",
+			env:  map[string]string{"TEST_PARSE_X": "a, b ,c "},
+			opts: []ff.Option{ff.WithEnvVarIgnoreCommas(true)},
+			want: fftest.Vars{X: []string{"a, b ,c "}},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			var options []ff.Option
-
 			if testcase.file != "" {
-				options = append(options, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ff.PlainParser))
+				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ff.PlainParser))
 			}
 
 			if len(testcase.env) > 0 {
@@ -102,11 +112,11 @@ func TestParseBasics(t *testing.T) {
 					defer os.Setenv(k, os.Getenv(k))
 					os.Setenv(k, v)
 				}
-				options = append(options, ff.WithEnvVarPrefix("TEST_PARSE"))
+				testcase.opts = append(testcase.opts, ff.WithEnvVarPrefix("TEST_PARSE"))
 			}
 
 			fs, vars := fftest.Pair()
-			vars.ParseError = ff.Parse(fs, testcase.args, options...)
+			vars.ParseError = ff.Parse(fs, testcase.args, testcase.opts...)
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
 			}
