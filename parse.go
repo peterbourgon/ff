@@ -80,8 +80,14 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 				}
 			}
 			if value := os.Getenv(key); value != "" {
-				for _, individual := range strings.Split(value, ",") {
-					if err := fs.Set(f.Name, strings.TrimSpace(individual)); err != nil {
+				var values []string
+				if c.envVarIgnoreCommas {
+					values = []string{value}
+				} else {
+					values = strings.Split(value, ",")
+				}
+				for _, v := range values {
+					if err := fs.Set(f.Name, v); err != nil {
 						errs = append(errs, fmt.Sprintf("error setting flag %q from env var %q: %v", f.Name, key, err))
 					}
 				}
@@ -102,6 +108,7 @@ type Context struct {
 	configFileParser   ConfigFileParser
 	envVarPrefix       string
 	envVarNoPrefix     bool
+	envVarIgnoreCommas bool
 }
 
 // Option controls some aspect of parse behavior.
@@ -134,9 +141,7 @@ func WithConfigFileParser(p ConfigFileParser) Option {
 // WithEnvVarPrefix tells parse to look in the environment for variables with
 // the given prefix. Flag names are converted to environment variables by
 // capitalizing them, and replacing separator characters like periods or hyphens
-// with underscores. Additionally, if the environment variable's value contains
-// commas, each comma-delimited token is treated as a separate instance of the
-// associated flag name.
+// with underscores.
 func WithEnvVarPrefix(prefix string) Option {
 	return func(c *Context) {
 		c.envVarPrefix = prefix
@@ -149,6 +154,17 @@ func WithEnvVarPrefix(prefix string) Option {
 func WithEnvVarNoPrefix() Option {
 	return func(c *Context) {
 		c.envVarNoPrefix = true
+	}
+}
+
+// WithEnvVarIgnoreCommas tells parse to ignore commas in environment variable
+// values, treating the complete value as a single string passed to the
+// associated flag. By default, if an environment variable's value contains
+// commas, each comma-delimited token is treated as a separate instance of the
+// associated flag.
+func WithEnvVarIgnoreCommas(ignore bool) Option {
+	return func(c *Context) {
+		c.envVarIgnoreCommas = ignore
 	}
 }
 
