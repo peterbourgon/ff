@@ -4,24 +4,41 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"io"
 
+	"github.com/peterbourgon/ff/ffcli"
 	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/rootcmd"
 )
 
-// Config for the create subcommand, including a reference
-// to the global config, for access to global flags.
-type Config struct {
-	Global    *rootcmd.Config
-	Overwrite bool
+// Creater models the Create method of an objectapi.Client.
+type Creater interface {
+	Create(key, value string, overwrite bool) error
 }
 
-// NewConfig returns a flag set with the command's flags registered,
-// and a config that will have the value of those flags after parse.
-func NewConfig(global *rootcmd.Config) (*flag.FlagSet, *Config) {
-	cfg := Config{Global: global}
+// Config for the create subcommand, including a reference to the API client.
+type Config struct {
+	rootConfig *rootcmd.Config
+	out        io.Writer
+	overwrite  bool
+}
+
+// New TODO
+func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
+	cfg := Config{
+		rootConfig: rootConfig,
+		out:        out,
+	}
+
 	fs := flag.NewFlagSet("objectctl delete", flag.ExitOnError)
-	fs.BoolVar(&cfg.Overwrite, "overwrite", false, "overwrite existing object, if it exists")
-	return fs, &cfg
+	fs.BoolVar(&cfg.overwrite, "overwrite", false, "overwrite existing object, if it exists")
+
+	return &ffcli.Command{
+		Name:      "create",
+		Usage:     "objectctl create [flags] <key> <value data...>",
+		ShortHelp: "Create or overwrite an object",
+		FlagSet:   fs,
+		Exec:      cfg.Exec,
+	}
 }
 
 // Exec function for this command.

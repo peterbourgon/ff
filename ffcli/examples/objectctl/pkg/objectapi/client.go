@@ -14,7 +14,7 @@ type Object struct {
 
 // Client is meant to model an SDK client for a theoretical object store API.
 // Because we're only using it for demo purposes, it embeds a mock server with
-// fixture data.
+// fixed data.
 type Client struct {
 	token  string
 	server *mockServer
@@ -22,9 +22,6 @@ type Client struct {
 
 // NewClient is meant to model a constructor for the SDK client.
 func NewClient(token string) (*Client, error) {
-	if token == "" {
-		return nil, errors.New("no token provided")
-	}
 	return &Client{
 		token:  token,
 		server: newMockServer(),
@@ -95,7 +92,7 @@ func (s *mockServer) list(token string) ([]Object, error) {
 		return nil, errors.New("not authorized")
 	}
 
-	result := make([]Object, len(s.objects))
+	result := make([]Object, 0, len(s.objects))
 	for _, obj := range s.objects {
 		result = append(result, obj)
 	}
@@ -107,17 +104,17 @@ var defaultObjects = map[string]Object{
 	"apple": Object{
 		Key:    "apple",
 		Value:  "The fruit of any of certain other species of tree of the same genus.",
-		Access: mustParseTime(time.RFC3339, "2019-03-15Z15:01:00"),
+		Access: mustParseTime(time.RFC3339, "2019-03-15T15:01:00Z"),
 	},
 	"beach": Object{
 		Key:    "beach",
 		Value:  "The shore of a body of water, especially when sandy or pebbly.",
-		Access: mustParseTime(time.RFC3339, "2019-04-20Z12:21:30"),
+		Access: mustParseTime(time.RFC3339, "2019-04-20T12:21:30Z"),
 	},
 	"carillon": Object{
 		Key:    "carillon",
 		Value:  "A stationary set of chromatically tuned bells in a tower.",
-		Access: mustParseTime(time.RFC3339, "2019-07-04Z23:59:59"),
+		Access: mustParseTime(time.RFC3339, "2019-07-04T23:59:59Z"),
 	},
 }
 

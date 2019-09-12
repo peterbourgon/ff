@@ -1,19 +1,33 @@
 package main
 
 import (
-	"github.com/peterbourgon/ff/ffcli/examples/2-objectctl/pkg/createcmd"
-	"github.com/peterbourgon/ff/ffcli/examples/2-objectctl/pkg/deletecmd"
-	"github.com/peterbourgon/ff/ffcli/examples/2-objectctl/pkg/listcmd"
-	"github.com/peterbourgon/ff/ffcli/examples/2-objectctl/pkg/rootcmd"
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/peterbourgon/ff/ffcli"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/createcmd"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/deletecmd"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/listcmd"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/rootcmd"
 )
 
 func main() {
 	var (
-		rootFlagSet, rootConfig     = rootcmd.NewConfig()
-		listFlagSet, listConfig     = listcmd.NewConfig(rootConfig)
-		createFlagSet, createConfig = createcmd.NewConfig(rootConfig)
-		deleteFlagSet, deleteConfig = deletecmd.NewConfig(rootConfig)
+		out                     = os.Stdout
+		rootCommand, rootConfig = rootcmd.New()
+		createCommand           = createcmd.New(rootConfig, out)
+		deleteCommand           = deletecmd.New(rootConfig, out)
+		listCommand             = listcmd.New(rootConfig, out)
 	)
 
-	// TODO(pb): elide flagsets and return commands directly
+	rootCommand.Subcommands = []*ffcli.Command{
+		createCommand,
+		deleteCommand,
+		listCommand,
+	}
+
+	if err := rootCommand.Run(context.Background(), os.Args[1:]); err != nil {
+		fmt.Fprintf(out, "error: %v\n", err)
+	}
 }

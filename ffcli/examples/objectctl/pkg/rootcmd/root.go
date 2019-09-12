@@ -4,30 +4,38 @@ import (
 	"context"
 	"flag"
 
+	"github.com/peterbourgon/ff/ffcli"
 	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/objectapi"
 )
 
-// Config for the root command, including flags that
-// should be available to each subcommand.
+// Config for the root command, including flags and types that should be
+// available to each subcommand.
 type Config struct {
-	Client  *objectapi.Client
-	Token   string
+	token   string
 	Verbose bool
+	Client  *objectapi.Client
 }
 
-// NewConfig returns a flag set with the command's flags registered,
-// and a config that will have the value of those flags after parse.
-func NewConfig() (*flag.FlagSet, *Config) {
+// New TODO
+func New() (*ffcli.Command, *Config) {
 	var cfg Config
+
 	fs := flag.NewFlagSet("objectctl", flag.ExitOnError)
-	fs.StringVar(&cfg.Token, "token", "", "secret token for object API")
+	fs.StringVar(&cfg.token, "token", "", "secret token for object API")
 	fs.BoolVar(&cfg.Verbose, "v", false, "log verbose output")
-	return fs, &cfg
+
+	return &ffcli.Command{
+		Name:      "objectctl",
+		Usage:     "objectctl [flags] <subcommand> [flags] [<arg>...]",
+		FlagSet:   fs,
+		Postparse: cfg.Postparse,
+		Exec:      cfg.Exec,
+	}, &cfg
 }
 
 // Postparse initializes the client with the value of the token.
-func (c *Config) Postparse() (err error) {
-	c.Client, err = objectapi.NewClient(c.Token)
+func (c *Config) Postparse(ctx context.Context) (err error) {
+	c.Client, err = objectapi.NewClient(c.token)
 	return err
 }
 
