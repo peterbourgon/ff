@@ -1,6 +1,7 @@
 package ffcli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"strings"
@@ -93,7 +94,7 @@ func (c *Command) Run(args []string) error {
 
 	if c.Exec != nil {
 		err := c.Exec(c.FlagSet.Args())
-		if err == flag.ErrHelp {
+		if errors.Is(err, flag.ErrHelp) {
 			c.FlagSet.Usage()
 		}
 		return err
