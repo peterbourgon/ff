@@ -19,7 +19,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		return fmt.Errorf("error parsing commandline args: %v", err)
+		return fmt.Errorf("error parsing commandline args: %w", err)
 	}
 
 	provided := map[string]bool{}

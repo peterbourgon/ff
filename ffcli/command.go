@@ -3,7 +3,6 @@ package ffcli
 import (
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 	"text/tabwriter"
 
@@ -36,6 +35,13 @@ type Command struct {
 	// Optional.
 	LongHelp string
 
+	// UsageFunc generates a complete usage output, displayed to the user when
+	// the -h flag is passed. The function is invoked with its corresponding
+	// command, and its output should reflect the command's short and long help
+	// strings, subcommands, and available flags. Optional; if not provided, a
+	// suitable, compact default is used.
+	UsageFunc func(*Command) string
+
 	// FlagSet associated with this command. Optional, but if none is provided,
 	// an empty FlagSet will be defined and attached during Run, so that the -h
 	// flag works as expected.
@@ -51,6 +57,9 @@ type Command struct {
 	// Exec is invoked if this command has been determined to be the terminal
 	// command selected by the arguments provided to Run. The args passed to
 	// Exec are the args left over after flags parsing. Optional.
+	//
+	// If Exec returns flag.ErrHelp, Run will behave as if -h were passed and
+	// emit the complete usage output.
 	Exec func(args []string) error
 }
 
@@ -62,7 +71,14 @@ func (c *Command) Run(args []string) error {
 		c.FlagSet = flag.NewFlagSet(c.Name, flag.ExitOnError)
 	}
 
-	c.FlagSet.Usage = c.usage
+	if c.UsageFunc == nil {
+		c.UsageFunc = DefaultUsageFunc
+	}
+
+	c.FlagSet.Usage = func() {
+		fmt.Fprintln(c.FlagSet.Output(), c.UsageFunc(c))
+	}
+
 	if err := ff.Parse(c.FlagSet, args, c.Options...); err != nil {
 		return err
 	}
@@ -76,38 +92,45 @@ func (c *Command) Run(args []string) error {
 	}
 
 	if c.Exec != nil {
-		return c.Exec(c.FlagSet.Args())
+		err := c.Exec(c.FlagSet.Args())
+		if err == flag.ErrHelp {
+			c.FlagSet.Usage()
+		}
+		return err
 	}
-
 	return nil
 }
 
-func (c *Command) usage() {
-	fmt.Fprintf(os.Stdout, "USAGE\n")
+// DefaultUsageFunc is the default UsageFunc used for all commands
+// if no custom UsageFunc is provided.
+func DefaultUsageFunc(c *Command) string {
+	var b strings.Builder
+
+	fmt.Fprintf(&b, "USAGE\n")
 	if c.Usage != "" {
-		fmt.Fprintf(os.Stdout, "  %s\n", c.Usage)
+		fmt.Fprintf(&b, "  %s\n", c.Usage)
 	} else {
-		fmt.Fprintf(os.Stdout, "  %s\n", c.Name)
+		fmt.Fprintf(&b, "  %s\n", c.Name)
 	}
-	fmt.Fprintf(os.Stdout, "\n")
+	fmt.Fprintf(&b, "\n")
 
 	if c.LongHelp != "" {
-		fmt.Fprintf(os.Stdout, "%s\n\n", c.LongHelp)
+		fmt.Fprintf(&b, "%s\n\n", c.LongHelp)
 	}
 
 	if len(c.Subcommands) > 0 {
-		fmt.Fprintf(os.Stdout, "SUBCOMMANDS\n")
-		tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+		fmt.Fprintf(&b, "SUBCOMMANDS\n")
+		tw := tabwriter.NewWriter(&b, 0, 2, 2, ' ', 0)
 		for _, subcommand := range c.Subcommands {
 			fmt.Fprintf(tw, "  %s\t%s\n", subcommand.Name, subcommand.ShortHelp)
 		}
 		tw.Flush()
-		fmt.Fprintf(os.Stdout, "\n")
+		fmt.Fprintf(&b, "\n")
 	}
 
 	if countFlags(c.FlagSet) > 0 {
-		fmt.Fprintf(os.Stdout, "FLAGS\n")
-		tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+		fmt.Fprintf(&b, "FLAGS\n")
+		tw := tabwriter.NewWriter(&b, 0, 2, 2, ' ', 0)
 		c.FlagSet.VisitAll(func(f *flag.Flag) {
 			def := f.DefValue
 			if def == "" {
@@ -116,8 +139,10 @@ func (c *Command) usage() {
 			fmt.Fprintf(tw, "  -%s %s\t%s\n", f.Name, def, f.Usage)
 		})
 		tw.Flush()
-		fmt.Fprintf(os.Stdout, "\n")
+		fmt.Fprintf(&b, "\n")
 	}
+
+	return strings.TrimSpace(b.String())
 }
 
 func countFlags(fs *flag.FlagSet) (n int) {

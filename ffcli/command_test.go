@@ -1,7 +1,11 @@
 package ffcli_test
 
 import (
+	"bytes"
+	"errors"
+	"flag"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -136,10 +140,71 @@ func TestCommandRun(t *testing.T) {
 	}
 }
 
+func TestHelpUsage(t *testing.T) {
+	for _, testcase := range []struct {
+		name      string
+		usageFunc func(*ffcli.Command) string
+		exec      func([]string) error
+		args      []string
+		output    string
+	}{
+		{
+			name:   "nil",
+			args:   []string{"-h"},
+			output: defaultUsageFuncOutput,
+		},
+		{
+			name:      "DefaultUsageFunc",
+			usageFunc: ffcli.DefaultUsageFunc,
+			args:      []string{"-h"},
+			output:    defaultUsageFuncOutput,
+		},
+		{
+			name:      "custom usage",
+			usageFunc: func(*ffcli.Command) string { return "🍰" },
+			args:      []string{"-h"},
+			output:    "🍰\n",
+		},
+		{
+			name:      "ErrHelp",
+			usageFunc: func(*ffcli.Command) string { return "👹" },
+			exec:      func([]string) error { return flag.ErrHelp },
+			output:    "👹\n",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			fs, _ := fftest.Pair()
+			var buf bytes.Buffer
+			fs.SetOutput(&buf)
+
+			command := &ffcli.Command{
+				Name:      "TestUsageFunc",
+				Usage:     "TestUsageFunc [flags] <args>",
+				ShortHelp: "Some short help.",
+				LongHelp:  "Some long help.",
+				FlagSet:   fs,
+				UsageFunc: testcase.usageFunc,
+				Exec:      testcase.exec,
+			}
+
+			err := command.Run(testcase.args)
+			assertErrorIs(t, flag.ErrHelp, err)
+			assertString(t, testcase.output, buf.String())
+		})
+	}
+}
+
 func assertNoError(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func assertErrorIs(t *testing.T, want, have error) {
+	t.Helper()
+	if !errors.Is(have, want) {
+		t.Fatalf("want %v, have %v", want, have)
 	}
 }
 
@@ -166,3 +231,18 @@ func assertStringSlice(t *testing.T, want, have []string) {
 		t.Fatalf("want %#+v, have %#+v", want, have)
 	}
 }
+
+var defaultUsageFuncOutput = strings.TrimSpace(`
+USAGE
+  TestUsageFunc [flags] <args>
+
+Some long help.
+
+FLAGS
+  -b false  bool
+  -d 0s     time.Duration
+  -f 0      float64
+  -i 0      int
+  -s ...    string
+  -x ...    collection of strings (repeatable)
+`) + "\n"
