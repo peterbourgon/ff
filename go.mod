@@ -1,5 +1,7 @@
 module github.com/peterbourgon/ff
 
+go 1.13
+
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/mitchellh/go-wordwrap v1.0.0
