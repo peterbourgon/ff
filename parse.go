@@ -41,7 +41,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		defer f.Close()
 
 		err = c.configFileParser(f, func(name, value string) error {
-			if fs.Lookup(name) == nil {
+			if fs.Lookup(name) == nil && !c.ignoreUndefined {
 				return fmt.Errorf("config file flag %q not defined in flag set", name)
 			}
 
@@ -109,6 +109,7 @@ type Context struct {
 	envVarPrefix       string
 	envVarNoPrefix     bool
 	envVarIgnoreCommas bool
+	ignoreUndefined    bool
 }
 
 // Option controls some aspect of parse behavior.
@@ -165,6 +166,14 @@ func WithEnvVarNoPrefix() Option {
 func WithEnvVarIgnoreCommas(ignore bool) Option {
 	return func(c *Context) {
 		c.envVarIgnoreCommas = ignore
+	}
+}
+
+// WithIgnoreUndefined tells parse to ignore undefined flags that it encounters,
+// which would normally throw an error.
+func WithIgnoreUndefined(ignore bool) Option {
+	return func(c *Context) {
+		c.ignoreUndefined = ignore
 	}
 }
 

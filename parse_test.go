@@ -97,6 +97,12 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: "one,two,three", X: []string{"one,two,three"}},
 		},
 		{
+			name: "WithIgnoreUndefined",
+			env:  map[string]string{"TEST_PARSE_UNDEFINED": "one", "TEST_PARSE_S": "one"},
+			opts: []ff.Option{ff.WithIgnoreUndefined(true)},
+			want: fftest.Vars{S: "one"},
+		},
+		{
 			name: "env var comma whitespace",
 			env:  map[string]string{"TEST_PARSE_S": "one, two, three ", "TEST_PARSE_X": "one, two, three "},
 			want: fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
