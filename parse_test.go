@@ -97,10 +97,22 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: "one,two,three", X: []string{"one,two,three"}},
 		},
 		{
-			name: "WithIgnoreUndefined",
+			name: "WithIgnoreUndefined env",
 			env:  map[string]string{"TEST_PARSE_UNDEFINED": "one", "TEST_PARSE_S": "one"},
 			opts: []ff.Option{ff.WithIgnoreUndefined(true)},
 			want: fftest.Vars{S: "one"},
+		},
+		{
+			name: "WithIgnoreUndefined file true",
+			file: "testdata/undefined.conf",
+			opts: []ff.Option{ff.WithIgnoreUndefined(true)},
+			want: fftest.Vars{S: "one"},
+		},
+		{
+			name: "WithIgnoreUndefined file false",
+			file: "testdata/undefined.conf",
+			opts: []ff.Option{ff.WithIgnoreUndefined(false)},
+			want: fftest.Vars{S: "", WantParseErrorString: "config file flag"},
 		},
 		{
 			name: "env var comma whitespace",
