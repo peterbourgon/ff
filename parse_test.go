@@ -112,7 +112,7 @@ func TestParseBasics(t *testing.T) {
 			name: "WithIgnoreUndefined file false",
 			file: "testdata/undefined.conf",
 			opts: []ff.Option{ff.WithIgnoreUndefined(false)},
-			want: fftest.Vars{S: "", WantParseErrorString: "config file flag"},
+			want: fftest.Vars{WantParseErrorString: "config file flag"},
 		},
 		{
 			name: "env var comma whitespace",
