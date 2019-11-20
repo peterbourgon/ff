@@ -35,30 +35,30 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 	if c.configFile != "" && c.configFileParser != nil {
 		f, err := os.Open(c.configFile)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		err = c.configFileParser(f, func(name, value string) error {
-			if fs.Lookup(name) == nil {
-				if c.ignoreUndefined {
-					return nil
+		if err == nil {
+			defer f.Close()
+			err = c.configFileParser(f, func(name, value string) error {
+				if fs.Lookup(name) == nil {
+					if c.ignoreUndefined {
+						return nil
+					}
+					return fmt.Errorf("config file flag %q not defined in flag set", name)
 				}
-				return fmt.Errorf("config file flag %q not defined in flag set", name)
-			}
 
-			if provided[name] {
-				return nil // commandline args take precedence
-			}
+				if provided[name] {
+					return nil // commandline args take precedence
+				}
 
-			if err := fs.Set(name, value); err != nil {
-				return fmt.Errorf("error setting flag %q from config file: %v", name, err)
-			}
+				if err := fs.Set(name, value); err != nil {
+					return fmt.Errorf("error setting flag %q from config file: %v", name, err)
+				}
 
-			return nil
-		})
-		if err != nil {
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		} else if err != nil && !c.allowMissingConfigFile {
 			return err
 		}
 	}
@@ -106,13 +106,14 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 // Context contains private fields used during parsing.
 type Context struct {
-	configFile         string
-	configFileFlagName string
-	configFileParser   ConfigFileParser
-	envVarPrefix       string
-	envVarNoPrefix     bool
-	envVarIgnoreCommas bool
-	ignoreUndefined    bool
+	configFile             string
+	configFileFlagName     string
+	configFileParser       ConfigFileParser
+	allowMissingConfigFile bool
+	envVarPrefix           string
+	envVarNoPrefix         bool
+	envVarIgnoreCommas     bool
+	ignoreUndefined        bool
 }
 
 // Option controls some aspect of parse behavior.
@@ -139,6 +140,14 @@ func WithConfigFileFlag(flagname string) Option {
 func WithConfigFileParser(p ConfigFileParser) Option {
 	return func(c *Context) {
 		c.configFileParser = p
+	}
+}
+
+// WithAllowMissingConfigFile will permit parse to succeed, even if a provided
+// config file doesn't exist.
+func WithAllowMissingConfigFile(allow bool) Option {
+	return func(c *Context) {
+		c.allowMissingConfigFile = allow
 	}
 }
 
