@@ -191,3 +191,48 @@ func TestParseIssue16(t *testing.T) {
 		})
 	}
 }
+
+func TestParseConfigFile(t *testing.T) {
+	for _, testcase := range []struct {
+		name         string
+		missing      bool
+		allowMissing bool
+		parseError   string
+	}{
+		{
+			name: "has config file",
+		},
+		{
+			name:       "config file missing",
+			missing:    true,
+			parseError: "open dummy: no such file or directory",
+		},
+		{
+			name:         "config file missing + allow missing",
+			missing:      true,
+			allowMissing: true,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			filename := "dummy"
+			if !testcase.missing {
+				var cleanup func()
+				filename, cleanup = fftest.TempFile(t, "")
+				defer cleanup()
+			}
+
+			options := []ff.Option{ff.WithConfigFile(filename), ff.WithConfigFileParser(ff.PlainParser)}
+			if testcase.allowMissing {
+				options = append(options, ff.WithAllowMissingConfigFile(true))
+			}
+
+			fs, vars := fftest.Pair()
+			vars.ParseError = ff.Parse(fs, []string{}, options...)
+
+			want := fftest.Vars{WantParseErrorString: testcase.parseError}
+			if err := fftest.Compare(&want, vars); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
