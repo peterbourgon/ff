@@ -6,26 +6,40 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/BurntSushi/toml"
+	"github.com/pelletier/go-toml"
 	"github.com/peterbourgon/ff"
 )
 
 // Parser is a parser for TOML file format. Flags and their values are read
 // from the key/value pairs defined in the config file.
 func Parser(r io.Reader, set func(name, value string) error) error {
-	var m map[string]interface{}
-	_, err := toml.DecodeReader(r, &m)
+	tree, err := toml.LoadReader(r)
 	if err != nil {
 		return ParseError{Inner: err}
 	}
-	for key, val := range m {
-		values, err := valsToStrs(val)
-		if err != nil {
-			return ParseError{Inner: err}
+	return parseTree(tree, "", set)
+}
+
+func parseTree(tree *toml.Tree, parent string, set func(name, value string) error) error {
+	for _, key := range tree.Keys() {
+		name := key
+		if parent != "" {
+			name = parent + "-" + key
 		}
-		for _, value := range values {
-			if err = set(key, value); err != nil {
+		switch t := tree.Get(key).(type) {
+		case *toml.Tree:
+			if err := parseTree(t, name, set); err != nil {
 				return err
+			}
+		case interface{}:
+			values, err := valsToStrs(t)
+			if err != nil {
+				return ParseError{Inner: err}
+			}
+			for _, value := range values {
+				if err = set(name, value); err != nil {
+					return err
+				}
 			}
 		}
 	}
