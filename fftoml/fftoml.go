@@ -13,22 +13,50 @@ import (
 // Parser is a parser for TOML file format. Flags and their values are read
 // from the key/value pairs defined in the config file.
 func Parser(r io.Reader, set func(name, value string) error) error {
-	tree, err := toml.LoadReader(r)
-	if err != nil {
-		return ParseError{Inner: err}
-	}
-	return parseTree(tree, "", set)
+	return ParserWith()(r, set)
 }
 
-func parseTree(tree *toml.Tree, parent string, set func(name, value string) error) error {
+type config struct {
+	separator string
+}
+
+// Option is a function which configures a fftoml.ConfigFileParser
+type Option func(*config)
+
+// FlagSeparator is an option which configures a separator
+// to use when constructing a flag name
+func FlagSeparator(s string) Option {
+	return func(c *config) {
+		c.separator = s
+	}
+}
+
+// ParserWith configures and returns a new ConfigFileParser using the
+// provided slice of Option types
+// By default the returned Parser uses a "." as a separator
+func ParserWith(opts ...Option) ff.ConfigFileParser {
+	return func(r io.Reader, set func(name, value string) error) error {
+		config := config{separator: "."}
+		for _, opt := range opts {
+			opt(&config)
+		}
+		tree, err := toml.LoadReader(r)
+		if err != nil {
+			return ParseError{Inner: err}
+		}
+		return parseTree(tree, "", config.separator, set)
+	}
+}
+
+func parseTree(tree *toml.Tree, parent, separator string, set func(name, value string) error) error {
 	for _, key := range tree.Keys() {
 		name := key
 		if parent != "" {
-			name = parent + "-" + key
+			name = parent + separator + key
 		}
 		switch t := tree.Get(key).(type) {
 		case *toml.Tree:
-			if err := parseTree(t, name, set); err != nil {
+			if err := parseTree(t, name, separator, set); err != nil {
 				return err
 			}
 		case interface{}:
