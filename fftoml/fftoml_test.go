@@ -100,7 +100,8 @@ func TestParser_WithTables(t *testing.T) {
 
 			if err := ff.Parse(fs, []string{},
 				ff.WithConfigFile("testdata/table.toml"),
-				ff.WithConfigFileParser(fftoml.ParserWith(testcase.opts...))); err != nil {
+				ff.WithConfigFileParser(fftoml.ParserWith(testcase.opts...)),
+			); err != nil {
 				t.Fatal(err)
 			}
 
