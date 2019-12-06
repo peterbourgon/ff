@@ -82,7 +82,7 @@ func TestParser_WithTables(t *testing.T) {
 		},
 		{
 			name:       "defaults",
-			opts:       []fftoml.Option{fftoml.FlagSeparator("-")},
+			opts:       []fftoml.Option{fftoml.TableDelimeter("-")},
 			stringKey:  "string-key",
 			floatKey:   "float-nested-key",
 			stringsKey: "strings-nested-key",
@@ -100,7 +100,7 @@ func TestParser_WithTables(t *testing.T) {
 
 			if err := ff.Parse(fs, []string{},
 				ff.WithConfigFile("testdata/table.toml"),
-				ff.WithConfigFileParser(fftoml.ParserWith(testcase.opts...))); err != nil {
+				ff.WithConfigFileParser(fftoml.New(testcase.opts...).Parse)); err != nil {
 				t.Fatal(err)
 			}
 

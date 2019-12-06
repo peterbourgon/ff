@@ -13,50 +13,59 @@ import (
 // Parser is a parser for TOML file format. Flags and their values are read
 // from the key/value pairs defined in the config file.
 func Parser(r io.Reader, set func(name, value string) error) error {
-	return ParserWith()(r, set)
+	return New().Parse(r, set)
 }
 
-type config struct {
-	separator string
+// ConfigFileParser is a parser for the TOML file format. Flags and their values
+// are read from the key/value pairs defined in the config file.
+// Nested tables and keys are concatenated with a delimeter to derive the
+// relevant flag name.
+type ConfigFileParser struct {
+	delimeter string
 }
 
-// Option is a function which configures a fftoml.ConfigFileParser
-type Option func(*config)
+// New constructs and configures a ConfigFileParser using the provided options.
+func New(opts ...Option) (c ConfigFileParser) {
+	c.delimeter = "."
+	for _, opt := range opts {
+		opt(&c)
+	}
+	return c
+}
 
-// FlagSeparator is an option which configures a separator
-// to use when constructing a flag name
-func FlagSeparator(s string) Option {
-	return func(c *config) {
-		c.separator = s
+// Parse parses the provided io.Reader as a TOML file and uses the provided set function
+// to set flag names derived from the tables names and their key/value pairs.
+func (c ConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
+	tree, err := toml.LoadReader(r)
+	if err != nil {
+		return ParseError{Inner: err}
+	}
+
+	return parseTree(tree, "", c.delimeter, set)
+}
+
+// Option is a function which changes the behavior of the TOML config file parser.
+type Option func(*ConfigFileParser)
+
+// TableDelimeter is an option which configures a delimeter
+// used to prefix table names onto keys when constructing
+// their associated flag name.
+// The default delimeter is "."
+func TableDelimeter(d string) Option {
+	return func(c *ConfigFileParser) {
+		c.delimeter = d
 	}
 }
 
-// ParserWith configures and returns a new ConfigFileParser using the
-// provided slice of Option types
-// By default the returned Parser uses a "." as a separator
-func ParserWith(opts ...Option) ff.ConfigFileParser {
-	return func(r io.Reader, set func(name, value string) error) error {
-		config := config{separator: "."}
-		for _, opt := range opts {
-			opt(&config)
-		}
-		tree, err := toml.LoadReader(r)
-		if err != nil {
-			return ParseError{Inner: err}
-		}
-		return parseTree(tree, "", config.separator, set)
-	}
-}
-
-func parseTree(tree *toml.Tree, parent, separator string, set func(name, value string) error) error {
+func parseTree(tree *toml.Tree, parent, delimeter string, set func(name, value string) error) error {
 	for _, key := range tree.Keys() {
 		name := key
 		if parent != "" {
-			name = parent + separator + key
+			name = parent + delimeter + key
 		}
 		switch t := tree.Get(key).(type) {
 		case *toml.Tree:
-			if err := parseTree(t, name, separator, set); err != nil {
+			if err := parseTree(t, name, delimeter, set); err != nil {
 				return err
 			}
 		case interface{}:
