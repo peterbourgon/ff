@@ -1,0 +1,7 @@
+[string]
+key = "a string"
+[float]
+[float.nested]
+key = 1.23
+[strings.nested]
+key = ["one", "two", "three"]
