@@ -82,7 +82,7 @@ func TestParser_WithTables(t *testing.T) {
 		},
 		{
 			name:       "defaults",
-			opts:       []fftoml.Option{fftoml.TableDelimeter("-")},
+			opts:       []fftoml.Option{fftoml.WithTableDelimiter("-")},
 			stringKey:  "string-key",
 			floatKey:   "float-nested-key",
 			stringsKey: "strings-nested-key",

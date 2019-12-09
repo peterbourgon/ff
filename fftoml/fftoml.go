@@ -18,15 +18,15 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 
 // ConfigFileParser is a parser for the TOML file format. Flags and their values
 // are read from the key/value pairs defined in the config file.
-// Nested tables and keys are concatenated with a delimeter to derive the
+// Nested tables and keys are concatenated with a delimiter to derive the
 // relevant flag name.
 type ConfigFileParser struct {
-	delimeter string
+	delimiter string
 }
 
 // New constructs and configures a ConfigFileParser using the provided options.
 func New(opts ...Option) (c ConfigFileParser) {
-	c.delimeter = "."
+	c.delimiter = "."
 	for _, opt := range opts {
 		opt(&c)
 	}
@@ -41,31 +41,39 @@ func (c ConfigFileParser) Parse(r io.Reader, set func(name, value string) error)
 		return ParseError{Inner: err}
 	}
 
-	return parseTree(tree, "", c.delimeter, set)
+	return parseTree(tree, "", c.delimiter, set)
 }
 
 // Option is a function which changes the behavior of the TOML config file parser.
 type Option func(*ConfigFileParser)
 
-// TableDelimeter is an option which configures a delimeter
+// WithTableDelimiter is an option which configures a delimiter
 // used to prefix table names onto keys when constructing
 // their associated flag name.
-// The default delimeter is "."
-func TableDelimeter(d string) Option {
+// The default delimiter is "."
+//
+// For example, given the following TOML
+//
+//     [section.subsection]
+//     value = 10
+//
+// Parse will match to a flag with the name `-section.subsection.value` by default.
+// If the delimiter is "-", Parse will match to `-section-subsection-value` instead.
+func WithTableDelimiter(d string) Option {
 	return func(c *ConfigFileParser) {
-		c.delimeter = d
+		c.delimiter = d
 	}
 }
 
-func parseTree(tree *toml.Tree, parent, delimeter string, set func(name, value string) error) error {
+func parseTree(tree *toml.Tree, parent, delimiter string, set func(name, value string) error) error {
 	for _, key := range tree.Keys() {
 		name := key
 		if parent != "" {
-			name = parent + delimeter + key
+			name = parent + delimiter + key
 		}
 		switch t := tree.Get(key).(type) {
 		case *toml.Tree:
-			if err := parseTree(t, name, delimeter, set); err != nil {
+			if err := parseTree(t, name, delimiter, set); err != nil {
 				return err
 			}
 		case interface{}:
