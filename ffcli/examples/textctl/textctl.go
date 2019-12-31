@@ -67,7 +67,7 @@ func main() {
 		},
 	}
 
-	if err := root.Run(context.Background(), os.Args[1:]); err != nil {
+	if err := root.ParseAndRun(context.Background(), os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}

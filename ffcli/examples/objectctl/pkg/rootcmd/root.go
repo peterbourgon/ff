@@ -11,7 +11,7 @@ import (
 // Config for the root command, including flags and types that should be
 // available to each subcommand.
 type Config struct {
-	token   string
+	Token   string
 	Verbose bool
 	Client  *objectapi.Client
 }
@@ -21,22 +21,15 @@ func New() (*ffcli.Command, *Config) {
 	var cfg Config
 
 	fs := flag.NewFlagSet("objectctl", flag.ExitOnError)
-	fs.StringVar(&cfg.token, "token", "", "secret token for object API")
+	fs.StringVar(&cfg.Token, "token", "", "secret token for object API")
 	fs.BoolVar(&cfg.Verbose, "v", false, "log verbose output")
 
 	return &ffcli.Command{
-		Name:      "objectctl",
-		Usage:     "objectctl [flags] <subcommand> [flags] [<arg>...]",
-		FlagSet:   fs,
-		Postparse: cfg.Postparse,
-		Exec:      cfg.Exec,
+		Name:    "objectctl",
+		Usage:   "objectctl [flags] <subcommand> [flags] [<arg>...]",
+		FlagSet: fs,
+		Exec:    cfg.Exec,
 	}, &cfg
-}
-
-// Postparse initializes the client with the value of the token.
-func (c *Config) Postparse(ctx context.Context) (err error) {
-	c.Client, err = objectapi.NewClient(c.token)
-	return err
 }
 
 // Exec function for this command.

@@ -53,14 +53,12 @@ type Command struct {
 	// Optional.
 	Options []ff.Option
 
-	// Postparse is invoked when this command has been visited by Run, after its
-	// FlagSet has been parsed, but before any subcommands are visited. It can
-	// be used to perform setup that relies on the value of a flag. If Postparse
-	// returns an error, Run is aborted with that error. Optional.
-	Postparse func(ctx context.Context) error
-
 	// Subcommands accessible underneath (i.e. after) this command. Optional.
 	Subcommands []*Command
+
+	// A successful Parse populates these fields.
+	selected *Command // the command itself (if terminal) or a subcommand
+	args     []string // args that should be passed to Run, if any
 
 	// Exec is invoked if this command has been determined to be the terminal
 	// command selected by the arguments provided to Run. The args passed to
@@ -71,10 +69,15 @@ type Command struct {
 	Exec func(ctx context.Context, args []string) error
 }
 
-// Run parses the commandline arguments for this command and all sub-commands
-// recursively, and invokes the Exec function for the terminal command, if it's
-// defined.
-func (c *Command) Run(ctx context.Context, args []string) error {
+// Parse the commandline arguments for this command and all sub-commands
+// recursively, defining flags along the way. If Parse returns without
+// an error, the terminal command has been successfully identified, and may
+// be invoked by calling Run.
+func (c *Command) Parse(args []string) error {
+	if c.selected != nil {
+		return nil
+	}
+
 	if c.FlagSet == nil {
 		c.FlagSet = flag.NewFlagSet(c.Name, flag.ExitOnError)
 	}
@@ -91,27 +94,57 @@ func (c *Command) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if c.Postparse != nil {
-		if err := c.Postparse(ctx); err != nil {
-			return err
-		}
-	}
-
-	if len(c.FlagSet.Args()) > 0 {
+	if fsargs := c.FlagSet.Args(); len(fsargs) > 0 {
+		c.args = fsargs
 		for _, subcommand := range c.Subcommands {
 			if strings.EqualFold(c.FlagSet.Args()[0], subcommand.Name) {
-				return subcommand.Run(ctx, c.FlagSet.Args()[1:])
+				c.selected = subcommand
+				return subcommand.Parse(c.FlagSet.Args()[1:])
 			}
 		}
 	}
 
-	if c.Exec != nil {
-		err := c.Exec(ctx, c.FlagSet.Args())
+	c.selected = c
+	return nil
+}
+
+// ErrUnparsed is returned by Run if Parse hasn't been called first.
+var ErrUnparsed = errors.New("command tree is unparsed, can't run")
+
+// Run selects the terminal command in a command tree previously identified by a
+// successful call to Parse, and calls that command's Exec function with the
+// appropriate subset of commandline args.
+func (c *Command) Run(ctx context.Context) (err error) {
+	defer func() {
 		if errors.Is(err, flag.ErrHelp) {
 			c.FlagSet.Usage()
 		}
+	}()
+
+	switch {
+	case c.selected == nil:
+		return ErrUnparsed
+	case c.selected == c && c.Exec != nil:
+		return c.Exec(ctx, c.args)
+	case c.selected == c && c.Exec == nil:
+		return nil
+	default:
+		return c.selected.Run(ctx)
+	}
+}
+
+// ParseAndRun is a helper function that calls Parse and then Run in a single
+// invocation. It's useful for simple command trees that don't need two-phase
+// setup.
+func (c *Command) ParseAndRun(ctx context.Context, args []string) error {
+	if err := c.Parse(args); err != nil {
 		return err
 	}
+
+	if err := c.Run(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -127,7 +128,7 @@ func TestCommandRun(t *testing.T) {
 				Exec:        func(_ context.Context, args []string) error { rootran, rootargs = true, args; return nil },
 			}
 
-			err := root.Run(context.Background(), testcase.args)
+			err := root.ParseAndRun(context.Background(), testcase.args)
 			assertNoError(t, err)
 			assertNoError(t, fftest.Compare(&testcase.rootvars, rootvars))
 			assertBool(t, testcase.rootran, rootran)
@@ -189,34 +190,35 @@ func TestHelpUsage(t *testing.T) {
 				Exec:      testcase.exec,
 			}
 
-			err := command.Run(context.Background(), testcase.args)
+			err := command.ParseAndRun(context.Background(), testcase.args)
 			assertErrorIs(t, flag.ErrHelp, err)
 			assertString(t, testcase.output, buf.String())
 		})
 	}
 }
 
-func ExampleCommand_Postparse() {
+func ExampleCommand_Parse_then_Run() {
 	// Assume our CLI will use some client that requires a token.
 	type FooClient struct {
 		token string
 	}
 
-	// It'll have a constructor.
+	// That client would have a constructor.
 	NewFooClient := func(token string) *FooClient {
 		return &FooClient{token: token}
 	}
 
-	// We would define that token in the root command's FlagSet.
+	// We define the token in the root command's FlagSet.
 	var (
 		rootFlagSet = flag.NewFlagSet("mycommand", flag.ExitOnError)
 		token       = rootFlagSet.String("token", "", "API token")
 	)
 
-	// Create a placeholder client.
+	// Create a placeholder client, initially nil.
 	var client *FooClient
 
-	// That client will be usable by subcommands...
+	// Commands can reference and use it, because by the time their Exec
+	// function is invoked, the client will be constructed.
 	foo := &ffcli.Command{
 		Name: "foo",
 		Exec: func(context.Context, []string) error {
@@ -225,17 +227,23 @@ func ExampleCommand_Postparse() {
 		},
 	}
 
-	// ...as long as we set it up in the root command's Postparse.
 	root := &ffcli.Command{
-		FlagSet: rootFlagSet,
-		Postparse: func(context.Context) error {
-			client = NewFooClient(*token)
-			return nil
-		},
+		FlagSet:     rootFlagSet,
 		Subcommands: []*ffcli.Command{foo},
 	}
 
-	root.Run(context.Background(), []string{"-token", "SECRETKEY", "foo"})
+	// Call Parse first, to populate flags and select a terminal command.
+	if err := root.Parse([]string{"-token", "SECRETKEY", "foo"}); err != nil {
+		log.Fatalf("Parse failure: %v", err)
+	}
+
+	// After a successful Parse, we can construct a FooClient with the token.
+	client = NewFooClient(*token)
+
+	// Then call Run, which will select the foo subcommand and invoke it.
+	if err := root.Run(context.Background()); err != nil {
+		log.Fatalf("Run failure: %v", err)
+	}
 
 	// Output:
 	// subcommand foo can use the client: &{SECRETKEY}
