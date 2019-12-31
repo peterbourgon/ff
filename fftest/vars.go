@@ -1,13 +1,12 @@
 package fftest
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"reflect"
 	"strings"
 	"time"
-
-	"golang.org/x/xerrors"
 )
 
 // Pair returns a predefined flag set, and a predefined set of variables that
@@ -42,7 +41,7 @@ type Vars struct {
 
 	// If a test case expects an input to generate a parse error,
 	// it can specify that error here. The Compare helper will
-	// look for it using xerrors.Is.
+	// look for it using errors.Is.
 	WantParseErrorIs error
 
 	// If a test case expects an input to generate a parse error,
@@ -67,7 +66,7 @@ func Compare(want, have *Vars) error {
 			return fmt.Errorf("want clean parse, have error (%v)", have.ParseError)
 		}
 
-		if want.WantParseErrorIs != nil && have.ParseError != nil && !xerrors.Is(have.ParseError, want.WantParseErrorIs) {
+		if want.WantParseErrorIs != nil && have.ParseError != nil && !errors.Is(have.ParseError, want.WantParseErrorIs) {
 			return fmt.Errorf("want wrapped error (%#+v), have error (%#+v)", want.WantParseErrorIs, have.ParseError)
 		}
 
