@@ -15,6 +15,7 @@ func TestParseBasics(t *testing.T) {
 		env  map[string]string
 		file string
 		args []string
+		opts []ff.Option
 		want fftest.Vars
 	}{
 		{
@@ -84,12 +85,44 @@ func TestParseBasics(t *testing.T) {
 			file: "testdata/spaces.conf",
 			want: fftest.Vars{S: "i am the very model of a modern major general"},
 		},
+		{
+			name: "default comma behavior",
+			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
+			want: fftest.Vars{S: "three", X: []string{"one", "two", "three"}},
+		},
+		{
+			name: "WithEnvVarIgnoreCommas",
+			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
+			opts: []ff.Option{ff.WithEnvVarIgnoreCommas(true)},
+			want: fftest.Vars{S: "one,two,three", X: []string{"one,two,three"}},
+		},
+		{
+			name: "WithIgnoreUndefined env",
+			env:  map[string]string{"TEST_PARSE_UNDEFINED": "one", "TEST_PARSE_S": "one"},
+			opts: []ff.Option{ff.WithIgnoreUndefined(true)},
+			want: fftest.Vars{S: "one"},
+		},
+		{
+			name: "WithIgnoreUndefined file true",
+			file: "testdata/undefined.conf",
+			opts: []ff.Option{ff.WithIgnoreUndefined(true)},
+			want: fftest.Vars{S: "one"},
+		},
+		{
+			name: "WithIgnoreUndefined file false",
+			file: "testdata/undefined.conf",
+			opts: []ff.Option{ff.WithIgnoreUndefined(false)},
+			want: fftest.Vars{WantParseErrorString: "config file flag"},
+		},
+		{
+			name: "env var comma whitespace",
+			env:  map[string]string{"TEST_PARSE_S": "one, two, three ", "TEST_PARSE_X": "one, two, three "},
+			want: fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			var options []ff.Option
-
 			if testcase.file != "" {
-				options = append(options, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ff.PlainParser))
+				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ff.PlainParser))
 			}
 
 			if len(testcase.env) > 0 {
@@ -97,11 +130,11 @@ func TestParseBasics(t *testing.T) {
 					defer os.Setenv(k, os.Getenv(k))
 					os.Setenv(k, v)
 				}
-				options = append(options, ff.WithEnvVarPrefix("TEST_PARSE"))
+				testcase.opts = append(testcase.opts, ff.WithEnvVarPrefix("TEST_PARSE"))
 			}
 
 			fs, vars := fftest.Pair()
-			vars.ParseError = ff.Parse(fs, testcase.args, options...)
+			vars.ParseError = ff.Parse(fs, testcase.args, testcase.opts...)
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
 			}
@@ -152,6 +185,51 @@ func TestParseIssue16(t *testing.T) {
 			)
 
 			want := fftest.Vars{S: testcase.want}
+			if err := fftest.Compare(&want, vars); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestParseConfigFile(t *testing.T) {
+	for _, testcase := range []struct {
+		name         string
+		missing      bool
+		allowMissing bool
+		parseError   string
+	}{
+		{
+			name: "has config file",
+		},
+		{
+			name:       "config file missing",
+			missing:    true,
+			parseError: "open dummy: no such file or directory",
+		},
+		{
+			name:         "config file missing + allow missing",
+			missing:      true,
+			allowMissing: true,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			filename := "dummy"
+			if !testcase.missing {
+				var cleanup func()
+				filename, cleanup = fftest.TempFile(t, "")
+				defer cleanup()
+			}
+
+			options := []ff.Option{ff.WithConfigFile(filename), ff.WithConfigFileParser(ff.PlainParser)}
+			if testcase.allowMissing {
+				options = append(options, ff.WithAllowMissingConfigFile(true))
+			}
+
+			fs, vars := fftest.Pair()
+			vars.ParseError = ff.Parse(fs, []string{}, options...)
+
+			want := fftest.Vars{WantParseErrorString: testcase.parseError}
 			if err := fftest.Compare(&want, vars); err != nil {
 				t.Fatal(err)
 			}

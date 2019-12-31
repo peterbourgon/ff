@@ -3,6 +3,7 @@ package ffcli_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"reflect"
@@ -189,7 +190,7 @@ func TestHelpUsage(t *testing.T) {
 			}
 
 			err := command.Run(context.Background(), testcase.args)
-			assertError(t, flag.ErrHelp, err)
+			assertErrorIs(t, flag.ErrHelp, err)
 			assertString(t, testcase.output, buf.String())
 		})
 	}
@@ -247,9 +248,9 @@ func assertNoError(t *testing.T, err error) {
 	}
 }
 
-func assertError(t *testing.T, want, have error) {
+func assertErrorIs(t *testing.T, want, have error) {
 	t.Helper()
-	if want != have {
+	if !errors.Is(have, want) {
 		t.Fatalf("want %v, have %v", want, have)
 	}
 }

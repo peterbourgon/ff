@@ -2,6 +2,7 @@ package ffcli
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"strings"
@@ -37,14 +38,14 @@ type Command struct {
 	LongHelp string
 
 	// UsageFunc generates a complete usage output, displayed to the user when
-	// the -h flag is passed. The function will be invoked with its
-	// corresponding command, and its output should reflect the command's short
-	// and long help strings, subcommands, and available flags. Optional; if not
-	// provided, a suitable, compact default is used.
+	// the -h flag is passed. The function is invoked with its corresponding
+	// command, and its output should reflect the command's short and long help
+	// strings, subcommands, and available flags. Optional; if not provided, a
+	// suitable, compact default is used.
 	UsageFunc func(c *Command) string
 
-	// FlagSet associated with this command. Optional; if none is provided, an
-	// empty FlagSet will be constructed and attached during Run, so that the -h
+	// FlagSet associated with this command. Optional, but if none is provided,
+	// an empty FlagSet will be defined and attached during Run, so that the -h
 	// flag works as expected.
 	FlagSet *flag.FlagSet
 
@@ -106,16 +107,16 @@ func (c *Command) Run(ctx context.Context, args []string) error {
 
 	if c.Exec != nil {
 		err := c.Exec(ctx, c.FlagSet.Args())
-		if err == flag.ErrHelp {
+		if errors.Is(err, flag.ErrHelp) {
 			c.FlagSet.Usage()
 		}
 		return err
 	}
-
 	return nil
 }
 
-// DefaultUsageFunc is the default UsageFunc used if none is provided.
+// DefaultUsageFunc is the default UsageFunc used for all commands
+// if no custom UsageFunc is provided.
 func DefaultUsageFunc(c *Command) string {
 	var b strings.Builder
 

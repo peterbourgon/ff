@@ -19,7 +19,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		return err
+		return fmt.Errorf("error parsing commandline args: %w", err)
 	}
 
 	provided := map[string]bool{}
@@ -35,27 +35,30 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 	if c.configFile != "" && c.configFileParser != nil {
 		f, err := os.Open(c.configFile)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+		if err == nil {
+			defer f.Close()
+			err = c.configFileParser(f, func(name, value string) error {
+				if fs.Lookup(name) == nil {
+					if c.ignoreUndefined {
+						return nil
+					}
+					return fmt.Errorf("config file flag %q not defined in flag set", name)
+				}
 
-		err = c.configFileParser(f, func(name, value string) error {
-			if fs.Lookup(name) == nil {
-				return fmt.Errorf("config file flag %q not defined in flag set", name)
+				if provided[name] {
+					return nil // commandline args take precedence
+				}
+
+				if err := fs.Set(name, value); err != nil {
+					return fmt.Errorf("error setting flag %q from config file: %v", name, err)
+				}
+
+				return nil
+			})
+			if err != nil {
+				return err
 			}
-
-			if provided[name] {
-				return nil // commandline args take precedence
-			}
-
-			if err := fs.Set(name, value); err != nil {
-				return fmt.Errorf("error setting flag %q from config file: %v", name, err)
-			}
-
-			return nil
-		})
-		if err != nil {
+		} else if err != nil && !c.allowMissingConfigFile {
 			return err
 		}
 	}
@@ -80,8 +83,14 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 				}
 			}
 			if value := os.Getenv(key); value != "" {
-				for _, individual := range strings.Split(value, ",") {
-					if err := fs.Set(f.Name, strings.TrimSpace(individual)); err != nil {
+				var values []string
+				if c.envVarIgnoreCommas {
+					values = []string{value}
+				} else {
+					values = strings.Split(value, ",")
+				}
+				for _, v := range values {
+					if err := fs.Set(f.Name, v); err != nil {
 						errs = append(errs, fmt.Sprintf("error setting flag %q from env var %q: %v", f.Name, key, err))
 					}
 				}
@@ -97,11 +106,14 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 // Context contains private fields used during parsing.
 type Context struct {
-	configFile         string
-	configFileFlagName string
-	configFileParser   ConfigFileParser
-	envVarPrefix       string
-	envVarNoPrefix     bool
+	configFile             string
+	configFileFlagName     string
+	configFileParser       ConfigFileParser
+	allowMissingConfigFile bool
+	envVarPrefix           string
+	envVarNoPrefix         bool
+	envVarIgnoreCommas     bool
+	ignoreUndefined        bool
 }
 
 // Option controls some aspect of parse behavior.
@@ -131,12 +143,18 @@ func WithConfigFileParser(p ConfigFileParser) Option {
 	}
 }
 
+// WithAllowMissingConfigFile will permit parse to succeed, even if a provided
+// config file doesn't exist.
+func WithAllowMissingConfigFile(allow bool) Option {
+	return func(c *Context) {
+		c.allowMissingConfigFile = allow
+	}
+}
+
 // WithEnvVarPrefix tells parse to look in the environment for variables with
 // the given prefix. Flag names are converted to environment variables by
 // capitalizing them, and replacing separator characters like periods or hyphens
-// with underscores. Additionally, if the environment variable's value contains
-// commas, each comma-delimited token is treated as a separate instance of the
-// associated flag name.
+// with underscores.
 func WithEnvVarPrefix(prefix string) Option {
 	return func(c *Context) {
 		c.envVarPrefix = prefix
@@ -149,6 +167,25 @@ func WithEnvVarPrefix(prefix string) Option {
 func WithEnvVarNoPrefix() Option {
 	return func(c *Context) {
 		c.envVarNoPrefix = true
+	}
+}
+
+// WithEnvVarIgnoreCommas tells parse to ignore commas in environment variable
+// values, treating the complete value as a single string passed to the
+// associated flag. By default, if an environment variable's value contains
+// commas, each comma-delimited token is treated as a separate instance of the
+// associated flag.
+func WithEnvVarIgnoreCommas(ignore bool) Option {
+	return func(c *Context) {
+		c.envVarIgnoreCommas = ignore
+	}
+}
+
+// WithIgnoreUndefined tells parse to ignore undefined flags that it encounters,
+// which would normally throw an error.
+func WithIgnoreUndefined(ignore bool) Option {
+	return func(c *Context) {
+		c.ignoreUndefined = ignore
 	}
 }
 

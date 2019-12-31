@@ -61,6 +61,7 @@ func TestParser(t *testing.T) {
 			vars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(testcase.file),
 				ff.WithConfigFileParser(ffyaml.Parser),
+				ff.WithAllowMissingConfigFile(true),
 			)
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
