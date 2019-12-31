@@ -9,15 +9,8 @@ import (
 	"time"
 
 	"github.com/peterbourgon/ff/ffcli"
-	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/objectapi"
 	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/rootcmd"
-	"golang.org/x/xerrors"
 )
-
-// Lister models the List method of an objectapi.Client.
-type Lister interface {
-	List() ([]objectapi.Object, error)
-}
 
 // Config for the list subcommand, including a reference
 // to the global config, for access to global flags.
@@ -27,7 +20,7 @@ type Config struct {
 	withAccessTimes bool
 }
 
-// New TODO
+// New creates a new ffcli.Command for the list subcommand.
 func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
 	cfg := Config{
 		rootConfig: rootConfig,
@@ -36,6 +29,7 @@ func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
 
 	fs := flag.NewFlagSet("objectctl list", flag.ExitOnError)
 	fs.BoolVar(&cfg.withAccessTimes, "a", false, "include last access time of each object")
+	rootConfig.RegisterFlags(fs)
 
 	return &ffcli.Command{
 		Name:      "list",
@@ -47,17 +41,20 @@ func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
 }
 
 // Exec function for this command.
-func (c *Config) Exec(context.Context, []string) error {
-	objects, err := c.rootConfig.Client.List()
+func (c *Config) Exec(ctx context.Context, _ []string) error {
+	objects, err := c.rootConfig.Client.List(ctx)
 	if err != nil {
-		return xerrors.Errorf("error executing list: %w", err)
+		return fmt.Errorf("error executing list: %w", err)
 	}
 
 	if len(objects) <= 0 {
 		fmt.Fprintf(c.out, "no objects\n")
 		return nil
 	}
-	fmt.Fprintf(c.out, "object count %d\n", len(objects))
+
+	if c.rootConfig.Verbose {
+		fmt.Fprintf(c.out, "object count: %d\n", len(objects))
+	}
 
 	tw := tabwriter.NewWriter(c.out, 0, 2, 2, ' ', 0)
 	if c.withAccessTimes {

@@ -4,16 +4,12 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 
 	"github.com/peterbourgon/ff/ffcli"
 	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/rootcmd"
 )
-
-// Deleter models the Delete method of an objectapi.Client.
-type Deleter interface {
-	Delete(key string) (deleted bool, err error)
-}
 
 // Config for the delete subcommand, including a reference to the API client.
 type Config struct {
@@ -22,7 +18,7 @@ type Config struct {
 	force      bool
 }
 
-// New TODO
+// New returns a usable ffcli.Command for the delete subcommand.
 func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
 	cfg := Config{
 		rootConfig: rootConfig,
@@ -30,11 +26,11 @@ func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
 	}
 
 	fs := flag.NewFlagSet("objectctl delete", flag.ExitOnError)
-	fs.BoolVar(&cfg.force, "f", false, "force delete without confirmation")
+	rootConfig.RegisterFlags(fs)
 
 	return &ffcli.Command{
 		Name:      "delete",
-		Usage:     "objectctl delete [flags] <key>",
+		Usage:     "objectctl delete <key>",
 		ShortHelp: "Delete an object",
 		FlagSet:   fs,
 		Exec:      cfg.Exec,
@@ -42,6 +38,22 @@ func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
 }
 
 // Exec function for this command.
-func (c *Config) Exec(context.Context, []string) error {
-	return errors.New("not implemented")
+func (c *Config) Exec(ctx context.Context, args []string) error {
+	if len(args) < 1 {
+		return errors.New("delete requires at least 1 arg")
+	}
+
+	var (
+		key          = args[0]
+		existed, err = c.rootConfig.Client.Delete(ctx, key)
+	)
+	if err != nil {
+		return err
+	}
+
+	if c.rootConfig.Verbose {
+		fmt.Fprintf(c.out, "delete %q OK (existed %v)\n", key, existed)
+	}
+
+	return nil
 }

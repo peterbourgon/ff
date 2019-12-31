@@ -1,6 +1,7 @@
 package objectapi
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -29,17 +30,17 @@ func NewClient(token string) (*Client, error) {
 }
 
 // Create is some bit of functionality.
-func (c *Client) Create(key, value string, overwrite bool) error {
+func (c *Client) Create(ctx context.Context, key, value string, overwrite bool) error {
 	return c.server.create(c.token, key, value, overwrite)
 }
 
 // Delete is some bit of functionality.
-func (c *Client) Delete(key string) (deleted bool, err error) {
+func (c *Client) Delete(ctx context.Context, key string) (existed bool, err error) {
 	return c.server.delete(c.token, key)
 }
 
 // List is some bit of functionality.
-func (c *Client) List() ([]Object, error) {
+func (c *Client) List(ctx context.Context) ([]Object, error) {
 	return c.server.list(c.token)
 }
 
@@ -77,7 +78,7 @@ func (s *mockServer) create(token, key, value string, overwrite bool) error {
 	return nil
 }
 
-func (s *mockServer) delete(token, key string) (deleted bool, err error) {
+func (s *mockServer) delete(token, key string) (existed bool, err error) {
 	if token != s.token {
 		return false, errors.New("not authorized")
 	}
