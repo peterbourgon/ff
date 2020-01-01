@@ -1,9 +1,7 @@
 # ffcli [GoDoc](https://godoc.org/github.com/peterbourgon/ff/ffcli?status.svg)](https://godoc.org/github.com/peterbourgon/ff/ffcli)
 
-ffcli stands for flags-first command line interface, and provides an opinionated
-way to build CLI tools with commands and subcommands. It's a little bit
-lower-level than popular, all-in-one packages .
-
+ffcli stands for flags-first command line interface, 
+and provides an opinionated way to build CLIs.
 
 ## Motivation
 
@@ -19,8 +17,7 @@ I believe it's possible to build fully-featured, modern CLIs using a toolkit
 with a minimal API surface area, by leveraging existing language features,
 patterns, and abstractions whenever possible. CLIs aren't fundamentally
 different than any other program: commands, subcommands, flag sets, etc. are all
-all just components in a component graph, with the same dependency relationships
-as any other kind of component.
+just components in a component graph, and can be managed in the same way.
 
 ## Goals
 
@@ -112,7 +109,6 @@ root := &ffcli.Command{
 	Usage:       "textctl [flags] <subcommand>",
 	FlagSet:     rootFlagSet,
 	Subcommands: []*ffcli.Command{repeat, count},
-	Exec:        func(context.Context, []string) error { ... },
 }
 
 if err := root.ParseAndRun(context.Background(), os.Args[1:]); err != nil {
@@ -121,8 +117,8 @@ if err := root.ParseAndRun(context.Background(), os.Args[1:]); err != nil {
 ```
 
 ParseAndRun can also be split into distinct Parse and Run phases, allowing you
-to perform two-phase setup or initialization of e.g. API clients based on user
-configuration.
+to perform two-phase setup or initialization of e.g. API clients that require
+user-supplied configuration.
 
 ## Examples
 
