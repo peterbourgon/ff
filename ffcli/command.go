@@ -20,28 +20,33 @@ type Command struct {
 	// optional for the root command.
 	Name string
 
-	// Usage string for this command. Printed at the top of the help output.
-	// Recommended but not required. Should be one line of the form
+	// ShortUsage string for this command. Consumed by the DefaultUsageFunc and
+	// printed at the top of the help output. Recommended but not required.
+	// Should be one line of the form
 	//
 	//     cmd [flags] subcmd [flags] <required> [<optional> ...]
 	//
-	Usage string
+	// If it's not provided, the DefaultUsageFunc will use Name instead.
+	// Optional, but recommended.
+	ShortUsage string
 
 	// ShortHelp is printed next to the command name when it appears as a
-	// sub-command, in the help output of its parent command. Recommended.
+	// sub-command, in the help output of its parent command. Optional, but
+	// recommended.
 	ShortHelp string
 
-	// LongHelp is printed in the help output, after usage and before flags.
-	// Typically a paragraph or more of prose-like text, providing more explicit
-	// context and guidance than what is implied by flags and arguments.
-	// Optional.
+	// LongHelp is consumed by the DefaultUsageFunc and printed in the help
+	// output, after ShortUsage and before flags. Typically a paragraph or more
+	// of prose-like text, providing more explicit context and guidance than
+	// what is implied by flags and arguments. Optional.
 	LongHelp string
 
 	// UsageFunc generates a complete usage output, written to the io.Writer
 	// returned by FlagSet.Output() when the -h flag is passed. The function is
 	// invoked with its corresponding command, and its output should reflect the
-	// command's short and long help strings, subcommands, and available flags.
-	// Optional; if not provided, a suitable, compact default is used.
+	// command's short usage, short help, and long help strings, subcommands,
+	// and available flags. Optional; if not provided, a suitable, compact
+	// default is used.
 	UsageFunc func(c *Command) string
 
 	// FlagSet associated with this command. Optional, but if none is provided,
@@ -94,12 +99,12 @@ func (c *Command) Parse(args []string) error {
 		return err
 	}
 
-	if fsargs := c.FlagSet.Args(); len(fsargs) > 0 {
-		c.args = fsargs
+	c.args = c.FlagSet.Args()
+	if len(c.args) > 0 {
 		for _, subcommand := range c.Subcommands {
-			if strings.EqualFold(c.FlagSet.Args()[0], subcommand.Name) {
+			if strings.EqualFold(c.args[0], subcommand.Name) {
 				c.selected = subcommand
-				return subcommand.Parse(c.FlagSet.Args()[1:])
+				return subcommand.Parse(c.args[1:])
 			}
 		}
 	}
@@ -160,8 +165,8 @@ func DefaultUsageFunc(c *Command) string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "USAGE\n")
-	if c.Usage != "" {
-		fmt.Fprintf(&b, "  %s\n", c.Usage)
+	if c.ShortUsage != "" {
+		fmt.Fprintf(&b, "  %s\n", c.ShortUsage)
 	} else {
 		fmt.Fprintf(&b, "  %s\n", c.Name)
 	}

@@ -185,13 +185,13 @@ func TestHelpUsage(t *testing.T) {
 			fs.SetOutput(&buf)
 
 			command := &ffcli.Command{
-				Name:      "TestHelpUsage",
-				Usage:     "TestHelpUsage [flags] <args>",
-				ShortHelp: "Some short help.",
-				LongHelp:  "Some long help.",
-				FlagSet:   fs,
-				UsageFunc: testcase.usageFunc,
-				Exec:      testcase.exec,
+				Name:       "TestHelpUsage",
+				ShortUsage: "TestHelpUsage [flags] <args>",
+				ShortHelp:  "Some short help.",
+				LongHelp:   "Some long help.",
+				FlagSet:    fs,
+				UsageFunc:  testcase.usageFunc,
+				Exec:       testcase.exec,
 			}
 
 			err := command.ParseAndRun(context.Background(), testcase.args)
