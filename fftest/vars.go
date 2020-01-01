@@ -79,22 +79,22 @@ func Compare(want, have *Vars) error {
 	}
 
 	if want.S != have.S {
-		return fmt.Errorf("S: want %q, have %q", want.S, have.S)
+		return fmt.Errorf("var S: want %q, have %q", want.S, have.S)
 	}
 	if want.I != have.I {
-		return fmt.Errorf("I: want %d, have %d", want.I, have.I)
+		return fmt.Errorf("var I: want %d, have %d", want.I, have.I)
 	}
 	if want.F != have.F {
-		return fmt.Errorf("F: want %f, have %f", want.F, have.F)
+		return fmt.Errorf("var F: want %f, have %f", want.F, have.F)
 	}
 	if want.B != have.B {
-		return fmt.Errorf("B: want %v, have %v", want.B, have.B)
+		return fmt.Errorf("var B: want %v, have %v", want.B, have.B)
 	}
 	if want.D != have.D {
-		return fmt.Errorf("D: want %s, have %s", want.D, have.D)
+		return fmt.Errorf("var D: want %s, have %s", want.D, have.D)
 	}
 	if !reflect.DeepEqual(want.X, have.X) {
-		return fmt.Errorf("X: want %v, have %v", want.X, have.X)
+		return fmt.Errorf("var X: want %v, have %v", want.X, have.X)
 	}
 
 	return nil
