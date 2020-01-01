@@ -197,7 +197,7 @@ func TestParseConfigFile(t *testing.T) {
 		name         string
 		missing      bool
 		allowMissing bool
-		parseError   string
+		parseError   error
 	}{
 		{
 			name: "has config file",
@@ -205,7 +205,7 @@ func TestParseConfigFile(t *testing.T) {
 		{
 			name:       "config file missing",
 			missing:    true,
-			parseError: "open dummy: no such file or directory",
+			parseError: os.ErrNotExist,
 		},
 		{
 			name:         "config file missing + allow missing",
@@ -229,7 +229,7 @@ func TestParseConfigFile(t *testing.T) {
 			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, []string{}, options...)
 
-			want := fftest.Vars{WantParseErrorString: testcase.parseError}
+			want := fftest.Vars{WantParseErrorIs: testcase.parseError}
 			if err := fftest.Compare(&want, vars); err != nil {
 				t.Fatal(err)
 			}
