@@ -211,30 +211,79 @@ func TestNestedOutput(t *testing.T) {
 		wantOutput string
 	}{
 		{
+			name:       "root without args",
+			args:       []string{},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "root usage func\n",
+		},
+		{
+			name:       "root with args",
+			args:       []string{"abc", "def ghi"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "root usage func\n",
+		},
+		{
+			name:       "root help",
+			args:       []string{"-h"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "root usage func\n",
+		},
+		{
 			name:       "foo without args",
 			args:       []string{"foo"},
 			wantOutput: "foo: ''\n",
 		},
 		{
 			name:       "foo with args",
-			args:       []string{"foo", "bar", "baz"},
-			wantOutput: "foo: 'bar baz'\n",
+			args:       []string{"foo", "alpha", "beta"},
+			wantOutput: "foo: 'alpha beta'\n",
 		},
 		{
-			name:       "help output only once",
+			name:       "foo help",
 			args:       []string{"foo", "-h"},
 			wantErr:    flag.ErrHelp,
-			wantOutput: "foo usage func\n",
+			wantOutput: "foo usage func\n", // only one instance of usage string
+		},
+		{
+			name:       "foo bar without args",
+			args:       []string{"foo", "bar"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "bar usage func\n",
+		},
+		{
+			name:       "foo bar with args",
+			args:       []string{"foo", "bar", "--", "baz quux"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "bar usage func\n",
+		},
+		{
+			name:       "foo bar help",
+			args:       []string{"foo", "bar", "--help"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "bar usage func\n",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			var (
 				rootfs = flag.NewFlagSet("root", flag.ContinueOnError)
 				foofs  = flag.NewFlagSet("foo", flag.ContinueOnError)
+				barfs  = flag.NewFlagSet("bar", flag.ContinueOnError)
 				buf    bytes.Buffer
 			)
-			foofs.SetOutput(&buf)
 			rootfs.SetOutput(&buf)
+			foofs.SetOutput(&buf)
+			barfs.SetOutput(&buf)
+
+			barExec := func(_ context.Context, args []string) error {
+				return flag.ErrHelp
+			}
+
+			bar := &ffcli.Command{
+				Name:      "bar",
+				FlagSet:   barfs,
+				UsageFunc: func(*ffcli.Command) string { return "bar usage func" },
+				Exec:      barExec,
+			}
 
 			fooExec := func(_ context.Context, args []string) error {
 				fmt.Fprintf(&buf, "foo: '%s'\n", strings.Join(args, " "))
@@ -242,19 +291,20 @@ func TestNestedOutput(t *testing.T) {
 			}
 
 			foo := &ffcli.Command{
-				Name:      "foo",
-				FlagSet:   foofs,
-				UsageFunc: func(*ffcli.Command) string { return "foo usage func" },
-				Exec:      fooExec,
+				Name:        "foo",
+				FlagSet:     foofs,
+				UsageFunc:   func(*ffcli.Command) string { return "foo usage func" },
+				Subcommands: []*ffcli.Command{bar},
+				Exec:        fooExec,
 			}
 
 			rootExec := func(_ context.Context, args []string) error {
-				fmt.Fprintf(&buf, "root: '%s'\n", strings.Join(args, " "))
-				return nil
+				return flag.ErrHelp
 			}
 
 			root := &ffcli.Command{
 				FlagSet:     rootfs,
+				UsageFunc:   func(*ffcli.Command) string { return "root usage func" },
 				Subcommands: []*ffcli.Command{foo},
 				Exec:        rootExec,
 			}

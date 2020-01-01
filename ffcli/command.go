@@ -115,18 +115,24 @@ var ErrUnparsed = errors.New("command tree is unparsed, can't run")
 // successful call to Parse, and calls that command's Exec function with the
 // appropriate subset of commandline args.
 func (c *Command) Run(ctx context.Context) (err error) {
+	var (
+		unparsed = c.selected == nil
+		terminal = c.selected == c && c.Exec != nil
+		noop     = c.selected == c && c.Exec == nil
+	)
+
 	defer func() {
-		if errors.Is(err, flag.ErrHelp) {
+		if terminal && errors.Is(err, flag.ErrHelp) {
 			c.FlagSet.Usage()
 		}
 	}()
 
 	switch {
-	case c.selected == nil:
+	case unparsed:
 		return ErrUnparsed
-	case c.selected == c && c.Exec != nil:
+	case terminal:
 		return c.Exec(ctx, c.args)
-	case c.selected == c && c.Exec == nil:
+	case noop:
 		return nil
 	default:
 		return c.selected.Run(ctx)
