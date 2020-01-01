@@ -185,8 +185,8 @@ func TestHelpUsage(t *testing.T) {
 			fs.SetOutput(&buf)
 
 			command := &ffcli.Command{
-				Name:      "TestUsageFunc",
-				Usage:     "TestUsageFunc [flags] <args>",
+				Name:      "TestHelpUsage",
+				Usage:     "TestHelpUsage [flags] <args>",
 				ShortHelp: "Some short help.",
 				LongHelp:  "Some long help.",
 				FlagSet:   fs,
@@ -419,7 +419,7 @@ func assertStringSlice(t *testing.T, want, have []string) {
 
 var defaultUsageFuncOutput = strings.TrimSpace(`
 USAGE
-  TestUsageFunc [flags] <args>
+  TestHelpUsage [flags] <args>
 
 Some long help.
 
