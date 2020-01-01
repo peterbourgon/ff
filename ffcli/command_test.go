@@ -17,6 +17,8 @@ import (
 )
 
 func TestCommandRun(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name     string
 		args     []string
@@ -144,6 +146,8 @@ func TestCommandRun(t *testing.T) {
 }
 
 func TestHelpUsage(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name      string
 		usageFunc func(*ffcli.Command) string
@@ -197,6 +201,75 @@ func TestHelpUsage(t *testing.T) {
 	}
 }
 
+func TestNestedOutput(t *testing.T) {
+	t.Parallel()
+
+	for _, testcase := range []struct {
+		name       string
+		args       []string
+		wantErr    error
+		wantOutput string
+	}{
+		{
+			name:       "foo without args",
+			args:       []string{"foo"},
+			wantOutput: "foo: ''\n",
+		},
+		{
+			name:       "foo with args",
+			args:       []string{"foo", "bar", "baz"},
+			wantOutput: "foo: 'bar baz'\n",
+		},
+		{
+			name:       "help output only once",
+			args:       []string{"foo", "-h"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "foo usage func\n",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			var (
+				rootfs = flag.NewFlagSet("root", flag.ContinueOnError)
+				foofs  = flag.NewFlagSet("foo", flag.ContinueOnError)
+				buf    bytes.Buffer
+			)
+			foofs.SetOutput(&buf)
+			rootfs.SetOutput(&buf)
+
+			fooExec := func(_ context.Context, args []string) error {
+				fmt.Fprintf(&buf, "foo: '%s'\n", strings.Join(args, " "))
+				return nil
+			}
+
+			foo := &ffcli.Command{
+				Name:      "foo",
+				FlagSet:   foofs,
+				UsageFunc: func(*ffcli.Command) string { return "foo usage func" },
+				Exec:      fooExec,
+			}
+
+			rootExec := func(_ context.Context, args []string) error {
+				fmt.Fprintf(&buf, "root: '%s'\n", strings.Join(args, " "))
+				return nil
+			}
+
+			root := &ffcli.Command{
+				FlagSet:     rootfs,
+				Subcommands: []*ffcli.Command{foo},
+				Exec:        rootExec,
+			}
+
+			err := root.ParseAndRun(context.Background(), testcase.args)
+			if want, have := testcase.wantErr, err; !errors.Is(have, want) {
+				t.Errorf("error: want %v, have %v", want, have)
+			}
+			if want, have := testcase.wantOutput, buf.String(); want != have {
+				t.Errorf("output: want %q, have %q", want, have)
+			}
+		})
+	}
+}
+
 func ExampleCommand_Parse_then_Run() {
 	// Assume our CLI will use some client that requires a token.
 	type FooClient struct {
@@ -204,8 +277,11 @@ func ExampleCommand_Parse_then_Run() {
 	}
 
 	// That client would have a constructor.
-	NewFooClient := func(token string) *FooClient {
-		return &FooClient{token: token}
+	NewFooClient := func(token string) (*FooClient, error) {
+		if token == "" {
+			return nil, fmt.Errorf("token required")
+		}
+		return &FooClient{token: token}, nil
 	}
 
 	// We define the token in the root command's FlagSet.
@@ -238,7 +314,11 @@ func ExampleCommand_Parse_then_Run() {
 	}
 
 	// After a successful Parse, we can construct a FooClient with the token.
-	client = NewFooClient(*token)
+	var err error
+	client, err = NewFooClient(*token)
+	if err != nil {
+		log.Fatalf("error constructing FooClient: %v", err)
+	}
 
 	// Then call Run, which will select the foo subcommand and invoke it.
 	if err := root.Run(context.Background()); err != nil {

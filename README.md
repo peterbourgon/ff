@@ -4,13 +4,7 @@ ff stands for flags-first, and provides an opinionated way to populate
 a [flag.FlagSet](https://golang.org/pkg/flag#FlagSet) with
 configuration data from the environment. By default, it parses only
 from the command line, but you can enable parsing from a configuration
-file and/or environmental variables.
-
-With everything enabled, the priority order is:
-
-1. Command line flags (highest priority)
-2. Configuration file
-3. Environment variables (lowest priority)
+file (lower priority) and/or environment variables (lowest priority).
 
 ## Usage
 
@@ -27,7 +21,9 @@ func main() {
 	)
 ```
 
-Then, call ff.Parse instead of fs.Parse.
+Then, call ff.Parse instead of fs.Parse. 
+[Options](https://godoc.org/github.com/peterbourgon/ff#Option)
+are available to control parse behavior.
 
 ```go
 	ff.Parse(fs, os.Args[1:],

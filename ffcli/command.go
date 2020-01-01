@@ -37,16 +37,16 @@ type Command struct {
 	// Optional.
 	LongHelp string
 
-	// UsageFunc generates a complete usage output, displayed to the user when
-	// the -h flag is passed. The function is invoked with its corresponding
-	// command, and its output should reflect the command's short and long help
-	// strings, subcommands, and available flags. Optional; if not provided, a
-	// suitable, compact default is used.
+	// UsageFunc generates a complete usage output, written to the io.Writer
+	// returned by FlagSet.Output() when the -h flag is passed. The function is
+	// invoked with its corresponding command, and its output should reflect the
+	// command's short and long help strings, subcommands, and available flags.
+	// Optional; if not provided, a suitable, compact default is used.
 	UsageFunc func(c *Command) string
 
 	// FlagSet associated with this command. Optional, but if none is provided,
-	// an empty FlagSet will be defined and attached during Run, so that the -h
-	// flag works as expected.
+	// an empty FlagSet will be defined and attached during the parse phase, so
+	// that the -h flag works as expected.
 	FlagSet *flag.FlagSet
 
 	// Options provided to ff.Parse when parsing arguments for this command.
@@ -56,7 +56,7 @@ type Command struct {
 	// Subcommands accessible underneath (i.e. after) this command. Optional.
 	Subcommands []*Command
 
-	// A successful Parse populates these fields.
+	// A successful Parse populates these unexported fields.
 	selected *Command // the command itself (if terminal) or a subcommand
 	args     []string // args that should be passed to Run, if any
 
