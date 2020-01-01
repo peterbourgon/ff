@@ -10,6 +10,8 @@ import (
 )
 
 func TestParser(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name string
 		file string

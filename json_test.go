@@ -10,6 +10,8 @@ import (
 )
 
 func TestJSONParser(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name string
 		args []string

@@ -10,6 +10,8 @@ import (
 )
 
 func TestParseBasics(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name string
 		env  map[string]string
@@ -143,6 +145,8 @@ func TestParseBasics(t *testing.T) {
 }
 
 func TestParseIssue16(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name string
 		data string
@@ -193,6 +197,8 @@ func TestParseIssue16(t *testing.T) {
 }
 
 func TestParseConfigFile(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name         string
 		missing      bool

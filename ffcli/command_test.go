@@ -14,6 +14,8 @@ import (
 )
 
 func TestCommandRun(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name     string
 		args     []string
@@ -141,6 +143,8 @@ func TestCommandRun(t *testing.T) {
 }
 
 func TestHelpUsage(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name      string
 		usageFunc func(*ffcli.Command) string
