@@ -27,10 +27,10 @@ func New() (*ffcli.Command, *Config) {
 	cfg.RegisterFlags(fs)
 
 	return &ffcli.Command{
-		Name:    "objectctl",
-		Usage:   "objectctl [flags] <subcommand> [flags] [<arg>...]",
-		FlagSet: fs,
-		Exec:    cfg.Exec,
+		Name:       "objectctl",
+		ShortUsage: "objectctl [flags] <subcommand> [flags] [<arg>...]",
+		FlagSet:    fs,
+		Exec:       cfg.Exec,
 	}, &cfg
 }
 

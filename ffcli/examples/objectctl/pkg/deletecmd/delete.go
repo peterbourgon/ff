@@ -29,11 +29,11 @@ func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
 	rootConfig.RegisterFlags(fs)
 
 	return &ffcli.Command{
-		Name:      "delete",
-		Usage:     "objectctl delete <key>",
-		ShortHelp: "Delete an object",
-		FlagSet:   fs,
-		Exec:      cfg.Exec,
+		Name:       "delete",
+		ShortUsage: "objectctl delete <key>",
+		ShortHelp:  "Delete an object",
+		FlagSet:    fs,
+		Exec:       cfg.Exec,
 	}
 }
 

@@ -31,11 +31,11 @@ func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
 	rootConfig.RegisterFlags(fs)
 
 	return &ffcli.Command{
-		Name:      "create",
-		Usage:     "objectctl create [flags] <key> <value data...>",
-		ShortHelp: "Create or overwrite an object",
-		FlagSet:   fs,
-		Exec:      cfg.Exec,
+		Name:       "create",
+		ShortUsage: "objectctl create [flags] <key> <value data...>",
+		ShortHelp:  "Create or overwrite an object",
+		FlagSet:    fs,
+		Exec:       cfg.Exec,
 	}
 }
 

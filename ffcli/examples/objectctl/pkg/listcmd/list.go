@@ -32,11 +32,11 @@ func New(rootConfig *rootcmd.Config, out io.Writer) *ffcli.Command {
 	rootConfig.RegisterFlags(fs)
 
 	return &ffcli.Command{
-		Name:      "list",
-		Usage:     "objectctl list [flags] [<prefix>]",
-		ShortHelp: "List available objects",
-		FlagSet:   fs,
-		Exec:      cfg.Exec,
+		Name:       "list",
+		ShortUsage: "objectctl list [flags] [<prefix>]",
+		ShortHelp:  "List available objects",
+		FlagSet:    fs,
+		Exec:       cfg.Exec,
 	}
 }
 
