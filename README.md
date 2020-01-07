@@ -1,4 +1,4 @@
-# ff [![Latest Release](https://img.shields.io/github/release/peterbourgon/ff.svg?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) [![GoDoc](https://godoc.org/github.com/peterbourgon/ff?status.svg)](https://godoc.org/github.com/peterbourgon/ff) [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fpeterbourgon%2Fff%2Fbadge&style=flat-square&label=none)](https://github.com/peterbourgon/ff/actions?query=workflow%3ATest)
+# ff [![Latest Release](https://img.shields.io/github/release/peterbourgon/ff.svg?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) [![GoDoc](https://godoc.org/github.com/peterbourgon/ff?status.svg)](https://godoc.org/github.com/peterbourgon/ff) [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fpeterbourgon%2Fff%2Fbadge&style=flat-square&label=build)](https://github.com/peterbourgon/ff/actions?query=workflow%3ATest)
 
 ff stands for flags-first, and provides an opinionated way to populate
 a [flag.FlagSet](https://golang.org/pkg/flag#FlagSet) with
