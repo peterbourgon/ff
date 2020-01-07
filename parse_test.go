@@ -10,6 +10,8 @@ import (
 )
 
 func TestParseBasics(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name string
 		env  map[string]string
@@ -143,6 +145,8 @@ func TestParseBasics(t *testing.T) {
 }
 
 func TestParseIssue16(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name string
 		data string
@@ -193,11 +197,13 @@ func TestParseIssue16(t *testing.T) {
 }
 
 func TestParseConfigFile(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name         string
 		missing      bool
 		allowMissing bool
-		parseError   string
+		parseError   error
 	}{
 		{
 			name: "has config file",
@@ -205,7 +211,7 @@ func TestParseConfigFile(t *testing.T) {
 		{
 			name:       "config file missing",
 			missing:    true,
-			parseError: "open dummy: no such file or directory",
+			parseError: os.ErrNotExist,
 		},
 		{
 			name:         "config file missing + allow missing",
@@ -229,7 +235,7 @@ func TestParseConfigFile(t *testing.T) {
 			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, []string{}, options...)
 
-			want := fftest.Vars{WantParseErrorString: testcase.parseError}
+			want := fftest.Vars{WantParseErrorIs: testcase.parseError}
 			if err := fftest.Compare(&want, vars); err != nil {
 				t.Fatal(err)
 			}

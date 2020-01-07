@@ -12,6 +12,8 @@ import (
 )
 
 func TestParser(t *testing.T) {
+	t.Parallel()
+
 	for _, testcase := range []struct {
 		name string
 		file string
@@ -54,6 +56,8 @@ func TestParser(t *testing.T) {
 }
 
 func TestParser_WithTables(t *testing.T) {
+	t.Parallel()
+
 	type fields struct {
 		String  string
 		Float   float64
