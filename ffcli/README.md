@@ -49,7 +49,7 @@ root := &ffcli.Command{
 	},
 }
 
-root.ParseAndRun(context.Background(), os.Args)
+root.ParseAndRun(context.Background(), os.Args[1:])
 ```
 
 Most CLIs use flags and arguments to control behavior. Here is a command which
