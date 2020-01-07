@@ -6,6 +6,10 @@ configuration data from the environment. By default, it parses only
 from the command line, but you can enable parsing from a configuration
 file (lower priority) and/or environment variables (lowest priority).
 
+Building a commandline application in the style of `kubectl` or `docker`?
+Consider [package ffcli](https://godoc.org/github.com/peterbourgon/ff/ffcli),
+a natural companion to, and extension of, package ff.
+
 ## Usage
 
 Define a flag.FlagSet in your func main.
@@ -65,9 +69,3 @@ Finally, it will look in the environment for variables with a `MY_PROGRAM`
 prefix. Flag names are capitalized, and separator characters are converted to
 underscores. In this case, for example, `MY_PROGRAM_LISTEN_ADDR` would match to
 `listen-addr`.
-
-## ffcli
-
-Building a commandline application in the style of `kubectl` or `docker`?
-Consider [package ffcli](https://godoc.org/github.com/peterbourgon/ff/ffcli).
-
