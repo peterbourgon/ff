@@ -58,18 +58,18 @@ a flag.
 
 ```go
 fs := flag.NewFlagSet("repeat", flag.ExitOnError)
-n := fs.Int("n", 3, "number of repetitions")
+n := fs.Int("n", 3, "how many times to repeat")
 
 root := &ffcli.Command{
-	Usage:     "repeat [-n times] <arg>",
-	ShortHelp: "Repeatedly print the argument to stdout.",
-	FlagSet:   fs,
+	ShortUsage: "repeat [-n times] <arg>",
+	ShortHelp:  "Repeatedly print the argument to stdout.",
+	FlagSet:    fs,
 	Exec: func(ctx context.Context, args []string) error {
 		if nargs := len(args); nargs != 1 {
 			return fmt.Errorf("repeat requires exactly 1 argument, but you provided %d", nargs)
 		}
 		for i := 0; i < *n; i++ {
-			fmt.Fprintf(os.Stdout, "%s\n", args[0])
+			fmt.Fprintln(os.Stdout, args[0])
 		}
 		return nil
 	},
@@ -91,22 +91,22 @@ var (
 )
 
 repeat := &ffcli.Command{
-	Name:      "repeat",
-	Usage:     "textctl repeat [-n times] <arg>",
-	ShortHelp: "Repeatedly print the argument to stdout.",
-	FlagSet:   repeatFlagSet,
-	Exec:      func(_ context.Context, args []string) error { ... },
+	Name:       "repeat",
+	ShortUsage: "textctl repeat [-n times] <arg>",
+	ShortHelp:  "Repeatedly print the argument to stdout.",
+	FlagSet:    repeatFlagSet,
+	Exec:       func(_ context.Context, args []string) error { ... },
 }
 
 count := &ffcli.Command{
-	Name:      "count",
-	Usage:     "textctl count [<arg> ...]",
-	ShortHelp: "Count the number of bytes in the arguments.",
-	Exec:      func(_ context.Context, args []string) error { ... },
+	Name:       "count",
+	ShortUsage: "textctl count [<arg> ...]",
+	ShortHelp:  "Count the number of bytes in the arguments.",
+	Exec:       func(_ context.Context, args []string) error { ... },
 }
 
 root := &ffcli.Command{
-	Usage:       "textctl [flags] <subcommand>",
+	ShortUsage:  "textctl [flags] <subcommand>",
 	FlagSet:     rootFlagSet,
 	Subcommands: []*ffcli.Command{repeat, count},
 }
