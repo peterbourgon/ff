@@ -1,4 +1,4 @@
-# ffcli [GoDoc](https://godoc.org/github.com/peterbourgon/ff/ffcli?status.svg)](https://godoc.org/github.com/peterbourgon/ff/ffcli)
+# ffcli [![GoDoc](https://godoc.org/github.com/peterbourgon/ff/ffcli?status.svg)](https://godoc.org/github.com/peterbourgon/ff/ffcli)
 
 ffcli stands for flags-first command line interface, 
 and provides an opinionated way to build CLIs.
@@ -149,5 +149,5 @@ See [the examples directory][examples]. If you'd like an example of a specific
 type of program structure, or a CLI that satisfies a specific requirement,
 please [file an issue][issue].
 
-[examples]: https://github.com/peterbourgon/ff/v2/tree/master/ffcli/examples
-[issue]: https://github.com/peterbourgon/ff/v2/issues/new
+[examples]: https://github.com/peterbourgon/ff/tree/master/ffcli/examples
+[issue]: https://github.com/peterbourgon/ff/issues/new
