@@ -45,7 +45,7 @@ func (c *Config) Exec(ctx context.Context, args []string) error {
 
 	var (
 		key          = args[0]
-		existed, err = c.rootConfig.Client.Delete(ctx, key)
+		existed, err = c.rootConfig.Client.Delete(ctx, key, c.force)
 	)
 	if err != nil {
 		return err

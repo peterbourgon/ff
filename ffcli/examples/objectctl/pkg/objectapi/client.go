@@ -35,8 +35,8 @@ func (c *Client) Create(ctx context.Context, key, value string, overwrite bool) 
 }
 
 // Delete is some bit of functionality.
-func (c *Client) Delete(ctx context.Context, key string) (existed bool, err error) {
-	return c.server.delete(c.token, key)
+func (c *Client) Delete(ctx context.Context, key string, force bool) (existed bool, err error) {
+	return c.server.delete(c.token, key, force)
 }
 
 // List is some bit of functionality.
@@ -78,7 +78,7 @@ func (s *mockServer) create(token, key, value string, overwrite bool) error {
 	return nil
 }
 
-func (s *mockServer) delete(token, key string) (existed bool, err error) {
+func (s *mockServer) delete(token, key string, force bool) (existed bool, err error) {
 	if token != s.token {
 		return false, errors.New("not authorized")
 	}
