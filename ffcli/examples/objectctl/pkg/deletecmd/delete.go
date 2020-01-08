@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/peterbourgon/ff/ffcli"
-	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/rootcmd"
+	"github.com/peterbourgon/ff/v2/ffcli"
+	"github.com/peterbourgon/ff/v2/ffcli/examples/objectctl/pkg/rootcmd"
 )
 
 // Config for the delete subcommand, including a reference to the API client.

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff"
-	"github.com/peterbourgon/ff/fftest"
+	"github.com/peterbourgon/ff/v2"
+	"github.com/peterbourgon/ff/v2/fftest"
 )
 
 func TestParseBasics(t *testing.T) {

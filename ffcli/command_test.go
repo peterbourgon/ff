@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff/ffcli"
-	"github.com/peterbourgon/ff/fftest"
+	"github.com/peterbourgon/ff/v2/ffcli"
+	"github.com/peterbourgon/ff/v2/fftest"
 )
 
 func TestCommandRun(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff"
-	"github.com/peterbourgon/ff/fftest"
-	"github.com/peterbourgon/ff/fftoml"
+	"github.com/peterbourgon/ff/v2"
+	"github.com/peterbourgon/ff/v2/fftest"
+	"github.com/peterbourgon/ff/v2/fftoml"
 )
 
 func TestParser(t *testing.T) {

@@ -3,7 +3,7 @@
 ffcli stands for flags-first command line interface, 
 and provides an opinionated way to build CLIs.
 
-## Motivation
+## Rationale
 
 Popular CLI frameworks like [spf13/cobra][cobra], [urfave/cli][urfave], or
 [alecthomas/kingpin][kingpin] tend to have extremely large APIs, to support a
@@ -13,11 +13,25 @@ large number of "table stakes" features.
 [urfave]: https://github.com/urfave/cli
 [kingpin]: https://github.com/alecthomas/kingpin
 
-I believe it's possible to build fully-featured, modern CLIs using a toolkit
-with a minimal API surface area, by leveraging existing language features,
-patterns, and abstractions whenever possible. CLIs aren't fundamentally
-different than any other program: commands, subcommands, flag sets, etc. are all
-just components in a component graph, and can be managed in the same way.
+This package is intended to be a lightweight alternative to those packages. In
+contrast to them, the API surface area of package ffcli is very small, with the
+immediate goal of being intuitive and productive, and the long-term goal of
+supporting commandline applications that are substantially easier to understand
+and maintain.
+
+To support these goals, the package is concerned only with the core mechanics of
+defining a command tree, parsing flags, and selecting a command to run. It does
+not intend to be a one-stop-shop for everything your commandline application
+needs. Features like tab completion or colorized output are orthogonal to
+command tree parsing, and should be easy to provide on top of ffcli.
+
+Finally, this package follows in the philosophy of its parent package ff, or
+"flags-first". Flags, and more specifically the Go stdlib flag.FlagSet, should
+be the primary mechanism of getting configuration from the execution environment
+into your program. The affordances provided by package ff, including environment
+variable and config file parsing, are also available in package ffcli. Support
+for other flag packages is a non-goal.
+
 
 ## Goals
 
@@ -42,14 +56,23 @@ possible example of an ffcli program.
 [command]: https://godoc.org/github.com/peterbourgon/ff/ffcli#Command
 
 ```go
-root := &ffcli.Command{
-	Exec: func(ctx context.Context, args []string) error {
-		fmt.Println("hello world")
-		return nil
-	},
-}
+import (
+	"context"
+	"os"
 
-root.ParseAndRun(context.Background(), os.Args[1:])
+	"github.com/peterbourgon/ff/v2/ffcli"
+)
+
+func main() {
+	root := &ffcli.Command{
+		Exec: func(ctx context.Context, args []string) error {
+			println("hello world")
+			return nil
+		},
+	}
+
+	root.ParseAndRun(context.Background(), os.Args[1:])
+}
 ```
 
 Most CLIs use flags and arguments to control behavior. Here is a command which
@@ -126,5 +149,5 @@ See [the examples directory][examples]. If you'd like an example of a specific
 type of program structure, or a CLI that satisfies a specific requirement,
 please [file an issue][issue].
 
-[examples]: https://github.com/peterbourgon/ff/tree/master/ffcli/examples
-[issue]: https://github.com/peterbourgon/ff/issues/new
+[examples]: https://github.com/peterbourgon/ff/v2/tree/master/ffcli/examples
+[issue]: https://github.com/peterbourgon/ff/v2/issues/new
