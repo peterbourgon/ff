@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 
-	"github.com/peterbourgon/ff/ffcli"
-	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/objectapi"
+	"github.com/peterbourgon/ff/v2/ffcli"
+	"github.com/peterbourgon/ff/v2/ffcli/examples/objectctl/pkg/objectapi"
 )
 
 // Config for the root command, including flags and types that should be

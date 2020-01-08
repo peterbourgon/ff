@@ -15,6 +15,14 @@ a natural companion to, and extension of, package ff.
 Define a flag.FlagSet in your func main.
 
 ```go
+import (
+	"flag"
+	"os"
+	"time"
+
+	"github.com/peterbourgon/ff/v2"
+)
+
 func main() {
 	fs := flag.NewFlagSet("my-program", flag.ExitOnError)
 	var (
@@ -26,7 +34,7 @@ func main() {
 ```
 
 Then, call ff.Parse instead of fs.Parse. 
-[Options](https://godoc.org/github.com/peterbourgon/ff#Option)
+[Options](https://godoc.org/github.com/peterbourgon/ff/v2#Option)
 are available to control parse behavior.
 
 ```go
