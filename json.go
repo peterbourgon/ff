@@ -74,8 +74,8 @@ func (e JSONParseError) Error() string {
 	return fmt.Sprintf("error parsing JSON config: %v", e.Inner)
 }
 
-// Unwrap implements the xerrors.Wrapper interface, allowing
-// xerrors.Is and xerrors.As to work with JSONParseErrors.
+// Unwrap implements the errors.Wrapper interface, allowing errors.Is and
+// errors.As to work with JSONParseErrors.
 func (e JSONParseError) Unwrap() error {
 	return e.Inner
 }

@@ -138,8 +138,8 @@ func (e ParseError) Error() string {
 	return fmt.Sprintf("error parsing TOML config: %v", e.Inner)
 }
 
-// Unwrap implements the xerrors.Wrapper interface, allowing
-// xerrors.Is and xerrors.As to work with ParseErrors.
+// Unwrap implements the errors.Wrapper interface, allowing errors.Is and
+// errors.As to work with ParseErrors.
 func (e ParseError) Unwrap() error {
 	return e.Inner
 }

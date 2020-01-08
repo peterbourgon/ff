@@ -2,8 +2,11 @@ package ffcli_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
+	"fmt"
+	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -106,7 +109,7 @@ func TestCommandRun(t *testing.T) {
 			foo := &ffcli.Command{
 				Name:    "foo",
 				FlagSet: foofs,
-				Exec:    func(args []string) error { fooran, fooargs = true, args; return nil },
+				Exec:    func(_ context.Context, args []string) error { fooran, fooargs = true, args; return nil },
 			}
 
 			barfs, barvars := fftest.Pair()
@@ -115,7 +118,7 @@ func TestCommandRun(t *testing.T) {
 			bar := &ffcli.Command{
 				Name:    "bar",
 				FlagSet: barfs,
-				Exec:    func(args []string) error { barran, barargs = true, args; return nil },
+				Exec:    func(_ context.Context, args []string) error { barran, barargs = true, args; return nil },
 			}
 
 			rootfs, rootvars := fftest.Pair()
@@ -124,10 +127,10 @@ func TestCommandRun(t *testing.T) {
 			root := &ffcli.Command{
 				FlagSet:     rootfs,
 				Subcommands: []*ffcli.Command{foo, bar},
-				Exec:        func(args []string) error { rootran, rootargs = true, args; return nil },
+				Exec:        func(_ context.Context, args []string) error { rootran, rootargs = true, args; return nil },
 			}
 
-			err := root.Run(testcase.args)
+			err := root.ParseAndRun(context.Background(), testcase.args)
 			assertNoError(t, err)
 			assertNoError(t, fftest.Compare(&testcase.rootvars, rootvars))
 			assertBool(t, testcase.rootran, rootran)
@@ -148,7 +151,7 @@ func TestHelpUsage(t *testing.T) {
 	for _, testcase := range []struct {
 		name      string
 		usageFunc func(*ffcli.Command) string
-		exec      func([]string) error
+		exec      func(context.Context, []string) error
 		args      []string
 		output    string
 	}{
@@ -172,7 +175,7 @@ func TestHelpUsage(t *testing.T) {
 		{
 			name:      "ErrHelp",
 			usageFunc: func(*ffcli.Command) string { return "👹" },
-			exec:      func([]string) error { return flag.ErrHelp },
+			exec:      func(context.Context, []string) error { return flag.ErrHelp },
 			output:    "👹\n",
 		},
 	} {
@@ -182,20 +185,198 @@ func TestHelpUsage(t *testing.T) {
 			fs.SetOutput(&buf)
 
 			command := &ffcli.Command{
-				Name:      "TestUsageFunc",
-				Usage:     "TestUsageFunc [flags] <args>",
-				ShortHelp: "Some short help.",
-				LongHelp:  "Some long help.",
-				FlagSet:   fs,
-				UsageFunc: testcase.usageFunc,
-				Exec:      testcase.exec,
+				Name:       "TestHelpUsage",
+				ShortUsage: "TestHelpUsage [flags] <args>",
+				ShortHelp:  "Some short help.",
+				LongHelp:   "Some long help.",
+				FlagSet:    fs,
+				UsageFunc:  testcase.usageFunc,
+				Exec:       testcase.exec,
 			}
 
-			err := command.Run(testcase.args)
+			err := command.ParseAndRun(context.Background(), testcase.args)
 			assertErrorIs(t, flag.ErrHelp, err)
 			assertString(t, testcase.output, buf.String())
 		})
 	}
+}
+
+func TestNestedOutput(t *testing.T) {
+	t.Parallel()
+
+	for _, testcase := range []struct {
+		name       string
+		args       []string
+		wantErr    error
+		wantOutput string
+	}{
+		{
+			name:       "root without args",
+			args:       []string{},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "root usage func\n",
+		},
+		{
+			name:       "root with args",
+			args:       []string{"abc", "def ghi"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "root usage func\n",
+		},
+		{
+			name:       "root help",
+			args:       []string{"-h"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "root usage func\n",
+		},
+		{
+			name:       "foo without args",
+			args:       []string{"foo"},
+			wantOutput: "foo: ''\n",
+		},
+		{
+			name:       "foo with args",
+			args:       []string{"foo", "alpha", "beta"},
+			wantOutput: "foo: 'alpha beta'\n",
+		},
+		{
+			name:       "foo help",
+			args:       []string{"foo", "-h"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "foo usage func\n", // only one instance of usage string
+		},
+		{
+			name:       "foo bar without args",
+			args:       []string{"foo", "bar"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "bar usage func\n",
+		},
+		{
+			name:       "foo bar with args",
+			args:       []string{"foo", "bar", "--", "baz quux"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "bar usage func\n",
+		},
+		{
+			name:       "foo bar help",
+			args:       []string{"foo", "bar", "--help"},
+			wantErr:    flag.ErrHelp,
+			wantOutput: "bar usage func\n",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			var (
+				rootfs = flag.NewFlagSet("root", flag.ContinueOnError)
+				foofs  = flag.NewFlagSet("foo", flag.ContinueOnError)
+				barfs  = flag.NewFlagSet("bar", flag.ContinueOnError)
+				buf    bytes.Buffer
+			)
+			rootfs.SetOutput(&buf)
+			foofs.SetOutput(&buf)
+			barfs.SetOutput(&buf)
+
+			barExec := func(_ context.Context, args []string) error {
+				return flag.ErrHelp
+			}
+
+			bar := &ffcli.Command{
+				Name:      "bar",
+				FlagSet:   barfs,
+				UsageFunc: func(*ffcli.Command) string { return "bar usage func" },
+				Exec:      barExec,
+			}
+
+			fooExec := func(_ context.Context, args []string) error {
+				fmt.Fprintf(&buf, "foo: '%s'\n", strings.Join(args, " "))
+				return nil
+			}
+
+			foo := &ffcli.Command{
+				Name:        "foo",
+				FlagSet:     foofs,
+				UsageFunc:   func(*ffcli.Command) string { return "foo usage func" },
+				Subcommands: []*ffcli.Command{bar},
+				Exec:        fooExec,
+			}
+
+			rootExec := func(_ context.Context, args []string) error {
+				return flag.ErrHelp
+			}
+
+			root := &ffcli.Command{
+				FlagSet:     rootfs,
+				UsageFunc:   func(*ffcli.Command) string { return "root usage func" },
+				Subcommands: []*ffcli.Command{foo},
+				Exec:        rootExec,
+			}
+
+			err := root.ParseAndRun(context.Background(), testcase.args)
+			if want, have := testcase.wantErr, err; !errors.Is(have, want) {
+				t.Errorf("error: want %v, have %v", want, have)
+			}
+			if want, have := testcase.wantOutput, buf.String(); want != have {
+				t.Errorf("output: want %q, have %q", want, have)
+			}
+		})
+	}
+}
+
+func ExampleCommand_Parse_then_Run() {
+	// Assume our CLI will use some client that requires a token.
+	type FooClient struct {
+		token string
+	}
+
+	// That client would have a constructor.
+	NewFooClient := func(token string) (*FooClient, error) {
+		if token == "" {
+			return nil, fmt.Errorf("token required")
+		}
+		return &FooClient{token: token}, nil
+	}
+
+	// We define the token in the root command's FlagSet.
+	var (
+		rootFlagSet = flag.NewFlagSet("mycommand", flag.ExitOnError)
+		token       = rootFlagSet.String("token", "", "API token")
+	)
+
+	// Create a placeholder client, initially nil.
+	var client *FooClient
+
+	// Commands can reference and use it, because by the time their Exec
+	// function is invoked, the client will be constructed.
+	foo := &ffcli.Command{
+		Name: "foo",
+		Exec: func(context.Context, []string) error {
+			fmt.Printf("subcommand foo can use the client: %v", client)
+			return nil
+		},
+	}
+
+	root := &ffcli.Command{
+		FlagSet:     rootFlagSet,
+		Subcommands: []*ffcli.Command{foo},
+	}
+
+	// Call Parse first, to populate flags and select a terminal command.
+	if err := root.Parse([]string{"-token", "SECRETKEY", "foo"}); err != nil {
+		log.Fatalf("Parse failure: %v", err)
+	}
+
+	// After a successful Parse, we can construct a FooClient with the token.
+	var err error
+	client, err = NewFooClient(*token)
+	if err != nil {
+		log.Fatalf("error constructing FooClient: %v", err)
+	}
+
+	// Then call Run, which will select the foo subcommand and invoke it.
+	if err := root.Run(context.Background()); err != nil {
+		log.Fatalf("Run failure: %v", err)
+	}
+
+	// Output:
+	// subcommand foo can use the client: &{SECRETKEY}
 }
 
 func assertNoError(t *testing.T, err error) {
@@ -238,7 +419,7 @@ func assertStringSlice(t *testing.T, want, have []string) {
 
 var defaultUsageFuncOutput = strings.TrimSpace(`
 USAGE
-  TestUsageFunc [flags] <args>
+  TestHelpUsage [flags] <args>
 
 Some long help.
 

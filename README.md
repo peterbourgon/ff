@@ -4,13 +4,11 @@ ff stands for flags-first, and provides an opinionated way to populate
 a [flag.FlagSet](https://golang.org/pkg/flag#FlagSet) with
 configuration data from the environment. By default, it parses only
 from the command line, but you can enable parsing from a configuration
-file and/or environmental variables.
+file (lower priority) and/or environment variables (lowest priority).
 
-With everything enabled, the priority order is:
-
-1. Command line flags (highest priority)
-2. Configuration file
-3. Environment variables (lowest priority)
+Building a commandline application in the style of `kubectl` or `docker`?
+Consider [package ffcli](https://godoc.org/github.com/peterbourgon/ff/ffcli),
+a natural companion to, and extension of, package ff.
 
 ## Usage
 
@@ -27,7 +25,9 @@ func main() {
 	)
 ```
 
-Then, call ff.Parse instead of fs.Parse.
+Then, call ff.Parse instead of fs.Parse. 
+[Options](https://godoc.org/github.com/peterbourgon/ff#Option)
+are available to control parse behavior.
 
 ```go
 	ff.Parse(fs, os.Args[1:],
@@ -69,9 +69,3 @@ Finally, it will look in the environment for variables with a `MY_PROGRAM`
 prefix. Flag names are capitalized, and separator characters are converted to
 underscores. In this case, for example, `MY_PROGRAM_LISTEN_ADDR` would match to
 `listen-addr`.
-
-## ffcli
-
-Building a commandline application in the style of `kubectl` or `docker`?
-Consider [package ffcli](https://godoc.org/github.com/peterbourgon/ff/ffcli).
-

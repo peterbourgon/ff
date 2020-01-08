@@ -1,2 +1,2 @@
-// Package fftest provides helpers for parser testing.
+// Package fftest provides unit test helpers.
 package fftest
