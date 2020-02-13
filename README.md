@@ -1,4 +1,4 @@
-# ff [![Latest Release](https://img.shields.io/github/release/peterbourgon/ff.svg?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) [![GoDoc](https://godoc.org/github.com/peterbourgon/ff?status.svg)](https://godoc.org/github.com/peterbourgon/ff) [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fpeterbourgon%2Fff%2Fbadge&style=flat-square&label=build)](https://github.com/peterbourgon/ff/actions?query=workflow%3ATest)
+# ff [![Latest Release](https://img.shields.io/github/release/peterbourgon/ff.svg?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) [![Docs](https://godoc.org/github.com/peterbourgon/ff?status.svg)](https://pkg.go.dev/github.com/peterbourgon/ff/v2) [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fpeterbourgon%2Fff%2Fbadge&style=flat-square&label=build)](https://github.com/peterbourgon/ff/actions?query=workflow%3ATest)
 
 ff stands for flags-first, and provides an opinionated way to populate
 a [flag.FlagSet](https://golang.org/pkg/flag#FlagSet) with
@@ -7,7 +7,7 @@ from the command line, but you can enable parsing from a configuration
 file (lower priority) and/or environment variables (lowest priority).
 
 Building a commandline application in the style of `kubectl` or `docker`?
-Consider [package ffcli](https://godoc.org/github.com/peterbourgon/ff/ffcli),
+Consider [package ffcli](https://pkg.go.dev/github.com/peterbourgon/ff/v2/ffcli),
 a natural companion to, and extension of, package ff.
 
 ## Usage
@@ -34,7 +34,7 @@ func main() {
 ```
 
 Then, call ff.Parse instead of fs.Parse. 
-[Options](https://godoc.org/github.com/peterbourgon/ff/v2#Option)
+[Options](https://pkg.go.dev/github.com/peterbourgon/ff/v2#Option)
 are available to control parse behavior.
 
 ```go
@@ -73,7 +73,10 @@ Or, you could write your own config file parser.
 type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
 ```
 
-Finally, it will look in the environment for variables with a `MY_PROGRAM`
-prefix. Flag names are capitalized, and separator characters are converted to
-underscores. In this case, for example, `MY_PROGRAM_LISTEN_ADDR` would match to
-`listen-addr`.
+Finally, the example will look in the environment for variables with a
+`MY_PROGRAM` prefix. Flag names are capitalized, and separator characters are
+converted to underscores. In this case, for example, `MY_PROGRAM_LISTEN_ADDR`
+would match to `listen-addr`. Parsing of env vars containing commas has special
+behavior, see
+[WithEnvVarIgnoreCommas](https://pkg.go.dev/github.com/peterbourgon/ff/v2?tab=doc#WithEnvVarIgnoreCommas)
+for details.
