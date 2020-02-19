@@ -33,7 +33,7 @@ func main() {
 	)
 ```
 
-Then, call ff.Parse instead of fs.Parse. 
+Then, call ff.Parse instead of fs.Parse.
 [Options](https://pkg.go.dev/github.com/peterbourgon/ff/v2#Option)
 are available to control parse behavior.
 
@@ -80,3 +80,37 @@ would match to `listen-addr`. Parsing of env vars containing commas has special
 behavior, see
 [WithEnvVarIgnoreCommas](https://pkg.go.dev/github.com/peterbourgon/ff/v2?tab=doc#WithEnvVarIgnoreCommas)
 for details.
+
+## Flags and env vars
+
+One common use case is to allow configuration from both flags and env vars.
+
+```go
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/peterbourgon/ff/v2"
+)
+
+func main() {
+	fs := flag.NewFlagSet("myservice", flag.ExitOnError)
+	var (
+		port  = fs.Int("port", 8080, "listen port for server (also via PORT)")
+		debug = fs.Bool("debug", false, "log debug information (also via DEBUG)")
+	)
+	ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix())
+
+	fmt.Printf("port %d, debug %v\n", *port, *debug)
+}
+```
+
+```
+$ env PORT=9090 myservice
+port 9090, debug false
+$ env PORT=9090 DEBUG=1 myservice -port=1234
+port 1234, debug true
+```
