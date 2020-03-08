@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/pelletier/go-toml"
-	"github.com/peterbourgon/ff/v2"
+	"github.com/peterbourgon/ff/v3"
 )
 
 // Parser is a parser for TOML file format. Flags and their values are read
