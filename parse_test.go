@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff/v2"
-	"github.com/peterbourgon/ff/v2/fftest"
+	"github.com/peterbourgon/ff/v3"
+	"github.com/peterbourgon/ff/v3/fftest"
 )
 
 func TestParseBasics(t *testing.T) {
@@ -38,32 +38,36 @@ func TestParseBasics(t *testing.T) {
 		{
 			name: "env only",
 			env:  map[string]string{"TEST_PARSE_S": "baz", "TEST_PARSE_F": "0.99", "TEST_PARSE_D": "100s"},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
 			want: fftest.Vars{S: "baz", F: 0.99, D: 100 * time.Second},
 		},
 		{
-			name: "file and args",
+			name: "file args",
 			file: "testdata/2.conf",
 			args: []string{"-s", "foo", "-i", "1234"},
 			want: fftest.Vars{S: "foo", I: 1234, D: 3 * time.Second},
 		},
 		{
-			name: "env and args",
+			name: "env args",
 			env:  map[string]string{"TEST_PARSE_S": "should be overridden", "TEST_PARSE_B": "true"},
 			args: []string{"-s", "explicit wins", "-i", "7"},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
 			want: fftest.Vars{S: "explicit wins", I: 7, B: true},
 		},
 		{
-			name: "env and file",
-			env:  map[string]string{"TEST_PARSE_S": "should be overridden", "TEST_PARSE_B": "true"},
+			name: "file env",
+			env:  map[string]string{"TEST_PARSE_S": "env takes priority", "TEST_PARSE_B": "true"},
 			file: "testdata/3.conf",
-			want: fftest.Vars{S: "bar", I: 99, B: true, D: 34 * time.Second},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			want: fftest.Vars{S: "env takes priority", I: 99, B: true, D: 34 * time.Second},
 		},
 		{
-			name: "env file args",
-			env:  map[string]string{"TEST_PARSE_S": "from env", "TEST_PARSE_I": "300", "TEST_PARSE_F": "0.15", "TEST_PARSE_B": "true", "TEST_PARSE_D": "1h"},
+			name: "file env args",
 			file: "testdata/4.conf",
+			env:  map[string]string{"TEST_PARSE_S": "from env", "TEST_PARSE_I": "300", "TEST_PARSE_F": "0.15", "TEST_PARSE_B": "true"},
 			args: []string{"-s", "from arg", "-i", "100"},
-			want: fftest.Vars{S: "from arg", I: 100, F: 2.3, B: true, D: time.Minute},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			want: fftest.Vars{S: "from arg", I: 100, F: 0.15, B: true, D: time.Minute},
 		},
 		{
 			name: "repeated args",
@@ -75,6 +79,7 @@ func TestParseBasics(t *testing.T) {
 			env:  map[string]string{"TEST_PARSE_S": "s.env", "TEST_PARSE_X": "x.env.1"},
 			file: "testdata/5.conf",
 			args: []string{"-s", "s.arg.1", "-s", "s.arg.2", "-x", "x.arg.1", "-x", "x.arg.2"},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
 			want: fftest.Vars{S: "s.arg.2", X: []string{"x.arg.1", "x.arg.2"}}, // highest prio wins and no others are called
 		},
 		{
@@ -90,18 +95,25 @@ func TestParseBasics(t *testing.T) {
 		{
 			name: "default comma behavior",
 			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			want: fftest.Vars{S: "one,two,three", X: []string{"one,two,three"}},
+		},
+		{
+			name: "WithEnvVarSplit",
+			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
 			want: fftest.Vars{S: "three", X: []string{"one", "two", "three"}},
 		},
 		{
-			name: "WithEnvVarIgnoreCommas",
-			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
-			opts: []ff.Option{ff.WithEnvVarIgnoreCommas(true)},
-			want: fftest.Vars{S: "one,two,three", X: []string{"one,two,three"}},
+			name: "WithEnvVarNoPrefix",
+			env:  map[string]string{"TEST_PARSE_S": "foo", "S": "bar"},
+			opts: []ff.Option{ff.WithEnvVarNoPrefix()},
+			want: fftest.Vars{S: "bar"},
 		},
 		{
 			name: "WithIgnoreUndefined env",
 			env:  map[string]string{"TEST_PARSE_UNDEFINED": "one", "TEST_PARSE_S": "one"},
-			opts: []ff.Option{ff.WithIgnoreUndefined(true)},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithIgnoreUndefined(true)},
 			want: fftest.Vars{S: "one"},
 		},
 		{
@@ -117,8 +129,9 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{WantParseErrorString: "config file flag"},
 		},
 		{
-			name: "env var comma whitespace",
+			name: "env var split comma whitespace",
 			env:  map[string]string{"TEST_PARSE_S": "one, two, three ", "TEST_PARSE_X": "one, two, three "},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
 			want: fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
 		},
 	} {
@@ -132,7 +145,6 @@ func TestParseBasics(t *testing.T) {
 					defer os.Setenv(k, os.Getenv(k))
 					os.Setenv(k, v)
 				}
-				testcase.opts = append(testcase.opts, ff.WithEnvVarPrefix("TEST_PARSE"))
 			}
 
 			fs, vars := fftest.Pair()

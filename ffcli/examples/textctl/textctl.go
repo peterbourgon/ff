@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/peterbourgon/ff/v2/ffcli"
+	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
 // textctl is a simple applications in which all commands are built up in func

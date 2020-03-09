@@ -6,14 +6,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff/v2/ffcli"
-	"github.com/peterbourgon/ff/v2/fftest"
+	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/peterbourgon/ff/v3/fftest"
 )
 
 func TestCommandRun(t *testing.T) {
@@ -315,6 +316,124 @@ func TestNestedOutput(t *testing.T) {
 			}
 			if want, have := testcase.wantOutput, buf.String(); want != have {
 				t.Errorf("output: want %q, have %q", want, have)
+			}
+		})
+	}
+}
+
+func TestIssue57(t *testing.T) {
+	t.Parallel()
+
+	for _, testcase := range []struct {
+		args        []string
+		parseErrAs  error
+		parseErrIs  error
+		parseErrStr string
+		runErrAs    error
+		runErrIs    error
+		runErrStr   string
+	}{
+		{
+			args:       []string{},
+			parseErrAs: &ffcli.NoExecError{},
+			runErrAs:   &ffcli.NoExecError{},
+		},
+		{
+			args:       []string{"-h"},
+			parseErrIs: flag.ErrHelp,
+			runErrIs:   ffcli.ErrUnparsed,
+		},
+		{
+			args:       []string{"bar"},
+			parseErrAs: &ffcli.NoExecError{},
+			runErrAs:   &ffcli.NoExecError{},
+		},
+		{
+			args:       []string{"bar", "-h"},
+			parseErrAs: flag.ErrHelp,
+			runErrAs:   ffcli.ErrUnparsed,
+		},
+		{
+			args:        []string{"bar", "-undefined"},
+			parseErrStr: "error parsing commandline args: flag provided but not defined: -undefined",
+			runErrIs:    ffcli.ErrUnparsed,
+		},
+		{
+			args: []string{"bar", "baz"},
+		},
+		{
+			args:       []string{"bar", "baz", "-h"},
+			parseErrIs: flag.ErrHelp,
+			runErrIs:   ffcli.ErrUnparsed,
+		},
+		{
+			args:        []string{"bar", "baz", "-also.undefined"},
+			parseErrStr: "error parsing commandline args: flag provided but not defined: -also.undefined",
+			runErrIs:    ffcli.ErrUnparsed,
+		},
+	} {
+		t.Run(strings.Join(append([]string{"foo"}, testcase.args...), " "), func(t *testing.T) {
+			fs := flag.NewFlagSet("·", flag.ContinueOnError)
+			fs.SetOutput(ioutil.Discard)
+
+			var (
+				baz = &ffcli.Command{Name: "baz", FlagSet: fs, Exec: func(_ context.Context, args []string) error { return nil }}
+				bar = &ffcli.Command{Name: "bar", FlagSet: fs, Subcommands: []*ffcli.Command{baz}}
+				foo = &ffcli.Command{Name: "foo", FlagSet: fs, Subcommands: []*ffcli.Command{bar}}
+			)
+
+			var (
+				parseErr = foo.Parse(testcase.args)
+				runErr   = foo.Run(context.Background())
+			)
+
+			if testcase.parseErrAs != nil {
+				if want, have := &testcase.parseErrAs, parseErr; !errors.As(have, want) {
+					t.Errorf("Parse: want %v, have %v", want, have)
+				}
+			}
+
+			if testcase.parseErrIs != nil {
+				if want, have := testcase.parseErrIs, parseErr; !errors.Is(have, want) {
+					t.Errorf("Parse: want %v, have %v", want, have)
+				}
+			}
+
+			if testcase.parseErrStr != "" {
+				if want, have := testcase.parseErrStr, parseErr.Error(); want != have {
+					t.Errorf("Parse: want %q, have %q", want, have)
+				}
+			}
+
+			if testcase.runErrAs != nil {
+				if want, have := &testcase.runErrAs, runErr; !errors.As(have, want) {
+					t.Errorf("Run: want %v, have %v", want, have)
+				}
+			}
+
+			if testcase.runErrIs != nil {
+				if want, have := testcase.runErrIs, runErr; !errors.Is(have, want) {
+					t.Errorf("Run: want %v, have %v", want, have)
+				}
+			}
+
+			if testcase.runErrStr != "" {
+				if want, have := testcase.runErrStr, runErr.Error(); want != have {
+					t.Errorf("Run: want %q, have %q", want, have)
+				}
+			}
+
+			var (
+				noParseErr = testcase.parseErrAs == nil && testcase.parseErrIs == nil && testcase.parseErrStr == ""
+				noRunErr   = testcase.runErrAs == nil && testcase.runErrIs == nil && testcase.runErrStr == ""
+			)
+			if noParseErr && noRunErr {
+				if parseErr != nil {
+					t.Errorf("Parse: unexpected error: %v", parseErr)
+				}
+				if runErr != nil {
+					t.Errorf("Run: unexpected error: %v", runErr)
+				}
 			}
 		})
 	}

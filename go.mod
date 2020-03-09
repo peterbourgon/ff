@@ -1,6 +1,6 @@
-module github.com/peterbourgon/ff/v2
+module github.com/peterbourgon/ff/v3
 
-go 1.13
+go 1.14
 
 require (
 	github.com/pelletier/go-toml v1.6.0
