@@ -28,7 +28,45 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		provided[f.Name] = true
 	})
 
-	// TEMPORARY second priority: config file (host).
+	// Second priority: environment variables (session).
+	if parseEnv := c.envVarPrefix != "" || c.envVarNoPrefix; parseEnv {
+		var visitErr error
+		fs.VisitAll(func(f *flag.Flag) {
+			if visitErr != nil {
+				return
+			}
+
+			if provided[f.Name] {
+				return
+			}
+
+			var key string
+			key = strings.ToUpper(f.Name)
+			key = envVarReplacer.Replace(key)
+			key = maybePrefix(key, c.envVarNoPrefix, c.envVarPrefix)
+
+			value := os.Getenv(key)
+			if value == "" {
+				return
+			}
+
+			for _, v := range maybeSplit(value, c.envVarSplit) {
+				if err := fs.Set(f.Name, v); err != nil {
+					visitErr = fmt.Errorf("error setting flag %q from env var %q: %w", f.Name, key, err)
+					return
+				}
+			}
+		})
+		if visitErr != nil {
+			return fmt.Errorf("error parsing env vars: %w", visitErr)
+		}
+	}
+
+	fs.Visit(func(f *flag.Flag) {
+		provided[f.Name] = true
+	})
+
+	// Third priority: config file (host).
 	if c.configFile == "" && c.configFileFlagName != "" {
 		if f := fs.Lookup(c.configFileFlagName); f != nil {
 			c.configFile = f.Value.String()
@@ -67,44 +105,6 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 		default:
 			return err
-		}
-	}
-
-	fs.Visit(func(f *flag.Flag) {
-		provided[f.Name] = true
-	})
-
-	// TEMPORARY third priority: environment variables (session).
-	if parseEnv := c.envVarPrefix != "" || c.envVarNoPrefix; parseEnv {
-		var visitErr error
-		fs.VisitAll(func(f *flag.Flag) {
-			if visitErr != nil {
-				return
-			}
-
-			if provided[f.Name] {
-				return
-			}
-
-			var key string
-			key = strings.ToUpper(f.Name)
-			key = envVarReplacer.Replace(key)
-			key = maybePrefix(key, c.envVarNoPrefix, c.envVarPrefix)
-
-			value := os.Getenv(key)
-			if value == "" {
-				return
-			}
-
-			for _, v := range maybeSplit(value, c.envVarSplit) {
-				if err := fs.Set(f.Name, v); err != nil {
-					visitErr = fmt.Errorf("error setting flag %q from env var %q: %w", f.Name, key, err)
-					return
-				}
-			}
-		})
-		if visitErr != nil {
-			return fmt.Errorf("error parsing env vars: %w", visitErr)
 		}
 	}
 
