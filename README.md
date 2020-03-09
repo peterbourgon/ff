@@ -1,13 +1,13 @@
-# ff [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/v2) [![Latest Release](https://img.shields.io/github/release/peterbourgon/ff.svg?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fpeterbourgon%2Fff%2Fbadge&style=flat-square&label=build)](https://github.com/peterbourgon/ff/actions?query=workflow%3ATest)
+# ff [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/v3) [![Latest Release](https://img.shields.io/github/release/peterbourgon/ff.svg?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fpeterbourgon%2Fff%2Fbadge&style=flat-square&label=build)](https://github.com/peterbourgon/ff/actions?query=workflow%3ATest)
 
-ff stands for flags-first, and provides an opinionated way to populate
-a [flag.FlagSet](https://golang.org/pkg/flag#FlagSet) with
-configuration data from the environment. By default, it parses only
-from the command line, but you can enable parsing from a configuration
-file (lower priority) and/or environment variables (lowest priority).
+ff stands for flags-first, and provides an opinionated way to populate a
+[flag.FlagSet](https://golang.org/pkg/flag#FlagSet) with configuration data from
+the environment. By default, it parses only from the command line, but you can
+enable parsing from environment variables (lower priority) and/or a
+configuration file (lowest priority).
 
 Building a commandline application in the style of `kubectl` or `docker`?
-Consider [package ffcli](https://pkg.go.dev/github.com/peterbourgon/ff/v2/ffcli),
+Consider [package ffcli](https://pkg.go.dev/github.com/peterbourgon/ff/v3/ffcli),
 a natural companion to, and extension of, package ff.
 
 ## Usage
@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/peterbourgon/ff/v2"
+	"github.com/peterbourgon/ff/v3"
 )
 
 func main() {
@@ -34,20 +34,27 @@ func main() {
 ```
 
 Then, call ff.Parse instead of fs.Parse.
-[Options](https://pkg.go.dev/github.com/peterbourgon/ff/v2#Option)
+[Options](https://pkg.go.dev/github.com/peterbourgon/ff/v3#Option)
 are available to control parse behavior.
 
 ```go
 	ff.Parse(fs, os.Args[1:],
+		ff.WithEnvVarPrefix("MY_PROGRAM"),
 		ff.WithConfigFileFlag("config"),
 		ff.WithConfigFileParser(ff.PlainParser),
-		ff.WithEnvVarPrefix("MY_PROGRAM"),
 	)
 ```
 
 This example will parse flags from the commandline args, just like regular
-package flag, with the highest priority. If a `-config` file is specified, it
-will try to parse it using the PlainParser, which expects files in this format.
+package flag, with the highest priority.
+
+Additionally, the example will look in the environment for variables with a
+`MY_PROGRAM` prefix. Flag names are capitalized, and separator characters are
+converted to underscores. In this case, for example, `MY_PROGRAM_LISTEN_ADDR`
+would match to `listen-addr`.
+
+Finally, if a `-config` file is specified, the example will try to parse it
+using the PlainParser, which expects files in this format.
 
 ```
 listen-addr localhost:8080
@@ -73,14 +80,6 @@ Or, you could write your own config file parser.
 type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
 ```
 
-Finally, the example will look in the environment for variables with a
-`MY_PROGRAM` prefix. Flag names are capitalized, and separator characters are
-converted to underscores. In this case, for example, `MY_PROGRAM_LISTEN_ADDR`
-would match to `listen-addr`. Parsing of env vars containing commas has special
-behavior, see
-[WithEnvVarIgnoreCommas](https://pkg.go.dev/github.com/peterbourgon/ff/v2?tab=doc#WithEnvVarIgnoreCommas)
-for details.
-
 ## Flags and env vars
 
 One common use case is to allow configuration from both flags and env vars.
@@ -93,7 +92,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/peterbourgon/ff/v2"
+	"github.com/peterbourgon/ff/v3"
 )
 
 func main() {
