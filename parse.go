@@ -195,8 +195,10 @@ func WithEnvVarSplit(delimiter string) Option {
 	}
 }
 
-// WithIgnoreUndefined tells Parse to ignore undefined flags that it encounters.
-// By default, undefined flags result in an error.
+// WithIgnoreUndefined tells Parse to ignore undefined flags that it encounters
+// in config files. By default, if Parse encounters an undefined flag in a
+// config file, it will return an error. Note that this setting does not apply
+// to undefined flags passed as arguments.
 func WithIgnoreUndefined(ignore bool) Option {
 	return func(c *Context) {
 		c.ignoreUndefined = ignore
