@@ -67,7 +67,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	})
 
 	// Third priority: config file (host).
-	if c.configFile == "" && c.configFileFlagName != "" {
+	if c.configFileFlagName != "" {
 		if f := fs.Lookup(c.configFileFlagName); f != nil {
 			c.configFile = f.Value.String()
 		}
@@ -131,7 +131,9 @@ type Context struct {
 type Option func(*Context)
 
 // WithConfigFile tells Parse to read the provided filename as a config file.
-// Requires WithConfigFileParser, and overrides WithConfigFileFlag.
+// Requires WithConfigFileParser. If WithConfigFileFlag is also used and
+// the config file flag is provided at runtime, the user-provided config
+// file replaces this one.
 func WithConfigFile(filename string) Option {
 	return func(c *Context) {
 		c.configFile = filename
@@ -139,8 +141,8 @@ func WithConfigFile(filename string) Option {
 }
 
 // WithConfigFileFlag tells Parse to treat the flag with the given name as a
-// config file. Requires WithConfigFileParser, and is overridden by
-// WithConfigFile.
+// config file. Requires WithConfigFileParser. If WithConfigFile is also used,
+// this flag only sets the config file if provided at runtime.
 func WithConfigFileFlag(flagname string) Option {
 	return func(c *Context) {
 		c.configFileFlagName = flagname
