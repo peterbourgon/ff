@@ -132,12 +132,8 @@ type Option func(*Context)
 
 // WithConfigFile tells Parse to read the provided filename as a config file.
 // Requires WithConfigFileParser, and overrides WithConfigFileFlag.
-//
-// If you want both a config file flag and a default value when one is
-// unprovided, use WithConfigFileFlag and set your chosen default when
-// defining the flag. Because config files should generally be
-// user-specifiable, this option should be rarely used. Prefer
-// WithConfigFileFlag.
+// Because config files should generally be user-specifiable, this option
+// should be rarely used. Prefer WithConfigFileFlag.
 func WithConfigFile(filename string) Option {
 	return func(c *Context) {
 		c.configFile = filename
