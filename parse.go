@@ -9,10 +9,24 @@ import (
 	"strings"
 )
 
+// FlagSet interface defines required minimum set of functions required for
+// parsing parameters.
+//
+// The standard library flag.FlagSet implements this interface. FromPflag
+// function is also provided in this package which can be used to adapt
+// pflag.FlagSet to FlagSet.
+type FlagSet interface {
+	Parse(arguments []string) error
+	Visit(fn func(*flag.Flag))
+	VisitAll(fn func(*flag.Flag))
+	Set(name, value string) error
+	Lookup(name string) *flag.Flag
+}
+
 // Parse the flags in the flag set from the provided (presumably commandline)
 // args. Additional options may be provided to parse from a config file and/or
 // environment variables in that priority order.
-func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
+func Parse(fs FlagSet, args []string, options ...Option) error {
 	var c Context
 	for _, option := range options {
 		option(&c)

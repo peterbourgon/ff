@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/spf13/pflag"
 )
 
 // Pair returns a predefined flag set, and a predefined set of variables that
@@ -25,6 +27,16 @@ func Pair() (*flag.FlagSet, *Vars) {
 	fs.Var(&v.X, "x", "collection of strings (repeatable)")
 
 	return fs, &v
+}
+
+// PairPflag returns the same flagset as Pair but uses pflag.
+func PairPflag() (*pflag.FlagSet, *Vars) {
+	fs, v := Pair()
+
+	pfs := pflag.NewFlagSet("fftest", pflag.ContinueOnError)
+	pfs.AddGoFlagSet(fs)
+
+	return pfs, v
 }
 
 // Vars are a common set of variables used for testing.

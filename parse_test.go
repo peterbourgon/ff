@@ -152,6 +152,12 @@ func TestParseBasics(t *testing.T) {
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
 			}
+
+			pfs, pvars := fftest.PairPflag()
+			pvars.ParseError = ff.Parse(ff.FromPflag(pfs), testcase.args, testcase.opts...)
+			if err := fftest.Compare(&testcase.want, vars); err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 }
@@ -194,14 +200,25 @@ func TestParseIssue16(t *testing.T) {
 			filename, cleanup := fftest.TempFile(t, testcase.data)
 			defer cleanup()
 
+			want := fftest.Vars{S: testcase.want}
+
 			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(filename),
 				ff.WithConfigFileParser(ff.PlainParser),
 			)
 
-			want := fftest.Vars{S: testcase.want}
 			if err := fftest.Compare(&want, vars); err != nil {
+				t.Fatal(err)
+			}
+
+			pfs, pvars := fftest.PairPflag()
+			pvars.ParseError = ff.Parse(ff.FromPflag(pfs), []string{},
+				ff.WithConfigFile(filename),
+				ff.WithConfigFileParser(ff.PlainParser),
+			)
+
+			if err := fftest.Compare(&want, pvars); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -244,11 +261,19 @@ func TestParseConfigFile(t *testing.T) {
 				options = append(options, ff.WithAllowMissingConfigFile(true))
 			}
 
+			want := fftest.Vars{WantParseErrorIs: testcase.parseError}
+
 			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, []string{}, options...)
 
-			want := fftest.Vars{WantParseErrorIs: testcase.parseError}
 			if err := fftest.Compare(&want, vars); err != nil {
+				t.Fatal(err)
+			}
+
+			pfs, pvars := fftest.PairPflag()
+			pvars.ParseError = ff.Parse(ff.FromPflag(pfs), []string{}, options...)
+
+			if err := fftest.Compare(&want, pvars); err != nil {
 				t.Fatal(err)
 			}
 		})

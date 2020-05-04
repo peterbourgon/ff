@@ -50,7 +50,16 @@ func TestJSONParser(t *testing.T) {
 				ff.WithConfigFileParser(ff.JSONParser),
 			)
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
-				t.Fatal(err)
+				t.Fatal("flag.FlagSet", err)
+			}
+
+			pfs, vars := fftest.PairPflag()
+			vars.ParseError = ff.Parse(ff.FromPflag(pfs), testcase.args,
+				ff.WithConfigFile(testcase.file),
+				ff.WithConfigFileParser(ff.JSONParser),
+			)
+			if err := fftest.Compare(&testcase.want, vars); err != nil {
+				t.Fatal("pflag.FlagSet", err)
 			}
 		})
 	}
