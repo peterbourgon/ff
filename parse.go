@@ -13,46 +13,51 @@ import (
 // args. Additional options may be provided to parse from a config file and/or
 // environment variables in that priority order.
 func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
+	return ParseFlagSet(NewFromFlag(fs), args, options...)
+}
+
+// ParseFlagSet is the same as Parse but uses FlagSet defined in this package
+// instead of flag.FlagSet.
+func ParseFlagSet(fs FlagSet, args []string, options ...Option) error {
 	var c Context
 	for _, option := range options {
 		option(&c)
 	}
-
 	// First priority: commandline flags (explicit user preference).
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("error parsing commandline args: %w", err)
 	}
 
 	provided := map[string]bool{}
-	fs.Visit(func(f *flag.Flag) {
-		provided[f.Name] = true
+	fs.Visit(func(name string) {
+		provided[name] = true
 	})
 
 	// Second priority: environment variables (session).
 	if parseEnv := c.envVarPrefix != "" || c.envVarNoPrefix; parseEnv {
 		var visitErr error
-		fs.VisitAll(func(f *flag.Flag) {
+		fs.VisitAll(func(name string) {
 			if visitErr != nil {
 				return
 			}
 
-			if provided[f.Name] {
+			if provided[name] {
 				return
 			}
 
 			var key string
-			key = strings.ToUpper(f.Name)
+			key = strings.ToUpper(name)
 			key = envVarReplacer.Replace(key)
 			key = maybePrefix(key, c.envVarNoPrefix, c.envVarPrefix)
 
-			value := os.Getenv(key)
-			if value == "" {
+			v := os.Getenv(key)
+			if v == "" {
 				return
 			}
 
-			for _, v := range maybeSplit(value, c.envVarSplit) {
-				if err := fs.Set(f.Name, v); err != nil {
-					visitErr = fmt.Errorf("error setting flag %q from env var %q: %w", f.Name, key, err)
+			for _, v := range maybeSplit(v, c.envVarSplit) {
+				if err := fs.Set(name, v); err != nil {
+					visitErr = fmt.Errorf("error setting flag %q from env var %q: %w", name, key, err)
 					return
 				}
 			}
@@ -62,14 +67,14 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		}
 	}
 
-	fs.Visit(func(f *flag.Flag) {
-		provided[f.Name] = true
+	fs.Visit(func(name string) {
+		provided[name] = true
 	})
 
 	// Third priority: config file (host).
 	if c.configFile == "" && c.configFileFlagName != "" {
-		if f := fs.Lookup(c.configFileFlagName); f != nil {
-			c.configFile = f.Value.String()
+		if value, ok := fs.Lookup(c.configFileFlagName); ok {
+			c.configFile = value
 		}
 	}
 
@@ -83,7 +88,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 					return nil
 				}
 
-				defined := fs.Lookup(name) != nil
+				_, defined := fs.Lookup(name)
 				switch {
 				case !defined && c.ignoreUndefined:
 					return nil
@@ -108,8 +113,8 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		}
 	}
 
-	fs.Visit(func(f *flag.Flag) {
-		provided[f.Name] = true
+	fs.Visit(func(name string) {
+		provided[name] = true
 	})
 
 	return nil
