@@ -152,12 +152,6 @@ func TestParseBasics(t *testing.T) {
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
 			}
-
-			pfs, pvars := fftest.PairPflag()
-			pvars.ParseError = ff.Parse(ff.FromPflag(pfs), testcase.args, testcase.opts...)
-			if err := fftest.Compare(&testcase.want, vars); err != nil {
-				t.Fatal(err)
-			}
 		})
 	}
 }
@@ -211,16 +205,6 @@ func TestParseIssue16(t *testing.T) {
 			if err := fftest.Compare(&want, vars); err != nil {
 				t.Fatal(err)
 			}
-
-			pfs, pvars := fftest.PairPflag()
-			pvars.ParseError = ff.Parse(ff.FromPflag(pfs), []string{},
-				ff.WithConfigFile(filename),
-				ff.WithConfigFileParser(ff.PlainParser),
-			)
-
-			if err := fftest.Compare(&want, pvars); err != nil {
-				t.Fatal(err)
-			}
 		})
 	}
 }
@@ -267,13 +251,6 @@ func TestParseConfigFile(t *testing.T) {
 			vars.ParseError = ff.Parse(fs, []string{}, options...)
 
 			if err := fftest.Compare(&want, vars); err != nil {
-				t.Fatal(err)
-			}
-
-			pfs, pvars := fftest.PairPflag()
-			pvars.ParseError = ff.Parse(ff.FromPflag(pfs), []string{}, options...)
-
-			if err := fftest.Compare(&want, pvars); err != nil {
 				t.Fatal(err)
 			}
 		})

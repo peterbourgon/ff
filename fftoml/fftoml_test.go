@@ -51,15 +51,6 @@ func TestParser(t *testing.T) {
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
 			}
-
-			pfs, pvars := fftest.PairPflag()
-			pvars.ParseError = ff.Parse(ff.FromPflag(pfs), []string{},
-				ff.WithConfigFile(testcase.file),
-				ff.WithConfigFileParser(fftoml.Parser),
-			)
-			if err := fftest.Compare(&testcase.want, pvars); err != nil {
-				t.Fatal(err)
-			}
 		})
 	}
 }

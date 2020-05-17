@@ -262,7 +262,7 @@ func PlainParser(r io.Reader, set func(name, value string) error) error {
 		}
 
 		if err := set(name, value); err != nil {
-			return err
+			return fmt.Errorf("PlainParser set: %w", err)
 		}
 	}
 	return nil
