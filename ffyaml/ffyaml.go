@@ -1,4 +1,4 @@
-// Package ffyaml provides a YAML config file paser.
+// Package ffyaml provides a YAML config file parser.
 package ffyaml
 
 import (

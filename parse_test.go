@@ -1,7 +1,9 @@
 package ff_test
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -250,6 +252,58 @@ func TestParseConfigFile(t *testing.T) {
 			want := fftest.Vars{WantParseErrorIs: testcase.parseError}
 			if err := fftest.Compare(&want, vars); err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestUsage(t *testing.T) {
+	t.Parallel()
+
+	for _, testcase := range []struct {
+		name      string
+		opts      []ff.Option
+		want      []string
+		donotwant []string
+	}{
+		{
+			name:      "args only",
+			donotwant: []string{"also via env var"},
+		},
+		{
+			name: "env var prefix",
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			want: []string{"also via env var TEST_PARSE_S", "also via env var TEST_PARSE_F", "also via env var TEST_PARSE_D"},
+		},
+		{
+			name: "env var no prefix",
+			opts: []ff.Option{ff.WithEnvVarNoPrefix()},
+			want: []string{"also via env var S", "also via env var F", "also via env var D"},
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			fs, _ := fftest.Pair()
+			if err := ff.Parse(fs, []string{}, testcase.opts...); err != nil {
+				t.Fatal(err)
+			}
+
+			buf := new(bytes.Buffer)
+			fs.SetOutput(buf)
+			fs.Usage()
+			have := buf.String()
+			if len(testcase.want) > 0 {
+				for _, w := range testcase.want {
+					if !strings.Contains(have, w) {
+						t.Fatalf("Unexpected usage text. Want:%s Have:%s", w, have)
+					}
+				}
+			}
+			if len(testcase.donotwant) > 0 {
+				for _, w := range testcase.donotwant {
+					if strings.Contains(have, w) {
+						t.Fatalf("Unexpected usage text '%s' was found in '%s'", w, have)
+					}
+				}
 			}
 		})
 	}

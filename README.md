@@ -98,8 +98,8 @@ import (
 func main() {
 	fs := flag.NewFlagSet("myservice", flag.ExitOnError)
 	var (
-		port  = fs.Int("port", 8080, "listen port for server (also via PORT)")
-		debug = fs.Bool("debug", false, "log debug information (also via DEBUG)")
+		port  = fs.Int("port", 8080, "listen port for server")
+		debug = fs.Bool("debug", false, "log debug information")
 	)
 	ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix())
 
@@ -112,4 +112,13 @@ $ env PORT=9090 myservice
 port 9090, debug false
 $ env PORT=9090 DEBUG=1 myservice -port=1234
 port 1234, debug true
+```
+
+The environment variable names are included in the usage text as follows:
+```
+Usage of myservice:
+  -debug
+    	log debug information (also via env var DEBUG)
+  -port int
+    	listen port for server (also via env var PORT) (default 8080)
 ```
