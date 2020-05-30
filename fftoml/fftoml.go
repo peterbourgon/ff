@@ -133,7 +133,7 @@ type ParseError struct {
 	Inner error
 }
 
-// Error implenents the error interface.
+// Error implements the error interface.
 func (e ParseError) Error() string {
 	return fmt.Sprintf("error parsing TOML config: %v", e.Inner)
 }
