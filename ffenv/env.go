@@ -48,8 +48,9 @@ func parse(prefix string, r io.Reader, set func(name, value string) error) error
 	return nil
 }
 
-// ParserWithPrefix removes any prefix_ on keys in a .env file.
-// MY_APP_PREFIX_KEY=value will get evaluated as key=value.
+// ParserWithPrefix returns a Parser that will remove any prefix on keys in an
+// .env file. For example, given prefix "MY_APP", the line `MY_APP_FOO=bar` 
+// in an .env file will be evaluated as name=foo, value=bar.
 func ParserWithPrefix(prefix string) func(io.Reader, func(string, string) error) error {
 	return func(r io.Reader, set func(name, value string) error) error {
 		return parse(prefix, r, set)
