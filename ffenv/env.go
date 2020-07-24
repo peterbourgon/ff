@@ -2,6 +2,7 @@ package ffenv
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -31,11 +32,11 @@ func parse(prefix string, r io.Reader, set func(name, value string) error) error
 			index = strings.IndexRune(line, '=')
 		)
 		if index < 0 {
-			name, value = line, "true" // boolean option
-		} else {
-			name, value = strings.ToLower(line[:index]), line[index+1:]
-			name = strings.ReplaceAll(name, "_", "-")
+			return fmt.Errorf("wrong format in env file, must be: name=value")
 		}
+
+		name, value = strings.ToLower(line[:index]), line[index+1:]
+		name = strings.ReplaceAll(name, "_", "-")
 
 		if i := strings.Index(value, " #"); i >= 0 {
 			value = strings.TrimSpace(value[:i])
