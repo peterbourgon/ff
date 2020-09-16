@@ -439,6 +439,83 @@ func TestIssue57(t *testing.T) {
 	}
 }
 
+func TestSharedFlags(t *testing.T) {
+	for _, testcase := range []struct {
+		name             string
+		args             []string
+		sharedFlag       string
+		fooBuilderCalled bool
+		barBuilderCalled bool
+	}{
+		{
+			name:             "foo",
+			args:             []string{"foo"},
+			sharedFlag:       "foo-default",
+			fooBuilderCalled: true,
+		},
+		{
+			name:             "bar",
+			args:             []string{"bar"},
+			sharedFlag:       "bar-default",
+			barBuilderCalled: true,
+		},
+		{
+			name:             "foo -baz=test",
+			args:             []string{"foo", "-baz=test"},
+			sharedFlag:       "test",
+			fooBuilderCalled: true,
+		},
+		{
+			name:             "bar -baz=test",
+			args:             []string{"bar", "-baz=test"},
+			sharedFlag:       "test",
+			barBuilderCalled: true,
+		},
+		{
+			name:             "foo -baz=",
+			args:             []string{"foo", "-baz="},
+			sharedFlag:       "",
+			fooBuilderCalled: true,
+		},
+		{
+			name:             "bar -baz=",
+			args:             []string{"bar", "-baz="},
+			sharedFlag:       "",
+			barBuilderCalled: true,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			var fooBuilderCalled, barBuilderCalled bool
+			sharedFlag := "init-value"
+			fooFsBuilder := func() (*flag.FlagSet, error) {
+				fs := flag.NewFlagSet("foo", flag.ContinueOnError)
+				fs.StringVar(&sharedFlag, "baz", "foo-default", "testing")
+				fooBuilderCalled = true
+				return fs, nil
+			}
+			barFsBuilder := func() (*flag.FlagSet, error) {
+				fs := flag.NewFlagSet("bar", flag.ContinueOnError)
+				fs.StringVar(&sharedFlag, "baz", "bar-default", "testing")
+				barBuilderCalled = true
+				return fs, nil
+			}
+			noopHandler := func(context.Context, []string) error { return nil }
+			root := &ffcli.Command{
+				Subcommands: []*ffcli.Command{
+					{Name: "foo", FlagSetBuilder: fooFsBuilder, Exec: noopHandler},
+					{Name: "bar", FlagSetBuilder: barFsBuilder, Exec: noopHandler},
+				},
+				Exec: noopHandler,
+			}
+			err := root.ParseAndRun(context.Background(), testcase.args)
+			assertNoError(t, err)
+			assertString(t, testcase.sharedFlag, sharedFlag)
+			assertBool(t, testcase.fooBuilderCalled, fooBuilderCalled)
+			assertBool(t, testcase.barBuilderCalled, barBuilderCalled)
+		})
+	}
+}
+
 func ExampleCommand_Parse_then_Run() {
 	// Assume our CLI will use some client that requires a token.
 	type FooClient struct {

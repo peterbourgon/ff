@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/peterbourgon/ff/v3"
+	ff "github.com/peterbourgon/ff/v3"
 )
 
 // Command combines a main function with a flag.FlagSet, and zero or more
@@ -54,6 +54,10 @@ type Command struct {
 	// that the -h flag works as expected.
 	FlagSet *flag.FlagSet
 
+	// FlagSetBuilder is a callback used to configure the Command.FlagSet
+	// asynchronously, and only if needed.
+	FlagSetBuilder func() (*flag.FlagSet, error)
+
 	// Options provided to ff.Parse when parsing arguments for this command.
 	// Optional.
 	Options []ff.Option
@@ -90,6 +94,14 @@ type Command struct {
 func (c *Command) Parse(args []string) error {
 	if c.selected != nil {
 		return nil
+	}
+
+	if c.FlagSetBuilder != nil {
+		var err error
+		c.FlagSet, err = c.FlagSetBuilder()
+		if err != nil {
+			return err
+		}
 	}
 
 	if c.FlagSet == nil {
