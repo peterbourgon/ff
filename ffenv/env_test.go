@@ -84,11 +84,6 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: "s.arg.2", X: []string{"x.arg.1", "x.arg.2"}}, // highest prio wins and no others are called
 		},
 		{
-			name: "PlainParser solo bool",
-			file: "testdata/solo_bool.env",
-			want: fftest.Vars{S: "x", B: true},
-		},
-		{
 			name: "PlainParser string with spaces",
 			file: "testdata/equals.env",
 			want: fftest.Vars{S: "i=am=the=very=model=of=a=modern=major=general"},
@@ -137,8 +132,9 @@ func TestParseBasics(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
+			t.Log("%%%%", testcase.name)
 			if testcase.file != "" {
-				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ffenv.Parser))
+				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ffenv.Parser(t)))
 			}
 
 			if len(testcase.env) > 0 {
@@ -150,6 +146,7 @@ func TestParseBasics(t *testing.T) {
 
 			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, testcase.args, testcase.opts...)
+			t.Log("vars:", vars)
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
 			}
@@ -182,12 +179,12 @@ func TestParseIssue16(t *testing.T) {
 		},
 		{
 			name: "only comment with space",
-			data: "# foo=bar\n",
+			data: "# foo bar\n",
 			want: "",
 		},
 		{
 			name: "only comment no space",
-			data: "#foo=bar\n",
+			data: "#foo bar\n",
 			want: "",
 		},
 	} {
@@ -198,97 +195,11 @@ func TestParseIssue16(t *testing.T) {
 			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(filename),
-				ff.WithConfigFileParser(ffenv.Parser),
+				ff.WithConfigFileParser(ffenv.Parser(t)),
 			)
 
 			want := fftest.Vars{S: testcase.want}
 			if err := fftest.Compare(&want, vars); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestParseConfigFile(t *testing.T) {
-	t.Parallel()
-
-	for _, testcase := range []struct {
-		name         string
-		missing      bool
-		allowMissing bool
-		parseError   error
-	}{
-		{
-			name: "has config file",
-		},
-		{
-			name:       "config file missing",
-			missing:    true,
-			parseError: os.ErrNotExist,
-		},
-		{
-			name:         "config file missing + allow missing",
-			missing:      true,
-			allowMissing: true,
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			filename := "dummy"
-			if !testcase.missing {
-				var cleanup func()
-				filename, cleanup = fftest.TempFile(t, "")
-				defer cleanup()
-			}
-
-			options := []ff.Option{ff.WithConfigFile(filename), ff.WithConfigFileParser(ffenv.Parser)}
-			if testcase.allowMissing {
-				options = append(options, ff.WithAllowMissingConfigFile(true))
-			}
-
-			fs, vars := fftest.Pair()
-			vars.ParseError = ff.Parse(fs, []string{}, options...)
-
-			want := fftest.Vars{WantParseErrorIs: testcase.parseError}
-			if err := fftest.Compare(&want, vars); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestParseClassicEnvFileWithPrefixUpperCase(t *testing.T) {
-	t.Parallel()
-
-	for _, testcase := range []struct {
-		name string
-		env  map[string]string
-		file string
-		args []string
-		opts []ff.Option
-		want fftest.Vars
-	}{
-		{
-			name: "Parser with prefix",
-			file: "testdata/prefix.env",
-			want: fftest.Vars{S: "this", I: 1, F: 1.3, B: true, D: 10 * time.Second},
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			if testcase.file != "" {
-				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithEnvVarSplit(","), ff.WithConfigFileParser(ffenv.ParserWithPrefix("TEST_PARSE")))
-			}
-
-			if len(testcase.env) > 0 {
-				for k, v := range testcase.env {
-					defer os.Setenv(k, os.Getenv(k))
-					os.Setenv(k, v)
-				}
-			}
-
-			fs, vars := fftest.Pair()
-			vars.ParseError = ff.Parse(fs, testcase.args, testcase.opts...)
-			t.Log("vars:", vars)
-			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
 			}
 		})
