@@ -34,6 +34,7 @@ func TestParseBasics(t *testing.T) {
 		{
 			name: "file only",
 			file: "testdata/1.env",
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
 			want: fftest.Vars{S: "bar", I: 99, B: true, D: time.Hour},
 		},
 		{
@@ -76,6 +77,11 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: "bar", D: time.Hour, X: []string{"1", "2", "3"}},
 		},
 		{
+			name: "long args",
+			args: []string{"-s_s", "f_oo", "-s-s", "f-oo", "-s.s", "f.oo", "-s/s", "f/oo"},
+			want: fftest.Vars{S_S: "f_oo", SDashS: "f-oo", SDotS: "f.oo", SSlashS: "f/oo"},
+		},
+		{
 			name: "priority repeats",
 			env:  map[string]string{"TEST_PARSE_S": "s.env", "TEST_PARSE_X": "x.env.1"},
 			file: "testdata/5.env",
@@ -107,35 +113,23 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: "bar"},
 		},
 		{
-			name: "WithIgnoreUndefined env",
-			env:  map[string]string{"TEST_PARSE_UNDEFINED": "one", "TEST_PARSE_S": "one"},
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithIgnoreUndefined(true)},
-			want: fftest.Vars{S: "one"},
-		},
-		{
-			name: "WithIgnoreUndefined file true",
-			file: "testdata/undefined.env",
-			opts: []ff.Option{ff.WithIgnoreUndefined(true)},
-			want: fftest.Vars{S: "one"},
-		},
-		{
-			name: "WithIgnoreUndefined file false",
-			file: "testdata/undefined.env",
-			opts: []ff.Option{ff.WithIgnoreUndefined(false)},
-			want: fftest.Vars{WantParseErrorString: "config file flag"},
-		},
-		{
 			name: "env var split comma whitespace",
 			env:  map[string]string{"TEST_PARSE_S": "one, two, three ", "TEST_PARSE_X": "one, two, three "},
 			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
 			want: fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
+		},
+		{
+			name: "flags with .",
+			env:  map[string]string{"TEST_PARSE_S_S": "one"},
+			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			want: fftest.Vars{SDashS: "one", S_S: "one", SDotS: "one", SSlashS: "one"},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Log("%%%%", testcase.name)
 			fs, vars := fftest.Pair()
 			if testcase.file != "" {
-				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ffenv.Parser(fs, t)))
+				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ffenv.ParserWithPrefix(fs, "TEST_PARSE", t)))
 			}
 
 			if len(testcase.env) > 0 {

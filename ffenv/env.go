@@ -61,17 +61,18 @@ func parse(fs *flag.FlagSet, t *testing.T) func(string, io.Reader, func(string, 
 			for _, sep := range []string{"-", ".", "/"} {
 				for _, f := range flags {
 					t.Log("YO: line", line, "flags", f, "name", name, "value", value)
+					// here we already check the existence of the flag, that's why the func set() cannot check it in ff.Parse
 					if f == strings.ReplaceAll(name, "_", sep) {
 						t.Log("YO2: line", line, "flags", f, "name", name, "value", value)
 						if err := set(name, value); err != nil {
 							t.Log("NOK")
 							return err
 						}
-						break
+						goto done
 					}
 				}
 			}
-
+		done:
 		}
 		return nil
 	}
@@ -80,7 +81,7 @@ func parse(fs *flag.FlagSet, t *testing.T) func(string, io.Reader, func(string, 
 // ParserWithPrefix returns a Parser that will remove any prefix on keys in an
 // .env file. For example, given prefix "MY_APP", the line `MY_APP_FOO=bar`
 // in an .env file will be evaluated as name=foo, value=bar.
-func ParserWithPrefix(prefix string, fs *flag.FlagSet, t *testing.T) func(io.Reader, func(string, string) error) error {
+func ParserWithPrefix(fs *flag.FlagSet, prefix string, t *testing.T) func(io.Reader, func(string, string) error) error {
 	return func(r io.Reader, set func(name, value string) error) error {
 		return parse(fs, t)(prefix, r, set)
 	}
