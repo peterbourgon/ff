@@ -548,5 +548,9 @@ FLAGS
   -f 0      float64
   -i 0      int
   -s ...    string
+  -s-s ...  string
+  -s.s ...  string
+  -s/s ...  string
+  -s_s ...  string
   -x ...    collection of strings (repeatable)
 `) + "\n"
