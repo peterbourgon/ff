@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"testing"
 )
 
 // Parser is a parser for .env file format: flag=value. Each
 // line is tokenized as a single key/value pair.
-func Parser(fs *flag.FlagSet, t *testing.T) func(io.Reader, func(string, string) error) error {
+func Parser(fs *flag.FlagSet) func(io.Reader, func(string, string) error) error {
 	return func(r io.Reader, set func(name, value string) error) error {
-		return parse(fs, t)("", r, set)
+		return parse(fs)("", r, set)
 	}
 }
 
@@ -22,7 +21,7 @@ func Parser(fs *flag.FlagSet, t *testing.T) func(io.Reader, func(string, string)
 // token in the line is interpreted as the flag name, and all remaining tokens
 // are interpreted as the value. Any leading hyphens on the flag name are
 // ignored.
-func parse(fs *flag.FlagSet, t *testing.T) func(string, io.Reader, func(string, string) error) error {
+func parse(fs *flag.FlagSet) func(string, io.Reader, func(string, string) error) error {
 	return func(prefix string, r io.Reader, set func(name, value string) error) error {
 
 		var flags []string
@@ -58,19 +57,21 @@ func parse(fs *flag.FlagSet, t *testing.T) func(string, io.Reader, func(string, 
 				value = strings.TrimSpace(value[:i])
 			}
 
-			for _, sep := range []string{"-", ".", "/"} {
+			var errs []error
+			for _, sep := range []string{"_", "-", ".", "/"} {
 				for _, f := range flags {
-					t.Log("YO: line", line, "flags", f, "name", name, "value", value)
-					// here we already check the existence of the flag, that's why the func set() cannot check it in ff.Parse
-					if f == strings.ReplaceAll(name, "_", sep) {
-						t.Log("YO2: line", line, "flags", f, "name", name, "value", value)
-						if err := set(name, value); err != nil {
-							t.Log("NOK")
-							return err
+					replaced := strings.ReplaceAll(name, "_", sep)
+					if f == replaced {
+						if err := set(replaced, value); err != nil {
+							errs = append(errs, err)
+							continue
 						}
 						goto done
 					}
 				}
+			}
+			if len(errs) > 0 {
+				return errs[0]
 			}
 		done:
 		}
@@ -81,8 +82,8 @@ func parse(fs *flag.FlagSet, t *testing.T) func(string, io.Reader, func(string, 
 // ParserWithPrefix returns a Parser that will remove any prefix on keys in an
 // .env file. For example, given prefix "MY_APP", the line `MY_APP_FOO=bar`
 // in an .env file will be evaluated as name=foo, value=bar.
-func ParserWithPrefix(fs *flag.FlagSet, prefix string, t *testing.T) func(io.Reader, func(string, string) error) error {
+func ParserWithPrefix(fs *flag.FlagSet, prefix string) func(io.Reader, func(string, string) error) error {
 	return func(r io.Reader, set func(name, value string) error) error {
-		return parse(fs, t)(prefix, r, set)
+		return parse(fs)(prefix, r, set)
 	}
 }

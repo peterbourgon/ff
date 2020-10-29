@@ -119,17 +119,16 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
 		},
 		{
-			name: "flags with .",
+			name: "flags with . from env",
 			env:  map[string]string{"TEST_PARSE_S_S": "one"},
 			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
-			want: fftest.Vars{SDashS: "one", S_S: "one", SDotS: "one", SSlashS: "one"},
+			want: fftest.Vars{S_S: "one", SDashS: "one", SDotS: "one", SSlashS: "one"},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			t.Log("%%%%", testcase.name)
 			fs, vars := fftest.Pair()
 			if testcase.file != "" {
-				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ffenv.ParserWithPrefix(fs, "TEST_PARSE", t)))
+				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ffenv.ParserWithPrefix(fs, "TEST_PARSE")))
 			}
 
 			if len(testcase.env) > 0 {
@@ -140,7 +139,6 @@ func TestParseBasics(t *testing.T) {
 			}
 
 			vars.ParseError = ff.Parse(fs, testcase.args, testcase.opts...)
-			t.Log("vars:", vars)
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
 				t.Fatal(err)
 			}
@@ -189,7 +187,7 @@ func TestParseIssue16(t *testing.T) {
 			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(filename),
-				ff.WithConfigFileParser(ffenv.Parser(fs, t)),
+				ff.WithConfigFileParser(ffenv.Parser(fs)),
 			)
 
 			want := fftest.Vars{S: testcase.want}
@@ -232,7 +230,7 @@ func TestParseConfigFile(t *testing.T) {
 			}
 
 			fs, vars := fftest.Pair()
-			options := []ff.Option{ff.WithConfigFile(filename), ff.WithConfigFileParser(ffenv.Parser(fs, t))}
+			options := []ff.Option{ff.WithConfigFile(filename), ff.WithConfigFileParser(ffenv.Parser(fs))}
 			if testcase.allowMissing {
 				options = append(options, ff.WithAllowMissingConfigFile(true))
 			}
