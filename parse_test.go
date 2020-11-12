@@ -1,11 +1,14 @@
 package ff_test
 
 import (
+	"context"
+	"flag"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/peterbourgon/ff/v3"
+	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/peterbourgon/ff/v3/fftest"
 )
 
@@ -253,4 +256,60 @@ func TestParseConfigFile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseConfigFileVia(t *testing.T) {
+	t.Parallel()
+
+	var (
+		rootFS = flag.NewFlagSet("root", flag.ContinueOnError)
+		config = rootFS.String("config-file", "", "")
+		i      = rootFS.Int("i", 0, "")
+		s      = rootFS.String("s", "", "")
+		subFS  = flag.NewFlagSet("subcommand", flag.ContinueOnError)
+		d      = subFS.Duration("d", time.Second, "")
+		b      = subFS.Bool("b", false, "")
+	)
+
+	subCommand := &ffcli.Command{
+		Name:    "subcommand",
+		FlagSet: subFS,
+		Options: []ff.Option{
+			ff.WithConfigFileParser(ff.PlainParser),
+			ff.WithConfigFileVia(config),
+			ff.WithIgnoreUndefined(true),
+		},
+		Exec: func(ctx context.Context, args []string) error { return nil },
+	}
+
+	root := &ffcli.Command{
+		Name:    "root",
+		FlagSet: rootFS,
+		Options: []ff.Option{
+			ff.WithConfigFileParser(ff.PlainParser),
+			ff.WithConfigFileFlag("config-file"),
+			ff.WithIgnoreUndefined(true),
+		},
+		Exec:        func(ctx context.Context, args []string) error { return nil },
+		Subcommands: []*ffcli.Command{subCommand},
+	}
+
+	err := root.ParseAndRun(context.Background(), []string{"-config-file", "testdata/1.conf", "subcommand", "-b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want, have := time.Hour, *d; want != have {
+		t.Errorf("d: want %v, have %v", want, have)
+	}
+	if want, have := true, *b; want != have {
+		t.Errorf("b: want %v, have %v", want, have)
+	}
+	if want, have := "bar", *s; want != have {
+		t.Errorf("s: want %q, have %q", want, have)
+	}
+	if want, have := 99, *i; want != have {
+		t.Errorf("i: want %d, have %d", want, have)
+	}
+
 }
