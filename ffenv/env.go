@@ -75,7 +75,7 @@ func parse(fs *flag.FlagSet) func(string, io.Reader, func(string, string) error)
 			}
 		done:
 		}
-		return nil
+		return s.Err()
 	}
 }
 
