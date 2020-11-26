@@ -18,10 +18,6 @@ func Pair() (*flag.FlagSet, *Vars) {
 
 	var v Vars
 	fs.StringVar(&v.S, "s", "", "string")
-	fs.StringVar(&v.S_S, "s_s", "", "string")
-	fs.StringVar(&v.SDashS, "s-s", "", "string")
-	fs.StringVar(&v.SDotS, "s.s", "", "string")
-	fs.StringVar(&v.SSlashS, "s/s", "", "string")
 	fs.IntVar(&v.I, "i", 0, "int")
 	fs.Float64Var(&v.F, "f", 0., "float64")
 	fs.BoolVar(&v.B, "b", false, "bool")
@@ -33,16 +29,12 @@ func Pair() (*flag.FlagSet, *Vars) {
 
 // Vars are a common set of variables used for testing.
 type Vars struct {
-	S       string
-	S_S     string
-	SDotS   string
-	SDashS  string
-	SSlashS string
-	I       int
-	F       float64
-	B       bool
-	D       time.Duration
-	X       StringSlice
+	S string
+	I int
+	F float64
+	B bool
+	D time.Duration
+	X StringSlice
 
 	// ParseError should be assigned as the result of Parse in tests.
 	ParseError error
@@ -87,18 +79,6 @@ func Compare(want, have *Vars) error {
 
 	if want.S != have.S {
 		return fmt.Errorf("var S: want %q, have %q", want.S, have.S)
-	}
-	if want.SDashS != have.SDashS {
-		return fmt.Errorf("var SDashS: want %q, have %q", want.SDashS, have.SDashS)
-	}
-	if want.SDotS != have.SDotS {
-		return fmt.Errorf("var SDotS: want %q, have %q", want.SDotS, have.SDotS)
-	}
-	if want.SSlashS != have.SSlashS {
-		return fmt.Errorf("var SSlashS: want %q, have %q", want.SSlashS, have.SSlashS)
-	}
-	if want.S_S != have.S_S {
-		return fmt.Errorf("var S_S: want %q, have %q", want.S_S, have.S_S)
 	}
 	if want.I != have.I {
 		return fmt.Errorf("var I: want %d, have %d", want.I, have.I)
