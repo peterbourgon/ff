@@ -106,6 +106,7 @@ func main() {
 	fmt.Printf("port %d, debug %v\n", *port, *debug)
 }
 ```
+> Note: Flag defaults are not considered when a matching environment variable is found. In the first example below, the default for the `port` *flag* is set to 8080, however, upon parsing with `ff.Parse` the `port` **variable** is actually set to 9090 as there was a `PORT` environment variable found. The `debug` **variable** in this example uses the default and is set to false as there is no matching environment variable to override it.
 
 ```
 $ env PORT=9090 myservice
