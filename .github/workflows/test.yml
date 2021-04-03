@@ -4,7 +4,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.13.x]
+        go-version: [1.16.x]
         platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -13,20 +13,19 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
     - name: Install staticcheck
-      run: pwd && cd .. && go get -v -u honnef.co/go/tools/cmd/staticcheck && cd -
+      run: go install honnef.co/go/tools/cmd/staticcheck@latest
       shell: bash
     - name: Install golint
-      run: pwd && cd .. && go get -v -u golang.org/x/lint/golint && cd -
+      run: go install golang.org/x/lint/golint@latest
       shell: bash
     - name: Update PATH
-      # https://github.com/actions/setup-go/issues/12#issuecomment-524631719
-      run: echo "##[add-path]$(go env GOPATH)/bin" 
+      run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       shell: bash
     - name: Checkout code
       uses: actions/checkout@v1
     - name: Fmt
       if: matrix.platform != 'windows-latest' # :(
-      run: "F=$(gofmt -l .) ; if [[ $F ]] ; then echo $F ; exit 1 ; fi"
+      run: "diff <(gofmt -d .) <(printf '')"
       shell: bash
     - name: Vet
       run: go vet ./...
@@ -34,7 +33,5 @@ jobs:
       run: staticcheck ./...
     - name: Lint
       run: golint ./...
-    - name: Parallel tests
-      run: hack/lint-parallel-tests.bash
     - name: Test
       run: go test -race ./...
