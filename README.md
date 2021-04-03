@@ -46,7 +46,9 @@ are available to control parse behavior.
 ```
 
 This example will parse flags from the commandline args, just like regular
-package flag, with the highest priority.
+package flag, with the highest priority. (The flag's default value will be used
+only if the flag remains unset after parsing all provided sources of
+configuration.)
 
 Additionally, the example will look in the environment for variables with a
 `MY_PROGRAM` prefix. Flag names are capitalized, and separator characters are
@@ -55,6 +57,7 @@ would match to `listen-addr`.
 
 Finally, if a `-config` file is specified, the example will try to parse it
 using the PlainParser, which expects files in this format.
+
 
 ```
 listen-addr localhost:8080
