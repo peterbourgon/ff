@@ -47,7 +47,7 @@ type Command struct {
 	// command's short usage, short help, and long help strings, subcommands,
 	// and available flags. Optional; if not provided, a suitable, compact
 	// default is used.
-	UsageFunc func(c *Command) string
+	UsageFunc func(c ...*Command) string
 
 	// FlagSet associated with this command. Optional, but if none is provided,
 	// an empty FlagSet will be defined and attached during the parse phase, so
@@ -88,6 +88,10 @@ type Command struct {
 // If the terminal command identified by Parse doesn't define an Exec function,
 // then Parse will return NoExecError.
 func (c *Command) Parse(args []string) error {
+	return c.parse([]*Command{c}, args)
+}
+
+func (c *Command) parse(cs []*Command, args []string) error {
 	if c.selected != nil {
 		return nil
 	}
@@ -101,7 +105,7 @@ func (c *Command) Parse(args []string) error {
 	}
 
 	c.FlagSet.Usage = func() {
-		fmt.Fprintln(c.FlagSet.Output(), c.UsageFunc(c))
+		fmt.Fprintln(c.FlagSet.Output(), c.UsageFunc(cs...))
 	}
 
 	if err := ff.Parse(c.FlagSet, args, c.Options...); err != nil {
@@ -113,7 +117,8 @@ func (c *Command) Parse(args []string) error {
 		for _, subcommand := range c.Subcommands {
 			if strings.EqualFold(c.args[0], subcommand.Name) {
 				c.selected = subcommand
-				return subcommand.Parse(c.args[1:])
+				cs = append(cs, c.selected)
+				return subcommand.parse(cs, c.args[1:])
 			}
 		}
 	}
@@ -197,46 +202,65 @@ func (e NoExecError) Error() string {
 
 // DefaultUsageFunc is the default UsageFunc used for all commands
 // if no custom UsageFunc is provided.
-func DefaultUsageFunc(c *Command) string {
+func DefaultUsageFunc(cs ...*Command) string {
 	var b strings.Builder
 
+	selected := cs[len(cs)-1]
+
+	flagSections := 0
+
 	fmt.Fprintf(&b, "USAGE\n")
-	if c.ShortUsage != "" {
-		fmt.Fprintf(&b, "  %s\n", c.ShortUsage)
-	} else {
-		fmt.Fprintf(&b, "  %s\n", c.Name)
+	for i, c := range cs {
+		if i == 0 {
+			fmt.Fprint(&b, " ")
+		}
+		if c.ShortUsage != "" {
+			fmt.Fprintf(&b, " %s", c.ShortUsage)
+		} else {
+			fmt.Fprintf(&b, " %s", c.Name)
+			if countFlags(c.FlagSet) > 0 {
+				fmt.Fprint(&b, " [flags]")
+				flagSections++
+			}
+			if c == selected && len(c.Subcommands) > 0 {
+				fmt.Fprint(&b, " <subcommand>")
+			}
+		}
 	}
-	fmt.Fprintf(&b, "\n")
 
-	if c.LongHelp != "" {
-		fmt.Fprintf(&b, "%s\n\n", c.LongHelp)
+	if selected.LongHelp != "" {
+		fmt.Fprintf(&b, "\n\n%s", selected.LongHelp)
 	}
 
-	if len(c.Subcommands) > 0 {
-		fmt.Fprintf(&b, "SUBCOMMANDS\n")
+	for _, c := range cs {
+		if countFlags(c.FlagSet) > 0 {
+			fmt.Fprintf(&b, "\n\n")
+			if flagSections > 1 {
+				fmt.Fprintf(&b, "%s ", c.Name)
+			}
+			fmt.Fprintf(&b, "FLAGS")
+			tw := tabwriter.NewWriter(&b, 0, 2, 2, ' ', 0)
+			c.FlagSet.VisitAll(func(f *flag.Flag) {
+				def := f.DefValue
+				if def == "" {
+					def = "..."
+				}
+				fmt.Fprintf(tw, "\n  -%s %s\t%s", f.Name, def, f.Usage)
+			})
+			tw.Flush()
+		}
+	}
+
+	if len(selected.Subcommands) > 0 {
+		fmt.Fprintf(&b, "\n\nSUBCOMMANDS")
 		tw := tabwriter.NewWriter(&b, 0, 2, 2, ' ', 0)
-		for _, subcommand := range c.Subcommands {
-			fmt.Fprintf(tw, "  %s\t%s\n", subcommand.Name, subcommand.ShortHelp)
+		for _, subcommand := range selected.Subcommands {
+			fmt.Fprintf(tw, "\n  %s\t%s", subcommand.Name, subcommand.ShortHelp)
 		}
 		tw.Flush()
-		fmt.Fprintf(&b, "\n")
 	}
 
-	if countFlags(c.FlagSet) > 0 {
-		fmt.Fprintf(&b, "FLAGS\n")
-		tw := tabwriter.NewWriter(&b, 0, 2, 2, ' ', 0)
-		c.FlagSet.VisitAll(func(f *flag.Flag) {
-			def := f.DefValue
-			if def == "" {
-				def = "..."
-			}
-			fmt.Fprintf(tw, "  -%s %s\t%s\n", f.Name, def, f.Usage)
-		})
-		tw.Flush()
-		fmt.Fprintf(&b, "\n")
-	}
-
-	return strings.TrimSpace(b.String())
+	return b.String()
 }
 
 func countFlags(fs *flag.FlagSet) (n int) {

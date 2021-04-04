@@ -151,7 +151,7 @@ func TestHelpUsage(t *testing.T) {
 
 	for _, testcase := range []struct {
 		name      string
-		usageFunc func(*ffcli.Command) string
+		usageFunc func(...*ffcli.Command) string
 		exec      func(context.Context, []string) error
 		args      []string
 		output    string
@@ -169,13 +169,13 @@ func TestHelpUsage(t *testing.T) {
 		},
 		{
 			name:      "custom usage",
-			usageFunc: func(*ffcli.Command) string { return "🍰" },
+			usageFunc: func(...*ffcli.Command) string { return "🍰" },
 			args:      []string{"-h"},
 			output:    "🍰\n",
 		},
 		{
 			name:      "ErrHelp",
-			usageFunc: func(*ffcli.Command) string { return "👹" },
+			usageFunc: func(...*ffcli.Command) string { return "👹" },
 			exec:      func(context.Context, []string) error { return flag.ErrHelp },
 			output:    "👹\n",
 		},
@@ -282,7 +282,7 @@ func TestNestedOutput(t *testing.T) {
 			bar := &ffcli.Command{
 				Name:      "bar",
 				FlagSet:   barfs,
-				UsageFunc: func(*ffcli.Command) string { return "bar usage func" },
+				UsageFunc: func(...*ffcli.Command) string { return "bar usage func" },
 				Exec:      barExec,
 			}
 
@@ -294,7 +294,7 @@ func TestNestedOutput(t *testing.T) {
 			foo := &ffcli.Command{
 				Name:        "foo",
 				FlagSet:     foofs,
-				UsageFunc:   func(*ffcli.Command) string { return "foo usage func" },
+				UsageFunc:   func(...*ffcli.Command) string { return "foo usage func" },
 				Subcommands: []*ffcli.Command{bar},
 				Exec:        fooExec,
 			}
@@ -305,7 +305,7 @@ func TestNestedOutput(t *testing.T) {
 
 			root := &ffcli.Command{
 				FlagSet:     rootfs,
-				UsageFunc:   func(*ffcli.Command) string { return "root usage func" },
+				UsageFunc:   func(...*ffcli.Command) string { return "root usage func" },
 				Subcommands: []*ffcli.Command{foo},
 				Exec:        rootExec,
 			}
@@ -316,6 +316,96 @@ func TestNestedOutput(t *testing.T) {
 			}
 			if want, have := testcase.wantOutput, buf.String(); want != have {
 				t.Errorf("output: want %q, have %q", want, have)
+			}
+		})
+	}
+}
+
+func TestNestedDefaultUsage(t *testing.T) {
+	t.Parallel()
+
+	for _, testcase := range []struct {
+		name       string
+		args       []string
+		wantOutput string
+	}{
+		{
+			name: "root -h",
+			args: []string{"-h"},
+			wantOutput: "" +
+				"USAGE\n" +
+				"  root [flags] <subcommand>\n" +
+				"\nFLAGS\n" +
+				"  -rf ...  root flag\n" +
+				"\nSUBCOMMANDS\n" +
+				"  foo  foo help\n",
+		},
+		{
+			name: "root foo -h",
+			args: []string{"foo", "-h"},
+			wantOutput: "" +
+				"USAGE\n" +
+				"  root [flags] foo [flags] <subcommand>\n" +
+				"\nroot FLAGS\n" +
+				"  -rf ...  root flag\n" +
+				"\nfoo FLAGS\n" +
+				"  -ff ...  foo flag\n" +
+				"\nSUBCOMMANDS\n" +
+				"  bar  bar help\n",
+		},
+		{
+			name: "root foo bar -h",
+			args: []string{"foo", "bar", "-h"},
+			wantOutput: "" +
+				"USAGE\n" +
+				"  root [flags] foo [flags] bar [flags]\n" +
+				"\nroot FLAGS\n" +
+				"  -rf ...  root flag\n" +
+				"\nfoo FLAGS\n" +
+				"  -ff ...  foo flag\n" +
+				"\nbar FLAGS\n" +
+				"  -bf ...  bar flag\n",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			barfs := flag.NewFlagSet("bar", flag.ContinueOnError)
+			barfs.SetOutput(&buf)
+			barfs.String("bf", "", "bar flag")
+			bar := &ffcli.Command{
+				Name:      "bar",
+				FlagSet:   barfs,
+				ShortHelp: "bar help",
+			}
+
+			foofs := flag.NewFlagSet("foo", flag.ContinueOnError)
+			foofs.SetOutput(&buf)
+			foofs.String("ff", "", "foo flag")
+			foo := &ffcli.Command{
+				Name:        "foo",
+				FlagSet:     foofs,
+				ShortHelp:   "foo help",
+				Subcommands: []*ffcli.Command{bar},
+			}
+
+			rootfs := flag.NewFlagSet("root", flag.ContinueOnError)
+			rootfs.SetOutput(&buf)
+			rootfs.String("rf", "", "root flag")
+			root := &ffcli.Command{
+				Name:        "root",
+				FlagSet:     rootfs,
+				ShortHelp:   "root help",
+				Subcommands: []*ffcli.Command{foo},
+			}
+
+			err := root.Parse(testcase.args)
+			if want, have := flag.ErrHelp, err; !errors.Is(have, want) {
+				t.Errorf("error: want %v, have %v", want, have)
+			}
+
+			if want, have := testcase.wantOutput, buf.String(); want != have {
+				t.Errorf("output:\nwant %q\nhave %q", want, have)
 			}
 		})
 	}
@@ -515,7 +605,7 @@ func assertErrorIs(t *testing.T, want, have error) {
 func assertString(t *testing.T, want, have string) {
 	t.Helper()
 	if want != have {
-		t.Fatalf("want %q, have %q", want, have)
+		t.Fatalf("\nwant %q\nhave %q", want, have)
 	}
 }
 
