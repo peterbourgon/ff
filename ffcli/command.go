@@ -226,20 +226,33 @@ func DefaultUsageFunc(c *Command) string {
 		fmt.Fprintf(&b, "FLAGS\n")
 		tw := tabwriter.NewWriter(&b, 0, 2, 2, ' ', 0)
 		c.FlagSet.VisitAll(func(f *flag.Flag) {
+			space := " "
+			if isBoolFlag(f) {
+				space = "="
+			}
+
 			def := f.DefValue
 			if def == "" {
 				def = "..."
 			}
-			fmt.Fprintf(tw, "  -%s %s\t%s\n", f.Name, def, f.Usage)
+
+			fmt.Fprintf(tw, "  -%s%s%s\t%s\n", f.Name, space, def, f.Usage)
 		})
 		tw.Flush()
 		fmt.Fprintf(&b, "\n")
 	}
 
-	return strings.TrimSpace(b.String())
+	return strings.TrimSpace(b.String()) + "\n"
 }
 
 func countFlags(fs *flag.FlagSet) (n int) {
 	fs.VisitAll(func(*flag.Flag) { n++ })
 	return n
+}
+
+func isBoolFlag(f *flag.Flag) bool {
+	b, ok := f.Value.(interface {
+		IsBoolFlag() bool
+	})
+	return ok && b.IsBoolFlag()
 }

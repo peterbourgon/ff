@@ -197,7 +197,7 @@ func TestHelpUsage(t *testing.T) {
 
 			err := command.ParseAndRun(context.Background(), testcase.args)
 			assertErrorIs(t, flag.ErrHelp, err)
-			assertString(t, testcase.output, buf.String())
+			assertMultilineString(t, testcase.output, buf.String())
 		})
 	}
 }
@@ -512,10 +512,10 @@ func assertErrorIs(t *testing.T, want, have error) {
 	}
 }
 
-func assertString(t *testing.T, want, have string) {
+func assertMultilineString(t *testing.T, want, have string) {
 	t.Helper()
 	if want != have {
-		t.Fatalf("want %q, have %q", want, have)
+		t.Fatalf("\nwant:\n%s\n\nhave:\n%s\n", want, have)
 	}
 }
 
@@ -543,10 +543,10 @@ USAGE
 Some long help.
 
 FLAGS
-  -b false  bool
+  -b=false  bool
   -d 0s     time.Duration
   -f 0      float64
   -i 0      int
   -s ...    string
   -x ...    collection of strings (repeatable)
-`) + "\n"
+`) + "\n\n"
