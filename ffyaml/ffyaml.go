@@ -27,7 +27,7 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 			return ParseError{err}
 		}
 		for _, ptrValue := range values {
-			//else d-reference strPointer
+			//Check for "empty" values in yaml
 			if ptrValue != nil {
 				value := *ptrValue
 				if err := set(key, value); err != nil {
