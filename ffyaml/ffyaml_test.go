@@ -1,12 +1,12 @@
 package ffyaml_test
 
 import (
-	"testing"
-	"time"
-
+	"errors"
 	"github.com/peterbourgon/ff/v3"
 	"github.com/peterbourgon/ff/v3/fftest"
 	"github.com/peterbourgon/ff/v3/ffyaml"
+	"testing"
+	"time"
 )
 
 func TestParser(t *testing.T) {
@@ -33,9 +33,9 @@ func TestParser(t *testing.T) {
 			want: fftest.Vars{WantParseErrorString: "found character that cannot start any token"},
 		},
 		{
-			name: "no value",
+			name: "no value for string key",
 			file: "testdata/no_value.yaml",
-			want: fftest.Vars{WantParseErrorIs: ff.StringConversionError{}},
+			want: fftest.Vars{S: "", I: 123},
 		},
 		{
 			name: "basic arrays",
@@ -66,6 +66,44 @@ func TestParser(t *testing.T) {
 				ff.WithAllowMissingConfigFile(true),
 			)
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestParserAllTypesEmptyValues(t *testing.T) {
+	t.Parallel()
+
+	for _, testcase := range []struct {
+		name string
+		file string
+		want fftest.Vars
+	}{
+		{
+			name: "basic empty vals",
+			file: "testdata/empty_basic_vals.yaml",
+			want: fftest.Vars{S: "", I:0, F: 0.00, D: 0 * time.Second, B: false, X: nil},
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			fs, testVars := fftest.EmptyValsFS()
+			testVars.ParseError = ff.Parse(fs, []string{},
+				ff.WithConfigFile(testcase.file),
+				ff.WithConfigFileParser(ffyaml.Parser),
+			)
+			pError := testVars.ParseError
+			if pError != nil {
+				var errMsg string
+				errMsg = "ParseError: " + pError.Error()
+				if errors.Is(pError, ff.StringConversionError{}) {
+					errMsg = errMsg + ";errType: " + "StringConversionError"
+				}
+
+				t.Fatal(errMsg)
+			}
+
+			if err := fftest.Compare(&testcase.want, testVars); err != nil {
 				t.Fatal(err)
 			}
 		})

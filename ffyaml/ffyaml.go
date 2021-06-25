@@ -23,18 +23,23 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 		if err != nil {
 			return ParseError{err}
 		}
-		for _, value := range values {
-			if err := set(key, value); err != nil {
-				return err
+		for _, ptrValue := range values {
+			//TODO: if nil - skip set, do continue;
+			//else d-reference strPointer
+			if ptrValue != nil {
+				value := *ptrValue
+				if err := set(key, value); err != nil {
+					return err
+				}
 			}
 		}
 	}
 	return nil
 }
 
-func valsToStrs(val interface{}) ([]string, error) {
+func valsToStrs(val interface{}) ([]*string, error) {
 	if vals, ok := val.([]interface{}); ok {
-		ss := make([]string, len(vals))
+		ss := make([]*string, len(vals))
 		for i := range vals {
 			s, err := valToStr(vals[i])
 			if err != nil {
@@ -48,29 +53,36 @@ func valsToStrs(val interface{}) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []string{s}, nil
+	return []*string{s}, nil
 
 }
 
-func valToStr(val interface{}) (string, error) {
+func valToStr(val interface{}) (*string, error) {
+	rtnStr := ""
+	var err error
+
 	switch v := val.(type) {
 	case byte:
-		return string([]byte{v}), nil
+		 rtnStr = string([]byte{v})
 	case string:
-		return v, nil
+		rtnStr = v
 	case bool:
-		return strconv.FormatBool(v), nil
+		rtnStr = strconv.FormatBool(v)
 	case uint64:
-		return strconv.FormatUint(v, 10), nil
+		rtnStr = strconv.FormatUint(v, 10)
 	case int:
-		return strconv.Itoa(v), nil
+		rtnStr = strconv.Itoa(v)
 	case int64:
-		return strconv.FormatInt(v, 10), nil
+		rtnStr = strconv.FormatInt(v, 10)
 	case float64:
-		return strconv.FormatFloat(v, 'g', -1, 64), nil
+		rtnStr = strconv.FormatFloat(v, 'g', -1, 64)
+	case nil:
+		return nil, nil
 	default:
-		return "", ff.StringConversionError{Value: val}
+		return nil, ff.StringConversionError{Value: val}
 	}
+
+	return &rtnStr, err
 }
 
 // ParseError wraps all errors originating from the YAML parser.
