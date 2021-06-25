@@ -1,4 +1,4 @@
-// Package ffyaml provides a YAML config file paser.
+// Package ffyaml provides a YAML config file parser.
 package ffyaml
 
 import (
@@ -12,6 +12,9 @@ import (
 
 // Parser is a parser for YAML file format. Flags and their values are read
 // from the key/value pairs defined in the config file.
+// NOTE: that this YAML parser NOW supports parsing "empty node values" (resolving to "null" values in YAML;
+//  see https://yaml.org/spec/1.2/spec.html#id2786563).
+// ff will therefore set the flagset value for an "empty" YAML field value to the Zero value for that golang type
 func Parser(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	d := yaml.NewDecoder(r)
@@ -24,7 +27,6 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 			return ParseError{err}
 		}
 		for _, ptrValue := range values {
-			//TODO: if nil - skip set, do continue;
 			//else d-reference strPointer
 			if ptrValue != nil {
 				value := *ptrValue
