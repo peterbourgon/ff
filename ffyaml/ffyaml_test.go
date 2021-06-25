@@ -83,7 +83,7 @@ func TestParserAllTypesEmptyValues(t *testing.T) {
 		{
 			name: "basic empty vals",
 			file: "testdata/empty_basic_vals.yaml",
-			want: fftest.Vars{S: "", I:0, F: 0.00, D: 0 * time.Second, B: false, X: nil},
+			want: fftest.Vars{S: "", I: 0, F: 0.00, D: 0 * time.Second, B: false, X: nil},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {

@@ -65,7 +65,7 @@ func valToStr(val interface{}) (*string, error) {
 
 	switch v := val.(type) {
 	case byte:
-		 rtnStr = string([]byte{v})
+		rtnStr = string([]byte{v})
 	case string:
 		rtnStr = v
 	case bool:
