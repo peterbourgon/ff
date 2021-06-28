@@ -124,8 +124,12 @@ func TestEmptyValsDontOverwritePresets(t *testing.T) {
 		{
 			name: "preset FS vals not overwritten",
 			file: "testdata/empty_basic_vals.yaml",
-			want: fftest.Vars{S: "EMPTY_DEFAULT", I: -500000, F: 42.42,
-				D: 86400 * time.Second, B: true, X: []string{"strVal1", "strVal2"}},
+			want: fftest.Vars{
+				S: "EMPTY_DEFAULT",
+				I: -500000, F: 42.42,
+				D: 86400 * time.Second,
+				B: true,
+				X: []string{"strVal1", "strVal2"}},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
