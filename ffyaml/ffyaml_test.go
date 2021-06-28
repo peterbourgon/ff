@@ -128,7 +128,7 @@ func TestEmptyValsDontOverwritePresets(t *testing.T) {
 				D: 86400 * time.Second, B: true, X: []string{"strVal1", "strVal2"}},
 		},
 	} {
-		t.Run(testcase.name, func (t *testing.T){
+		t.Run(testcase.name, func(t *testing.T) {
 			fs, testVars := fftest.PresetValsFS()
 			testVars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(testcase.file),
