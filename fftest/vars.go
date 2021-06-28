@@ -45,6 +45,24 @@ func EmptyValsFS() (*flag.FlagSet, *Vars) {
 	return fs, &v
 }
 
+func PresetValsFS() (*flag.FlagSet, *Vars) {
+	fs := flag.NewFlagSet("ffpresettest", flag.ContinueOnError)
+
+	//Set Defaults to be something OTHER than GoLang defaults for each type
+	var v Vars
+	fs.StringVar(&v.S, "emptyStr", "EMPTY_DEFAULT", "string")
+	fs.IntVar(&v.I, "emptyInt", -500000, "int")
+	fs.Float64Var(&v.F, "emptyFloat", 42.42, "float64")
+	fs.BoolVar(&v.B, "emptyBool", true, "bool")
+	fs.DurationVar(&v.D, "emptyDur", 86400*time.Second, "time.Duration")
+	defaultSlice := &v.X
+	defaultSlice.Set("strVal1")
+	defaultSlice.Set("strVal2")
+	fs.Var(defaultSlice, "emptySlice", "collection of strings (repeatable)")
+
+	return fs, &v
+}
+
 // Vars are a common set of variables used for testing.
 type Vars struct {
 	S string

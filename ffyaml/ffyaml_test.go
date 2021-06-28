@@ -72,7 +72,7 @@ func TestParser(t *testing.T) {
 	}
 }
 
-func TestParserAllTypesEmptyValues(t *testing.T) {
+func TestParserAllTypesEmptyVals(t *testing.T) {
 	t.Parallel()
 
 	for _, testcase := range []struct {
@@ -93,15 +93,49 @@ func TestParserAllTypesEmptyValues(t *testing.T) {
 				ff.WithConfigFileParser(ffyaml.Parser),
 			)
 			pError := testVars.ParseError
-			if pError != nil {
-				var errMsg string
-				errMsg = "ParseError: " + pError.Error()
-				if errors.Is(pError, ff.StringConversionError{}) {
-					errMsg = errMsg + ";errType: " + "StringConversionError"
-				}
+			checkParseErr(t, pError)
 
-				t.Fatal(errMsg)
+			if err := fftest.Compare(&testcase.want, testVars); err != nil {
+				t.Fatal(err)
 			}
+		})
+	}
+}
+
+func checkParseErr(t *testing.T, pError error) {
+	if pError != nil {
+		var errMsg string
+		errMsg = "ParseError: " + pError.Error()
+		if errors.Is(pError, ff.StringConversionError{}) {
+			errMsg = errMsg + ";errType: " + "StringConversionError"
+		}
+		t.Fatal(errMsg)
+	}
+}
+
+func TestEmptyValsDontOverwritePresets(t *testing.T) {
+	t.Parallel()
+
+	for _, testcase := range []struct {
+		name string
+		file string
+		want fftest.Vars
+	}{
+		{
+			name: "preset FS vals not overwritten",
+			file: "testdata/empty_basic_vals.yaml",
+			want: fftest.Vars{S: "EMPTY_DEFAULT", I: -500000, F: 42.42,
+				D: 86400 * time.Second, B: true, X: []string{"strVal1", "strVal2"}},
+		},
+	} {
+		t.Run(testcase.name, func (t *testing.T){
+			fs, testVars := fftest.PresetValsFS()
+			testVars.ParseError = ff.Parse(fs, []string{},
+				ff.WithConfigFile(testcase.file),
+				ff.WithConfigFileParser(ffyaml.Parser),
+			)
+			pError := testVars.ParseError
+			checkParseErr(t, pError)
 
 			if err := fftest.Compare(&testcase.want, testVars); err != nil {
 				t.Fatal(err)
