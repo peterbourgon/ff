@@ -93,23 +93,19 @@ func TestParserAllTypesEmptyVals(t *testing.T) {
 				ff.WithConfigFileParser(ffyaml.Parser),
 			)
 			pError := testVars.ParseError
-			checkParseErr(t, pError)
+			if pError != nil {
+				var errMsg string
+				errMsg = "ParseError: " + pError.Error()
+				if errors.Is(pError, ff.StringConversionError{}) {
+					errMsg = errMsg + ";errType: " + "StringConversionError"
+				}
+				t.Fatal(errMsg)
+			}
 
 			if err := fftest.Compare(&testcase.want, testVars); err != nil {
 				t.Fatal(err)
 			}
 		})
-	}
-}
-
-func checkParseErr(t *testing.T, pError error) {
-	if pError != nil {
-		var errMsg string
-		errMsg = "ParseError: " + pError.Error()
-		if errors.Is(pError, ff.StringConversionError{}) {
-			errMsg = errMsg + ";errType: " + "StringConversionError"
-		}
-		t.Fatal(errMsg)
 	}
 }
 
@@ -139,7 +135,14 @@ func TestEmptyValsDontOverwritePresets(t *testing.T) {
 				ff.WithConfigFileParser(ffyaml.Parser),
 			)
 			pError := testVars.ParseError
-			checkParseErr(t, pError)
+			if pError != nil {
+				var errMsg string
+				errMsg = "ParseError: " + pError.Error()
+				if errors.Is(pError, ff.StringConversionError{}) {
+					errMsg = errMsg + ";errType: " + "StringConversionError"
+				}
+				t.Fatal(errMsg)
+			}
 
 			if err := fftest.Compare(&testcase.want, testVars); err != nil {
 				t.Fatal(err)
