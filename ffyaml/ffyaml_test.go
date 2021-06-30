@@ -2,11 +2,12 @@ package ffyaml_test
 
 import (
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/peterbourgon/ff/v3"
 	"github.com/peterbourgon/ff/v3/fftest"
 	"github.com/peterbourgon/ff/v3/ffyaml"
-	"testing"
-	"time"
 )
 
 func TestParser(t *testing.T) {
@@ -76,34 +77,34 @@ func TestParserReturnsErrorsForBlankNonStrings(t *testing.T) {
 	t.Parallel()
 
 	for _, testcase := range []struct {
-		name 		string
-		file 		string
-		wantFS      fftest.Vars
-		wantErrMsg 	string
+		name       string
+		file       string
+		wantFS     fftest.Vars
+		wantErrMsg string
 	}{
 		{
-			name: "blank string and int vals",
-			file: "testdata/empty_str_int.yaml",
+			name:       "blank string and int vals",
+			file:       "testdata/empty_str_int.yaml",
 			wantErrMsg: "error setting flag \"emptyInt\" from config file: parse error",
 		},
 		{
-			name: "blank string and bool vals",
-			file: "testdata/empty_str_bool.yaml",
+			name:       "blank string and bool vals",
+			file:       "testdata/empty_str_bool.yaml",
 			wantErrMsg: "error setting flag \"emptyBool\" from config file: parse error",
 		},
 		{
-			name: "blank string and duration vals",
-			file: "testdata/empty_str_dur.yaml",
+			name:       "blank string and duration vals",
+			file:       "testdata/empty_str_dur.yaml",
 			wantErrMsg: "error setting flag \"emptyDur\" from config file: parse error",
 		},
 		{
-			name: "blank string and float vals",
-			file: "testdata/empty_str_float.yaml",
+			name:       "blank string and float vals",
+			file:       "testdata/empty_str_float.yaml",
 			wantErrMsg: "error setting flag \"emptyFloat\" from config file: parse error",
 		},
 		{
-			name: "blank string and slice vals",
-			file: "testdata/empty_str_slice.yaml",
+			name:   "blank string and slice vals",
+			file:   "testdata/empty_str_slice.yaml",
 			wantFS: fftest.Vars{S: "", X: []string{""}},
 		},
 	} {
@@ -122,7 +123,7 @@ func TestParserReturnsErrorsForBlankNonStrings(t *testing.T) {
 				}
 
 				if testcase.wantErrMsg != errMsg {
-					t.Fatal("error \"" + errMsg  + "\" Does Not Match Expected ErrorMsg: " + testcase.wantErrMsg)
+					t.Fatal("error \"" + errMsg + "\" Does Not Match Expected ErrorMsg: " + testcase.wantErrMsg)
 				}
 			}
 
