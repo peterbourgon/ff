@@ -30,7 +30,7 @@ func Pair() (*flag.FlagSet, *Vars) {
 // EmptyValsFS returns a predefined flag set, and a predefined set of variables that
 // have been registered into it.
 // Custom Test Flagset creation function for the Empty (YAML) Values parsing, using more
-// specific flag names.
+// specific flag names to enhance/clarify the Error messages output in Test code.
 func EmptyValsFS() (*flag.FlagSet, *Vars) {
 	fs := flag.NewFlagSet("ffemptytest", flag.ContinueOnError)
 
@@ -41,24 +41,6 @@ func EmptyValsFS() (*flag.FlagSet, *Vars) {
 	fs.BoolVar(&v.B, "emptyBool", false, "bool")
 	fs.DurationVar(&v.D, "emptyDur", 0*time.Second, "time.Duration")
 	fs.Var(&v.X, "emptySlice", "collection of strings (repeatable)")
-
-	return fs, &v
-}
-
-func PresetValsFS() (*flag.FlagSet, *Vars) {
-	fs := flag.NewFlagSet("ffpresettest", flag.ContinueOnError)
-
-	//Set Defaults to be something OTHER than GoLang defaults for each type
-	var v Vars
-	fs.StringVar(&v.S, "emptyStr", "EMPTY_DEFAULT", "string")
-	fs.IntVar(&v.I, "emptyInt", -500000, "int")
-	fs.Float64Var(&v.F, "emptyFloat", 42.42, "float64")
-	fs.BoolVar(&v.B, "emptyBool", true, "bool")
-	fs.DurationVar(&v.D, "emptyDur", 86400*time.Second, "time.Duration")
-	defaultSlice := &v.X
-	defaultSlice.Set("strVal1")
-	defaultSlice.Set("strVal2")
-	fs.Var(defaultSlice, "emptySlice", "collection of strings (repeatable)")
 
 	return fs, &v
 }

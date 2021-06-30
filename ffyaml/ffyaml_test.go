@@ -72,18 +72,39 @@ func TestParser(t *testing.T) {
 	}
 }
 
-func TestParserAllTypesEmptyVals(t *testing.T) {
+func TestParserReturnsErrorsForBlankNonStrings(t *testing.T) {
 	t.Parallel()
 
 	for _, testcase := range []struct {
-		name string
-		file string
-		want fftest.Vars
+		name 		string
+		file 		string
+		wantFS      fftest.Vars
+		wantErrMsg 	string
 	}{
 		{
-			name: "basic empty vals",
-			file: "testdata/empty_basic_vals.yaml",
-			want: fftest.Vars{S: "", I: 0, F: 0.00, D: 0 * time.Second, B: false, X: nil},
+			name: "blank string and int vals",
+			file: "testdata/empty_str_int.yaml",
+			wantErrMsg: "error setting flag \"emptyInt\" from config file: parse error",
+		},
+		{
+			name: "blank string and bool vals",
+			file: "testdata/empty_str_bool.yaml",
+			wantErrMsg: "error setting flag \"emptyBool\" from config file: parse error",
+		},
+		{
+			name: "blank string and duration vals",
+			file: "testdata/empty_str_dur.yaml",
+			wantErrMsg: "error setting flag \"emptyDur\" from config file: parse error",
+		},
+		{
+			name: "blank string and float vals",
+			file: "testdata/empty_str_float.yaml",
+			wantErrMsg: "error setting flag \"emptyFloat\" from config file: parse error",
+		},
+		{
+			name: "blank string and slice vals",
+			file: "testdata/empty_str_slice.yaml",
+			wantFS: fftest.Vars{S: "", X: []string{""}},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -95,56 +116,17 @@ func TestParserAllTypesEmptyVals(t *testing.T) {
 			pError := testVars.ParseError
 			if pError != nil {
 				var errMsg string
-				errMsg = "ParseError: " + pError.Error()
+				errMsg = pError.Error()
 				if errors.Is(pError, ff.StringConversionError{}) {
 					errMsg = errMsg + ";errType: " + "StringConversionError"
 				}
-				t.Fatal(errMsg)
-			}
 
-			if err := fftest.Compare(&testcase.want, testVars); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestEmptyValsDontOverwritePresets(t *testing.T) {
-	t.Parallel()
-
-	for _, testcase := range []struct {
-		name string
-		file string
-		want fftest.Vars
-	}{
-		{
-			name: "preset FS vals not overwritten",
-			file: "testdata/empty_basic_vals.yaml",
-			want: fftest.Vars{
-				S: "EMPTY_DEFAULT",
-				I: -500000, F: 42.42,
-				D: 86400 * time.Second,
-				B: true,
-				X: []string{"strVal1", "strVal2"}},
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			fs, testVars := fftest.PresetValsFS()
-			testVars.ParseError = ff.Parse(fs, []string{},
-				ff.WithConfigFile(testcase.file),
-				ff.WithConfigFileParser(ffyaml.Parser),
-			)
-			pError := testVars.ParseError
-			if pError != nil {
-				var errMsg string
-				errMsg = "ParseError: " + pError.Error()
-				if errors.Is(pError, ff.StringConversionError{}) {
-					errMsg = errMsg + ";errType: " + "StringConversionError"
+				if testcase.wantErrMsg != errMsg {
+					t.Fatal("error \"" + errMsg  + "\" Does Not Match Expected ErrorMsg: " + testcase.wantErrMsg)
 				}
-				t.Fatal(errMsg)
 			}
 
-			if err := fftest.Compare(&testcase.want, testVars); err != nil {
+			if err := fftest.Compare(&testcase.wantFS, testVars); err != nil {
 				t.Fatal(err)
 			}
 		})

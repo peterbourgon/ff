@@ -14,7 +14,7 @@ import (
 // from the key/value pairs defined in the config file.
 // NOTE: that this YAML parser NOW supports parsing "empty node values" (resolving to "null" values in YAML;
 //  see https://yaml.org/spec/1.2/spec.html#id2786563).
-// ff will therefore set the flagset value for an "empty" YAML field value to the Zero value for that golang type
+// ff will assume that the flagset value for an "empty" YAML field value is meant to be an empty string
 func Parser(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	d := yaml.NewDecoder(r)
@@ -26,22 +26,18 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 		if err != nil {
 			return ParseError{err}
 		}
-		for _, ptrValue := range values {
-			//Check for "empty" values in yaml
-			if ptrValue != nil {
-				value := *ptrValue
-				if err := set(key, value); err != nil {
-					return err
-				}
+		for _, value := range values {
+			if err := set(key, value); err != nil {
+				return err
 			}
 		}
 	}
 	return nil
 }
 
-func valsToStrs(val interface{}) ([]*string, error) {
+func valsToStrs(val interface{}) ([]string, error) {
 	if vals, ok := val.([]interface{}); ok {
-		ss := make([]*string, len(vals))
+		ss := make([]string, len(vals))
 		for i := range vals {
 			s, err := valToStr(vals[i])
 			if err != nil {
@@ -55,36 +51,31 @@ func valsToStrs(val interface{}) ([]*string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []*string{s}, nil
+	return []string{s}, nil
 
 }
 
-func valToStr(val interface{}) (*string, error) {
-	rtnStr := ""
-	var err error
-
+func valToStr(val interface{}) (string, error) {
 	switch v := val.(type) {
 	case byte:
-		rtnStr = string([]byte{v})
+		return string([]byte{v}), nil
 	case string:
-		rtnStr = v
+		return v, nil
 	case bool:
-		rtnStr = strconv.FormatBool(v)
+		return strconv.FormatBool(v), nil
 	case uint64:
-		rtnStr = strconv.FormatUint(v, 10)
+		return strconv.FormatUint(v, 10), nil
 	case int:
-		rtnStr = strconv.Itoa(v)
+		return strconv.Itoa(v), nil
 	case int64:
-		rtnStr = strconv.FormatInt(v, 10)
+		return strconv.FormatInt(v, 10), nil
 	case float64:
-		rtnStr = strconv.FormatFloat(v, 'g', -1, 64)
+		return strconv.FormatFloat(v, 'g', -1, 64), nil
 	case nil:
-		return nil, nil
+		return "", nil
 	default:
-		return nil, ff.StringConversionError{Value: val}
+		return "", ff.StringConversionError{Value: val}
 	}
-
-	return &rtnStr, err
 }
 
 // ParseError wraps all errors originating from the YAML parser.
