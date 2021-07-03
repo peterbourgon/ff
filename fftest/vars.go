@@ -27,24 +27,6 @@ func Pair() (*flag.FlagSet, *Vars) {
 	return fs, &v
 }
 
-// EmptyValsFS returns a predefined flag set, and a predefined set of variables that
-// have been registered into it.
-// Custom Test Flagset creation function for the Empty (YAML) Values parsing, using more
-// specific flag names to enhance/clarify the Error messages output in Test code.
-func EmptyValsFS() (*flag.FlagSet, *Vars) {
-	fs := flag.NewFlagSet("ffemptytest", flag.ContinueOnError)
-
-	var v Vars
-	fs.StringVar(&v.S, "emptyStr", "", "string")
-	fs.IntVar(&v.I, "emptyInt", 0, "int")
-	fs.Float64Var(&v.F, "emptyFloat", 0.00, "float64")
-	fs.BoolVar(&v.B, "emptyBool", false, "bool")
-	fs.DurationVar(&v.D, "emptyDur", 0*time.Second, "time.Duration")
-	fs.Var(&v.X, "emptySlice", "collection of strings (repeatable)")
-
-	return fs, &v
-}
-
 // Vars are a common set of variables used for testing.
 type Vars struct {
 	S string

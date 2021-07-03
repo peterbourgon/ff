@@ -1,7 +1,6 @@
 package ffyaml_test
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -67,67 +66,6 @@ func TestParser(t *testing.T) {
 				ff.WithAllowMissingConfigFile(true),
 			)
 			if err := fftest.Compare(&testcase.want, vars); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestParserReturnsErrorsForBlankNonStrings(t *testing.T) {
-	t.Parallel()
-
-	for _, testcase := range []struct {
-		name       string
-		file       string
-		wantFS     fftest.Vars
-		wantErrMsg string
-	}{
-		{
-			name:       "blank string and int vals",
-			file:       "testdata/empty_str_int.yaml",
-			wantErrMsg: "error setting flag \"emptyInt\" from config file: parse error",
-		},
-		{
-			name:       "blank string and bool vals",
-			file:       "testdata/empty_str_bool.yaml",
-			wantErrMsg: "error setting flag \"emptyBool\" from config file: parse error",
-		},
-		{
-			name:       "blank string and duration vals",
-			file:       "testdata/empty_str_dur.yaml",
-			wantErrMsg: "error setting flag \"emptyDur\" from config file: parse error",
-		},
-		{
-			name:       "blank string and float vals",
-			file:       "testdata/empty_str_float.yaml",
-			wantErrMsg: "error setting flag \"emptyFloat\" from config file: parse error",
-		},
-		{
-			name:   "blank string and slice vals",
-			file:   "testdata/empty_str_slice.yaml",
-			wantFS: fftest.Vars{S: "", X: []string{""}},
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			fs, testVars := fftest.EmptyValsFS()
-			testVars.ParseError = ff.Parse(fs, []string{},
-				ff.WithConfigFile(testcase.file),
-				ff.WithConfigFileParser(ffyaml.Parser),
-			)
-			pError := testVars.ParseError
-			if pError != nil {
-				var errMsg string
-				errMsg = pError.Error()
-				if errors.Is(pError, ff.StringConversionError{}) {
-					errMsg = errMsg + ";errType: " + "StringConversionError"
-				}
-
-				if testcase.wantErrMsg != errMsg {
-					t.Fatal("error \"" + errMsg + "\" Does Not Match Expected ErrorMsg: " + testcase.wantErrMsg)
-				}
-			}
-
-			if err := fftest.Compare(&testcase.wantFS, testVars); err != nil {
 				t.Fatal(err)
 			}
 		})
