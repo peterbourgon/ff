@@ -9,13 +9,17 @@ import (
 	"time"
 )
 
-// Pair returns a predefined flag set, and a predefined set of variables that
-// have been registered into it. Tests can call parse on the flag set with a
-// variety of flags, config files, and env vars, and check the resulting effect
-// on the vars.
+// Pair defines and returns an empty flag set and vars assigned to it.
 func Pair() (*flag.FlagSet, *Vars) {
 	fs := flag.NewFlagSet("fftest", flag.ContinueOnError)
+	vars := DefaultVars(fs)
+	return fs, vars
+}
 
+// DefaultVars registers a predefined set of variables to the flag set.
+// Tests can call parse on the flag set with a variety of flags, config files,
+// and env vars, and check the resulting effect on the vars.
+func DefaultVars(fs *flag.FlagSet) *Vars {
 	var v Vars
 	fs.StringVar(&v.S, "s", "", "string")
 	fs.IntVar(&v.I, "i", 0, "int")
@@ -23,8 +27,21 @@ func Pair() (*flag.FlagSet, *Vars) {
 	fs.BoolVar(&v.B, "b", false, "bool")
 	fs.DurationVar(&v.D, "d", 0*time.Second, "time.Duration")
 	fs.Var(&v.X, "x", "collection of strings (repeatable)")
+	return &v
+}
 
-	return fs, &v
+// NonzeroDefaultVars is like DefaultVars, but provides each primitive flag with
+// a nonzero default value. This is useful for tests that explicitly provide a
+// zero value for the type.
+func NonzeroDefaultVars(fs *flag.FlagSet) *Vars {
+	var v Vars
+	fs.StringVar(&v.S, "s", "foo", "string")
+	fs.IntVar(&v.I, "i", 123, "int")
+	fs.Float64Var(&v.F, "f", 9.99, "float64")
+	fs.BoolVar(&v.B, "b", true, "bool")
+	fs.DurationVar(&v.D, "d", 3*time.Hour, "time.Duration")
+	fs.Var(&v.X, "x", "collection of strings (repeatable)")
+	return &v
 }
 
 // Vars are a common set of variables used for testing.
