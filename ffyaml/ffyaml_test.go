@@ -92,9 +92,7 @@ func TestParser(t *testing.T) {
 				ff.WithConfigFileParser(ffyaml.Parser),
 				ff.WithAllowMissingConfigFile(testcase.miss),
 			)
-			if err := fftest.CompareTest(t, &testcase.want, vars); err != nil {
-				t.Fatal(err)
-			}
+			fftest.Compare(t, &testcase.want, vars)
 		})
 	}
 }

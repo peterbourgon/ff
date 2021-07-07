@@ -152,9 +152,7 @@ func TestParseBasics(t *testing.T) {
 
 			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, testcase.args, testcase.opts...)
-			if err := fftest.Compare(&testcase.want, vars); err != nil {
-				t.Fatal(err)
-			}
+			fftest.Compare(t, &testcase.want, vars)
 		})
 	}
 }
@@ -204,9 +202,7 @@ func TestParseIssue16(t *testing.T) {
 			)
 
 			want := fftest.Vars{S: testcase.want}
-			if err := fftest.Compare(&want, vars); err != nil {
-				t.Fatal(err)
-			}
+			fftest.Compare(t, &want, vars)
 		})
 	}
 }
@@ -251,9 +247,7 @@ func TestParseConfigFile(t *testing.T) {
 			vars.ParseError = ff.Parse(fs, []string{}, options...)
 
 			want := fftest.Vars{WantParseErrorIs: testcase.parseError}
-			if err := fftest.Compare(&want, vars); err != nil {
-				t.Fatal(err)
-			}
+			fftest.Compare(t, &want, vars)
 		})
 	}
 }
