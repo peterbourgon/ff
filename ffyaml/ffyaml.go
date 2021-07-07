@@ -1,4 +1,4 @@
-// Package ffyaml provides a YAML config file paser.
+// Package ffyaml provides a YAML config file parser.
 package ffyaml
 
 import (
@@ -68,6 +68,8 @@ func valToStr(val interface{}) (string, error) {
 		return strconv.FormatInt(v, 10), nil
 	case float64:
 		return strconv.FormatFloat(v, 'g', -1, 64), nil
+	case nil:
+		return "", nil
 	default:
 		return "", ff.StringConversionError{Value: val}
 	}

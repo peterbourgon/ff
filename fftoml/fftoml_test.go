@@ -48,9 +48,7 @@ func TestParser(t *testing.T) {
 				ff.WithConfigFile(testcase.file),
 				ff.WithConfigFileParser(fftoml.Parser),
 			)
-			if err := fftest.Compare(&testcase.want, vars); err != nil {
-				t.Fatal(err)
-			}
+			fftest.Compare(t, &testcase.want, vars)
 		})
 	}
 }

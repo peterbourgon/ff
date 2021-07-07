@@ -49,9 +49,7 @@ func TestJSONParser(t *testing.T) {
 				ff.WithConfigFile(testcase.file),
 				ff.WithConfigFileParser(ff.JSONParser),
 			)
-			if err := fftest.Compare(&testcase.want, vars); err != nil {
-				t.Fatal(err)
-			}
+			fftest.Compare(t, &testcase.want, vars)
 		})
 	}
 }

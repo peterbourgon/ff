@@ -1,6 +1,8 @@
 package ffyaml_test
 
 import (
+	"flag"
+	"os"
 	"testing"
 	"time"
 
@@ -13,13 +15,15 @@ func TestParser(t *testing.T) {
 	t.Parallel()
 
 	for _, testcase := range []struct {
+		vars func(*flag.FlagSet) *fftest.Vars
 		name string
 		file string
+		miss bool // AllowMissingConfigFiles
 		want fftest.Vars
 	}{
 		{
-			name: "empty input",
-			file: "testdata/empty_input.yaml",
+			name: "empty",
+			file: "testdata/empty.yaml",
 			want: fftest.Vars{},
 		},
 		{
@@ -33,9 +37,16 @@ func TestParser(t *testing.T) {
 			want: fftest.Vars{WantParseErrorString: "found character that cannot start any token"},
 		},
 		{
-			name: "no value",
-			file: "testdata/no_value.yaml",
-			want: fftest.Vars{WantParseErrorIs: ff.StringConversionError{}},
+			vars: fftest.NonzeroDefaultVars,
+			name: "no value for s",
+			file: "testdata/no_value_s.yaml",
+			want: fftest.Vars{S: "", I: 123, F: 9.99, B: true, D: 3 * time.Hour},
+		},
+		{
+			vars: fftest.NonzeroDefaultVars,
+			name: "no value for i",
+			file: "testdata/no_value_i.yaml",
+			want: fftest.Vars{WantParseErrorString: "parse error"},
 		},
 		{
 			name: "basic arrays",
@@ -57,17 +68,31 @@ func TestParser(t *testing.T) {
 			file: "testdata/unquoted_string_array.yaml",
 			want: fftest.Vars{X: []string{"one", "two", "three"}},
 		},
+		{
+			name: "missing config file allowed",
+			file: "testdata/this_file_does_not_exist.yaml",
+			miss: true,
+			want: fftest.Vars{},
+		},
+		{
+			name: "missing config file not allowed",
+			file: "testdata/this_file_does_not_exist.yaml",
+			miss: false,
+			want: fftest.Vars{WantParseErrorIs: os.ErrNotExist},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			fs, vars := fftest.Pair()
+			if testcase.vars == nil {
+				testcase.vars = fftest.DefaultVars
+			}
+			fs := flag.NewFlagSet("fftest", flag.ContinueOnError)
+			vars := testcase.vars(fs)
 			vars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(testcase.file),
 				ff.WithConfigFileParser(ffyaml.Parser),
-				ff.WithAllowMissingConfigFile(true),
+				ff.WithAllowMissingConfigFile(testcase.miss),
 			)
-			if err := fftest.Compare(&testcase.want, vars); err != nil {
-				t.Fatal(err)
-			}
+			fftest.Compare(t, &testcase.want, vars)
 		})
 	}
 }
