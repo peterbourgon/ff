@@ -22,8 +22,8 @@ func TestParser(t *testing.T) {
 		want fftest.Vars
 	}{
 		{
-			name: "empty input",
-			file: "testdata/empty_input.yaml",
+			name: "empty",
+			file: "testdata/empty.yaml",
 			want: fftest.Vars{},
 		},
 		{
@@ -37,15 +37,16 @@ func TestParser(t *testing.T) {
 			want: fftest.Vars{WantParseErrorString: "found character that cannot start any token"},
 		},
 		{
-			name: "no value for string key",
+			vars: fftest.NonzeroDefaultVars,
+			name: "no value for s",
 			file: "testdata/no_value_s.yaml",
-			want: fftest.Vars{S: "", I: 123},
+			want: fftest.Vars{S: "", I: 123, F: 9.99, B: true, D: 3 * time.Hour},
 		},
 		{
 			vars: fftest.NonzeroDefaultVars,
-			name: "no value for nonstring key",
+			name: "no value for i",
 			file: "testdata/no_value_i.yaml",
-			want: fftest.Vars{S: "woozlewozzle", I: 0, F: 9.99, B: true, D: 3 * time.Hour},
+			want: fftest.Vars{WantParseErrorString: "parse error"},
 		},
 		{
 			name: "basic arrays",
@@ -91,7 +92,7 @@ func TestParser(t *testing.T) {
 				ff.WithConfigFileParser(ffyaml.Parser),
 				ff.WithAllowMissingConfigFile(testcase.miss),
 			)
-			if err := fftest.Compare(&testcase.want, vars); err != nil {
+			if err := fftest.CompareTest(t, &testcase.want, vars); err != nil {
 				t.Fatal(err)
 			}
 		})
