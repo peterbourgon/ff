@@ -137,6 +137,11 @@ func TestParseBasics(t *testing.T) {
 			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
 			want: fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
 		},
+		{
+			name: "PlainParser string without value",
+			file: "testdata/string_without_value.conf",
+			want: fftest.Vars{I: 1, S: "", D: 3 * time.Second},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			if testcase.file != "" {
