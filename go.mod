@@ -1,3 +1,5 @@
+// Deprecated: prefer major version 0
+
 module github.com/peterbourgon/ff/v3
 
 go 1.16
