@@ -1,4 +1,4 @@
-# ffcli [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/v3/ffcli)
+# ffcli [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/ffcli)
 
 ffcli stands for flags-first command line interface,
 and provides an opinionated way to build CLIs.
@@ -60,7 +60,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/peterbourgon/ff/ffcli"
 )
 
 func main() {

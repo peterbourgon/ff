@@ -8,8 +8,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/peterbourgon/ff/v3/ffcli/examples/objectctl/pkg/rootcmd"
+	"github.com/peterbourgon/ff/ffcli"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/rootcmd"
 )
 
 // Config for the list subcommand, including a reference

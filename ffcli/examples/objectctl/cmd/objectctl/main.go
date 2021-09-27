@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/peterbourgon/ff/v3/ffcli/examples/objectctl/pkg/createcmd"
-	"github.com/peterbourgon/ff/v3/ffcli/examples/objectctl/pkg/deletecmd"
-	"github.com/peterbourgon/ff/v3/ffcli/examples/objectctl/pkg/listcmd"
-	"github.com/peterbourgon/ff/v3/ffcli/examples/objectctl/pkg/objectapi"
-	"github.com/peterbourgon/ff/v3/ffcli/examples/objectctl/pkg/rootcmd"
+	"github.com/peterbourgon/ff/ffcli"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/createcmd"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/deletecmd"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/listcmd"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/objectapi"
+	"github.com/peterbourgon/ff/ffcli/examples/objectctl/pkg/rootcmd"
 )
 
 func main() {

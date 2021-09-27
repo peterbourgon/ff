@@ -6,7 +6,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/peterbourgon/ff/v3"
+	"github.com/peterbourgon/ff"
 	"gopkg.in/yaml.v2"
 )
 

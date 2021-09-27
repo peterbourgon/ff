@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/peterbourgon/ff/v3"
+	"github.com/peterbourgon/ff"
 )
 
 // Command combines a main function with a flag.FlagSet, and zero or more

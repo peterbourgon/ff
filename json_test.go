@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff/v3"
-	"github.com/peterbourgon/ff/v3/fftest"
+	"github.com/peterbourgon/ff"
+	"github.com/peterbourgon/ff/fftest"
 )
 
 func TestJSONParser(t *testing.T) {
