@@ -1,4 +1,4 @@
-# ff [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff) ![Latest Release](https://img.shields.io/github/v/release/peterbourgon/ff?style=flat-square) ![Build Status](https://github.com/peterbourgon/ff/actions/workflows/test.yml/badge.svg?branch=main)
+# ff [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/v3) [![Latest Release](https://img.shields.io/github/release/peterbourgon/ff.svg?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fpeterbourgon%2Fff%2Fbadge&style=flat-square&label=build)](https://github.com/peterbourgon/ff/actions?query=workflow%3ATest)
 
 ff stands for flags-first, and provides an opinionated way to populate a
 [flag.FlagSet](https://golang.org/pkg/flag#FlagSet) with configuration data from
@@ -7,7 +7,7 @@ enable parsing from environment variables (lower priority) and/or a
 configuration file (lowest priority).
 
 Building a commandline application in the style of `kubectl` or `docker`?
-Consider [package ffcli](https://pkg.go.dev/github.com/peterbourgon/ff/ffcli),
+Consider [package ffcli](https://pkg.go.dev/github.com/peterbourgon/ff/v3/ffcli),
 a natural companion to, and extension of, package ff.
 
 ## Usage
@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/peterbourgon/ff"
+	"github.com/peterbourgon/ff/v3"
 )
 
 func main() {
@@ -34,7 +34,7 @@ func main() {
 ```
 
 Then, call ff.Parse instead of fs.Parse.
-[Options](https://pkg.go.dev/github.com/peterbourgon/ff#Option)
+[Options](https://pkg.go.dev/github.com/peterbourgon/ff/v3#Option)
 are available to control parse behavior.
 
 ```go
@@ -95,7 +95,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/peterbourgon/ff"
+	"github.com/peterbourgon/ff/v3"
 )
 
 func main() {

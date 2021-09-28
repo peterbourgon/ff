@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff"
-	"github.com/peterbourgon/ff/ffcli"
-	"github.com/peterbourgon/ff/fftest"
+	"github.com/peterbourgon/ff/v3"
+	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/peterbourgon/ff/v3/fftest"
 )
 
 func TestParseBasics(t *testing.T) {
@@ -305,4 +305,5 @@ func TestParseConfigFileVia(t *testing.T) {
 	if want, have := 99, *i; want != have {
 		t.Errorf("i: want %d, have %d", want, have)
 	}
+
 }

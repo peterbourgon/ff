@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff/ffcli"
-	"github.com/peterbourgon/ff/fftest"
+	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/peterbourgon/ff/v3/fftest"
 )
 
 func TestCommandRun(t *testing.T) {
