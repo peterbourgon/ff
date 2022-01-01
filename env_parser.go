@@ -14,8 +14,8 @@ import (
 // trailing whitespace. If the value is "double quoted", control characters like
 // `\n` are expanded. Lines beginning with `#` are interpreted as comments.
 //
-// EnvParser respects WithEnvVarPrefix, e.g. `MYPROG_FOO=bar` will set a flag
-// named "foo" if Parse is called with WithEnvVarPrefix("MYPROG").
+// EnvParser respects WithEnvVarPrefix, e.g. an .env file containing `A_B=c`
+// will set a flag named "b" if Parse is called with WithEnvVarPrefix("A").
 func EnvParser(r io.Reader, set func(name, value string) error) error {
 	s := bufio.NewScanner(r)
 	for s.Scan() {

@@ -355,7 +355,7 @@ func TestIssue57(t *testing.T) {
 		},
 		{
 			args:        []string{"bar", "-undefined"},
-			parseErrStr: "error parsing commandline args: flag provided but not defined: -undefined",
+			parseErrStr: "error parsing commandline arguments: flag provided but not defined: -undefined",
 			runErrIs:    ffcli.ErrUnparsed,
 		},
 		{
@@ -368,7 +368,7 @@ func TestIssue57(t *testing.T) {
 		},
 		{
 			args:        []string{"bar", "baz", "-also.undefined"},
-			parseErrStr: "error parsing commandline args: flag provided but not defined: -also.undefined",
+			parseErrStr: "error parsing commandline arguments: flag provided but not defined: -also.undefined",
 			runErrIs:    ffcli.ErrUnparsed,
 		},
 	} {

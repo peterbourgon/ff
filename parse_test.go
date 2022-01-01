@@ -108,9 +108,9 @@ func TestParseBasics(t *testing.T) {
 			want: fftest.Vars{S: "three", X: []string{"one", "two", "three"}},
 		},
 		{
-			name: "WithEnvVarNoPrefix",
+			name: "WithEnvVars",
 			env:  map[string]string{"TEST_PARSE_S": "foo", "S": "bar"},
-			opts: []ff.Option{ff.WithEnvVarNoPrefix()},
+			opts: []ff.Option{ff.WithEnvVars()},
 			want: fftest.Vars{S: "bar"},
 		},
 		{
