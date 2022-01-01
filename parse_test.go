@@ -305,5 +305,4 @@ func TestParseConfigFileVia(t *testing.T) {
 	if want, have := 99, *i; want != have {
 		t.Errorf("i: want %d, have %d", want, have)
 	}
-
 }

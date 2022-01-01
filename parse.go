@@ -1,13 +1,18 @@
 package ff
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 )
+
+// ConfigFileParser interprets the config file represented by the reader
+// and calls the set function for each parsed flag pair.
+type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
+
+type ConfigFileLookup func(fs *flag.FlagSet, name string) *flag.Flag
 
 // Parse the flags in the flag set from the provided (presumably commandline)
 // args. Additional options may be provided to parse from a config file and/or
@@ -17,6 +22,17 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	for _, option := range options {
 		option(&c)
 	}
+
+	flag2env := map[*flag.Flag]string{}
+	env2flag := map[string]*flag.Flag{}
+	fs.VisitAll(func(f *flag.Flag) {
+		var key string
+		key = strings.ToUpper(f.Name)
+		key = flagNameToEnvVar.Replace(key)
+		key = maybePrefix(key, c.envVarNoPrefix, c.envVarPrefix)
+		env2flag[key] = f
+		flag2env[f] = key
+	})
 
 	// First priority: commandline flags (explicit user preference).
 	if err := fs.Parse(args); err != nil {
@@ -29,7 +45,8 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	})
 
 	// Second priority: environment variables (session).
-	if parseEnv := c.envVarPrefix != "" || c.envVarNoPrefix; parseEnv {
+	parseEnv := c.envVarPrefix != "" || c.envVarNoPrefix
+	if parseEnv {
 		var visitErr error
 		fs.VisitAll(func(f *flag.Flag) {
 			if visitErr != nil {
@@ -40,10 +57,10 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 				return
 			}
 
-			var key string
-			key = strings.ToUpper(f.Name)
-			key = envVarReplacer.Replace(key)
-			key = maybePrefix(key, c.envVarNoPrefix, c.envVarPrefix)
+			key, ok := flag2env[f]
+			if !ok {
+				panic(fmt.Errorf("%s: invalid flag/env mapping", f.Name))
+			}
 
 			value := os.Getenv(key)
 			if value == "" {
@@ -66,19 +83,30 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		provided[f.Name] = true
 	})
 
+	// Third priority: config file (host).
 	var configFile string
 	if c.configFileVia != nil {
 		configFile = *c.configFileVia
 	}
 
-	// Third priority: config file (host).
 	if configFile == "" && c.configFileFlagName != "" {
 		if f := fs.Lookup(c.configFileFlagName); f != nil {
 			configFile = f.Value.String()
 		}
 	}
 
-	if parseConfig := configFile != "" && c.configFileParser != nil; parseConfig {
+	if c.configFileLookup == nil {
+		c.configFileLookup = func(fs *flag.FlagSet, name string) *flag.Flag {
+			return fs.Lookup(name)
+		}
+	}
+
+	var (
+		haveConfigFile  = configFile != ""
+		haveParser      = c.configFileParser != nil
+		parseConfigFile = haveConfigFile && haveParser
+	)
+	if parseConfigFile {
 		f, err := os.Open(configFile)
 		switch {
 		case err == nil:
@@ -88,15 +116,31 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 					return nil
 				}
 
-				defined := fs.Lookup(name) != nil
+				var (
+					f1 = fs.Lookup(name)
+					f2 = env2flag[name]
+					f  *flag.Flag
+				)
 				switch {
-				case !defined && c.ignoreUndefined:
+				case f1 == nil && f2 == nil && c.ignoreUndefined:
 					return nil
-				case !defined && !c.ignoreUndefined:
+				case f1 == nil && f2 == nil && !c.ignoreUndefined:
 					return fmt.Errorf("config file flag %q not defined in flag set", name)
+				case f1 != nil && f2 == nil:
+					f = f1
+				case f1 == nil && f2 != nil:
+					f = f2
+				case f1 != nil && f2 != nil && f1 == f2:
+					f = f1
+				case f1 != nil && f2 != nil && f1 != f2:
+					return fmt.Errorf("config file flag %q ambiguous: matches %s and %s", name, f1.Name, f2.Name)
 				}
 
-				if err := fs.Set(name, value); err != nil {
+				if provided[f.Name] {
+					return nil
+				}
+
+				if err := fs.Set(f.Name, value); err != nil {
 					return fmt.Errorf("error setting flag %q from config file: %w", name, err)
 				}
 
@@ -125,6 +169,7 @@ type Context struct {
 	configFileVia          *string
 	configFileFlagName     string
 	configFileParser       ConfigFileParser
+	configFileLookup       ConfigFileLookup
 	allowMissingConfigFile bool
 	envVarPrefix           string
 	envVarNoPrefix         bool
@@ -224,57 +269,24 @@ func WithIgnoreUndefined(ignore bool) Option {
 	}
 }
 
-// ConfigFileParser interprets the config file represented by the reader
-// and calls the set function for each parsed flag pair.
-type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
-
-// PlainParser is a parser for config files in an extremely simple format. Each
-// line is tokenized as a single key/value pair. The first whitespace-delimited
-// token in the line is interpreted as the flag name, and all remaining tokens
-// are interpreted as the value. Any leading hyphens on the flag name are
-// ignored.
-func PlainParser(r io.Reader, set func(name, value string) error) error {
-	s := bufio.NewScanner(r)
-	for s.Scan() {
-		line := strings.TrimSpace(s.Text())
-		if line == "" {
-			continue // skip empties
-		}
-
-		if line[0] == '#' {
-			continue // skip comments
-		}
-
-		var (
-			name  string
-			value string
-			index = strings.IndexRune(line, ' ')
-		)
-		if index < 0 {
-			name, value = line, "true" // boolean option
-		} else {
-			name, value = line[:index], strings.TrimSpace(line[index:])
-		}
-
-		if i := strings.Index(value, " #"); i >= 0 {
-			value = strings.TrimSpace(value[:i])
-		}
-
-		if err := set(name, value); err != nil {
-			return err
-		}
+func envVarToFlagNames(env string) []string {
+	lower := strings.ToLower(env)
+	return []string{
+		lower,
+		strings.ReplaceAll(lower, "_", "-"),
+		strings.ReplaceAll(lower, "_", "."),
+		strings.ReplaceAll(lower, "_", "/"),
 	}
-	return nil
 }
 
-var envVarReplacer = strings.NewReplacer(
+var flagNameToEnvVar = strings.NewReplacer(
 	"-", "_",
 	".", "_",
 	"/", "_",
 )
 
 func maybePrefix(key string, noPrefix bool, prefix string) string {
-	if noPrefix {
+	if noPrefix || prefix == "" {
 		return key
 	}
 	return strings.ToUpper(prefix) + "_" + key
