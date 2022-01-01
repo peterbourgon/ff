@@ -137,6 +137,18 @@ func TestParseBasics(t *testing.T) {
 			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
 			want: fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
 		},
+		{
+			name: "WithEnvVars",
+			env:  map[string]string{"S": "xxx", "F": "9.87"},
+			opts: []ff.Option{ff.WithEnvVars()},
+			want: fftest.Vars{S: "xxx", F: 9.87},
+		},
+		{
+			name: "WithEnvVarNoPrefix", // make sure alias works
+			env:  map[string]string{"S": "xxx", "F": "9.87"},
+			opts: []ff.Option{ff.WithEnvVarNoPrefix()},
+			want: fftest.Vars{S: "xxx", F: 9.87},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			if testcase.file != "" {
