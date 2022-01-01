@@ -1,7 +1,6 @@
 package ff
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -9,18 +8,36 @@ import (
 	"strings"
 )
 
+// ConfigFileParser interprets the config file represented by the reader
+// and calls the set function for each parsed flag pair.
+type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
+
+type lookupFunc func(fs *flag.FlagSet, name string) *flag.Flag
+
 // Parse the flags in the flag set from the provided (presumably commandline)
-// args. Additional options may be provided to parse from a config file and/or
-// environment variables in that priority order.
+// args. Additional options may be provided to have Parse also read from a
+// config file, and/or environment variables, in that priority order.
 func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	var c Context
 	for _, option := range options {
 		option(&c)
 	}
 
+	flag2env := map[*flag.Flag]string{}
+	env2flag := map[string]*flag.Flag{}
+	fs.VisitAll(func(f *flag.Flag) {
+		var key string
+		key = strings.ToUpper(f.Name)
+		key = flagNameToEnvVar.Replace(key)
+		key = maybePrefix(c.envVarPrefix != "", key, c.envVarPrefix)
+		env2flag[key] = f
+		flag2env[f] = key
+	})
+
 	// First priority: commandline flags (explicit user preference).
+
 	if err := fs.Parse(args); err != nil {
-		return fmt.Errorf("error parsing commandline args: %w", err)
+		return fmt.Errorf("error parsing commandline arguments: %w", err)
 	}
 
 	provided := map[string]bool{}
@@ -29,7 +46,8 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	})
 
 	// Second priority: environment variables (session).
-	if parseEnv := c.envVarPrefix != "" || c.envVarNoPrefix; parseEnv {
+
+	if c.readEnvVars {
 		var visitErr error
 		fs.VisitAll(func(f *flag.Flag) {
 			if visitErr != nil {
@@ -40,10 +58,10 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 				return
 			}
 
-			var key string
-			key = strings.ToUpper(f.Name)
-			key = envVarReplacer.Replace(key)
-			key = maybePrefix(key, c.envVarNoPrefix, c.envVarPrefix)
+			key, ok := flag2env[f]
+			if !ok {
+				panic(fmt.Errorf("%s: invalid flag/env mapping", f.Name))
+			}
 
 			value := os.Getenv(key)
 			if value == "" {
@@ -52,13 +70,13 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 			for _, v := range maybeSplit(value, c.envVarSplit) {
 				if err := fs.Set(f.Name, v); err != nil {
-					visitErr = fmt.Errorf("error setting flag %q from env var %q: %w", f.Name, key, err)
+					visitErr = fmt.Errorf("error setting flag %q from environment variable %q: %w", f.Name, key, err)
 					return
 				}
 			}
 		})
 		if visitErr != nil {
-			return fmt.Errorf("error parsing env vars: %w", visitErr)
+			return fmt.Errorf("error parsing environment variables: %w", visitErr)
 		}
 	}
 
@@ -66,19 +84,31 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		provided[f.Name] = true
 	})
 
+	// Third priority: config file (host).
+
 	var configFile string
 	if c.configFileVia != nil {
 		configFile = *c.configFileVia
 	}
 
-	// Third priority: config file (host).
 	if configFile == "" && c.configFileFlagName != "" {
 		if f := fs.Lookup(c.configFileFlagName); f != nil {
 			configFile = f.Value.String()
 		}
 	}
 
-	if parseConfig := configFile != "" && c.configFileParser != nil; parseConfig {
+	if c.configFileLookup == nil {
+		c.configFileLookup = func(fs *flag.FlagSet, name string) *flag.Flag {
+			return fs.Lookup(name)
+		}
+	}
+
+	var (
+		haveConfigFile  = configFile != ""
+		haveParser      = c.configFileParser != nil
+		parseConfigFile = haveConfigFile && haveParser
+	)
+	if parseConfigFile {
 		f, err := os.Open(configFile)
 		switch {
 		case err == nil:
@@ -88,15 +118,31 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 					return nil
 				}
 
-				defined := fs.Lookup(name) != nil
+				var (
+					f1 = fs.Lookup(name)
+					f2 = env2flag[name]
+					f  *flag.Flag
+				)
 				switch {
-				case !defined && c.ignoreUndefined:
+				case f1 == nil && f2 == nil && c.ignoreUndefined:
 					return nil
-				case !defined && !c.ignoreUndefined:
+				case f1 == nil && f2 == nil && !c.ignoreUndefined:
 					return fmt.Errorf("config file flag %q not defined in flag set", name)
+				case f1 != nil && f2 == nil:
+					f = f1
+				case f1 == nil && f2 != nil:
+					f = f2
+				case f1 != nil && f2 != nil && f1 == f2:
+					f = f1
+				case f1 != nil && f2 != nil && f1 != f2:
+					return fmt.Errorf("config file flag %q ambiguous: matches %s and %s", name, f1.Name, f2.Name)
 				}
 
-				if err := fs.Set(name, value); err != nil {
+				if provided[f.Name] {
+					return nil
+				}
+
+				if err := fs.Set(f.Name, value); err != nil {
 					return fmt.Errorf("error setting flag %q from config file: %w", name, err)
 				}
 
@@ -125,9 +171,10 @@ type Context struct {
 	configFileVia          *string
 	configFileFlagName     string
 	configFileParser       ConfigFileParser
+	configFileLookup       lookupFunc
 	allowMissingConfigFile bool
+	readEnvVars            bool
 	envVarPrefix           string
-	envVarNoPrefix         bool
 	envVarSplit            string
 	ignoreUndefined        bool
 }
@@ -136,17 +183,17 @@ type Context struct {
 type Option func(*Context)
 
 // WithConfigFile tells Parse to read the provided filename as a config file.
-// Requires WithConfigFileParser, and overrides WithConfigFileFlag.
-// Because config files should generally be user-specifiable, this option
-// should be rarely used. Prefer WithConfigFileFlag.
+// Requires WithConfigFileParser, and overrides WithConfigFileFlag. Because
+// config files should generally be user-specifiable, this option should rarely
+// be used; prefer WithConfigFileFlag.
 func WithConfigFile(filename string) Option {
 	return WithConfigFileVia(&filename)
 }
 
 // WithConfigFileVia tells Parse to read the provided filename as a config file.
-// Requires WithConfigFileParser, and overrides WithConfigFileFlag.
-// This is useful for sharing a single root level flag for config files among
-// multiple ffcli subcommands.
+// Requires WithConfigFileParser, and overrides WithConfigFileFlag. This is
+// useful for sharing a single root level flag for config files among multiple
+// ffcli subcommands.
 func WithConfigFileVia(filename *string) Option {
 	return func(c *Context) {
 		c.configFileVia = filename
@@ -158,8 +205,7 @@ func WithConfigFileVia(filename *string) Option {
 // WithConfigFile.
 //
 // To specify a default config file, provide it as the default value of the
-// corresponding flag -- and consider also using the WithAllowMissingConfigFile
-// option.
+// corresponding flag. See also: WithAllowMissingConfigFile.
 func WithConfigFileFlag(flagname string) Option {
 	return func(c *Context) {
 		c.configFileFlagName = flagname
@@ -175,33 +221,41 @@ func WithConfigFileParser(p ConfigFileParser) Option {
 }
 
 // WithAllowMissingConfigFile tells Parse to permit the case where a config file
-// is specified but doesn't exist. By default, missing config files result in an
-// error.
+// is specified but doesn't exist.
+//
+// By default, missing config files cause Parse to fail.
 func WithAllowMissingConfigFile(allow bool) Option {
 	return func(c *Context) {
 		c.allowMissingConfigFile = allow
 	}
 }
 
-// WithEnvVarPrefix tells Parse to try to set flags from environment variables
-// with the given prefix. Flag names are matched to environment variables with
-// the given prefix, followed by an underscore, followed by the capitalized flag
-// names, with separator characters like periods or hyphens replaced with
-// underscores. By default, flags are not set from environment variables at all.
-func WithEnvVarPrefix(prefix string) Option {
+// WithEnvVarNoPrefix is an alias for WithEnvVars.
+//
+// DEPRECATED: prefer WithEnvVars.
+var WithEnvVarNoPrefix = WithEnvVars
+
+// WithEnvVars tells Parse to set flags from environment variables. Flag
+// names are matched to environment variables by capitalizing the flag name, and
+// replacing separator characters like periods or hyphens with underscores.
+//
+// By default, flags are not set from environment variables at all.
+func WithEnvVars() Option {
 	return func(c *Context) {
-		c.envVarPrefix = prefix
+		c.readEnvVars = true
 	}
 }
 
-// WithEnvVarNoPrefix tells Parse to try to set flags from environment variables
-// without any specific prefix. Flag names are matched to environment variables
-// by capitalizing the flag name, and replacing separator characters like
-// periods or hyphens with underscores. By default, flags are not set from
-// environment variables at all.
-func WithEnvVarNoPrefix() Option {
+// WithEnvVarPrefix is like WithEnvVars, but only considers environment
+// variables beginning with the given prefix followed by an underscore. That
+// prefix (and underscore) are removed before matching to flag names. This
+// option is also respected by the EnvParser config file parser.
+//
+// By default, flags are not set from environment variables at all.
+func WithEnvVarPrefix(prefix string) Option {
 	return func(c *Context) {
-		c.envVarNoPrefix = true
+		c.readEnvVars = true
+		c.envVarPrefix = prefix
 	}
 }
 
@@ -224,60 +278,17 @@ func WithIgnoreUndefined(ignore bool) Option {
 	}
 }
 
-// ConfigFileParser interprets the config file represented by the reader
-// and calls the set function for each parsed flag pair.
-type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
-
-// PlainParser is a parser for config files in an extremely simple format. Each
-// line is tokenized as a single key/value pair. The first whitespace-delimited
-// token in the line is interpreted as the flag name, and all remaining tokens
-// are interpreted as the value. Any leading hyphens on the flag name are
-// ignored.
-func PlainParser(r io.Reader, set func(name, value string) error) error {
-	s := bufio.NewScanner(r)
-	for s.Scan() {
-		line := strings.TrimSpace(s.Text())
-		if line == "" {
-			continue // skip empties
-		}
-
-		if line[0] == '#' {
-			continue // skip comments
-		}
-
-		var (
-			name  string
-			value string
-			index = strings.IndexRune(line, ' ')
-		)
-		if index < 0 {
-			name, value = line, "true" // boolean option
-		} else {
-			name, value = line[:index], strings.TrimSpace(line[index:])
-		}
-
-		if i := strings.Index(value, " #"); i >= 0 {
-			value = strings.TrimSpace(value[:i])
-		}
-
-		if err := set(name, value); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-var envVarReplacer = strings.NewReplacer(
+var flagNameToEnvVar = strings.NewReplacer(
 	"-", "_",
 	".", "_",
 	"/", "_",
 )
 
-func maybePrefix(key string, noPrefix bool, prefix string) string {
-	if noPrefix {
-		return key
+func maybePrefix(doPrefix bool, key string, prefix string) string {
+	if doPrefix {
+		key = strings.ToUpper(prefix) + "_" + key
 	}
-	return strings.ToUpper(prefix) + "_" + key
+	return key
 }
 
 func maybeSplit(value, split string) []string {

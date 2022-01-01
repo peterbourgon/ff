@@ -104,7 +104,7 @@ func main() {
 		port  = fs.Int("port", 8080, "listen port for server (also via PORT)")
 		debug = fs.Bool("debug", false, "log debug information (also via DEBUG)")
 	)
-	ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix())
+	ff.Parse(fs, os.Args[1:], ff.WithEnvVars())
 
 	fmt.Printf("port %d, debug %v\n", *port, *debug)
 }
