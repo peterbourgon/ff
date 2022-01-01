@@ -269,16 +269,6 @@ func WithIgnoreUndefined(ignore bool) Option {
 	}
 }
 
-func envVarToFlagNames(env string) []string {
-	lower := strings.ToLower(env)
-	return []string{
-		lower,
-		strings.ReplaceAll(lower, "_", "-"),
-		strings.ReplaceAll(lower, "_", "."),
-		strings.ReplaceAll(lower, "_", "/"),
-	}
-}
-
 var flagNameToEnvVar = strings.NewReplacer(
 	"-", "_",
 	".", "_",
