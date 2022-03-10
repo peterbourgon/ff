@@ -24,7 +24,7 @@ import (
 )
 
 func main() {
-	fs := flag.NewFlagSet("my-program", flag.ExitOnError)
+	fs := flag.NewFlagSet("my-program", flag.ContinueOnError)
 	var (
 		listenAddr = fs.String("listen-addr", "localhost:8080", "listen address")
 		refresh    = fs.Duration("refresh", 15*time.Second, "refresh interval")
@@ -38,7 +38,7 @@ Then, call ff.Parse instead of fs.Parse.
 are available to control parse behavior.
 
 ```go
-	ff.Parse(fs, os.Args[1:],
+	err := ff.Parse(fs, os.Args[1:],
 		ff.WithEnvVarPrefix("MY_PROGRAM"),
 		ff.WithConfigFileFlag("config"),
 		ff.WithConfigFileParser(ff.PlainParser),
@@ -83,6 +83,14 @@ Or, you could write your own config file parser.
 type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
 ```
 
+## Error handling
+
+In general, you should call flag.NewFlagSet with the flag.ContinueOnError error 
+handling strategy, which, somewhat confusingly, is the only way that ff.Parse can
+return errors. (The other strategies terminate the program on error. Rude!) This 
+is [the only way to detect certain types of parse failures][#90], in addition to 
+being good practice in general.
+
 ## Flags and env vars
 
 One common use case is to allow configuration from both flags and env vars.
@@ -99,12 +107,15 @@ import (
 )
 
 func main() {
-	fs := flag.NewFlagSet("myservice", flag.ExitOnError)
+	fs := flag.NewFlagSet("myservice", flag.ContinueOnError)
 	var (
 		port  = fs.Int("port", 8080, "listen port for server (also via PORT)")
 		debug = fs.Bool("debug", false, "log debug information (also via DEBUG)")
 	)
-	ff.Parse(fs, os.Args[1:], ff.WithEnvVars())
+	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVars()); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
 
 	fmt.Printf("port %d, debug %v\n", *port, *debug)
 }
