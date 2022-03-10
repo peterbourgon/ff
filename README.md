@@ -83,16 +83,6 @@ Or, you could write your own config file parser.
 type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
 ```
 
-## Error handling
-
-In general, you should call flag.NewFlagSet with the flag.ContinueOnError error 
-handling strategy, which, somewhat confusingly, is the only way that ff.Parse can
-return errors. (The other strategies terminate the program on error. Rude!) This 
-is [the only way to detect certain types of parse failures][90], in addition to 
-being good practice in general.
-
-[90]: https://github.com/peterbourgon/ff/issues/90
-
 ## Flags and env vars
 
 One common use case is to allow configuration from both flags and env vars.
@@ -129,3 +119,13 @@ port 9090, debug false
 $ env PORT=9090 DEBUG=1 myservice -port=1234
 port 1234, debug true
 ```
+
+## Error handling
+
+In general, you should call flag.NewFlagSet with the flag.ContinueOnError error 
+handling strategy, which, somewhat confusingly, is the only way that ff.Parse can
+return errors. (The other strategies terminate the program on error. Rude!) This 
+is [the only way to detect certain types of parse failures][90], in addition to 
+being good practice in general.
+
+[90]: https://github.com/peterbourgon/ff/issues/90
