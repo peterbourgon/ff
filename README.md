@@ -88,8 +88,10 @@ type ConfigFileParser func(r io.Reader, set func(name, value string) error) erro
 In general, you should call flag.NewFlagSet with the flag.ContinueOnError error 
 handling strategy, which, somewhat confusingly, is the only way that ff.Parse can
 return errors. (The other strategies terminate the program on error. Rude!) This 
-is [the only way to detect certain types of parse failures][#90], in addition to 
+is [the only way to detect certain types of parse failures][90], in addition to 
 being good practice in general.
+
+[90]: https://github.com/peterbourgon/ff/issues/90
 
 ## Flags and env vars
 
