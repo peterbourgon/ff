@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/peterbourgon/ff/v3"
+	"github.com/peterbourgon/ff/v10"
 )
 
 func main() {
