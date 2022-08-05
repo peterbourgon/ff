@@ -326,10 +326,10 @@ func TestIssue57(t *testing.T) {
 
 	for _, testcase := range []struct {
 		args        []string
-		parseErrAs  error
+		parseErrAs  any
 		parseErrIs  error
 		parseErrStr string
-		runErrAs    error
+		runErrAs    any
 		runErrIs    error
 		runErrStr   string
 	}{
