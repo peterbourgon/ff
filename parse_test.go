@@ -204,8 +204,7 @@ func TestParseIssue16(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			filename, cleanup := fftest.TempFile(t, testcase.data)
-			defer cleanup()
+			filename := fftest.TempFile(t, testcase.data)
 
 			fs, vars := fftest.Pair()
 			vars.ParseError = ff.Parse(fs, []string{},
@@ -245,9 +244,7 @@ func TestParseConfigFile(t *testing.T) {
 		t.Run(testcase.name, func(t *testing.T) {
 			filename := "dummy"
 			if !testcase.missing {
-				var cleanup func()
-				filename, cleanup = fftest.TempFile(t, "")
-				defer cleanup()
+				filename = fftest.TempFile(t, "")
 			}
 
 			options := []ff.Option{ff.WithConfigFile(filename), ff.WithConfigFileParser(ff.PlainParser)}

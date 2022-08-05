@@ -1,34 +1,26 @@
 package fftest
 
 import (
-	"io/ioutil"
+	"math/rand"
 	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 )
 
-// TempFile uses ioutil.TempFile to create a temporary file with the given
-// content. Use the cleanup func to remove the file.
-func TempFile(t *testing.T, content string) (filename string, cleanup func()) {
+// TempFile returns the filename of a temporary file that has been created with
+// the provided content. The file is created in t.TempDir(), which is
+// automatically removed when the test finishes.
+func TempFile(t *testing.T, content string) string {
 	t.Helper()
 
-	f, err := ioutil.TempFile("", "fftest_")
-	if err != nil {
+	filename := filepath.Join(t.TempDir(), strconv.Itoa(rand.Int()))
+
+	if err := os.WriteFile(filename, []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := f.Write([]byte(content)); err != nil {
-		t.Fatal(err)
-	}
+	t.Logf("created %s", filename)
 
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	cleanup = func() {
-		if err := os.Remove(f.Name()); err != nil {
-			t.Errorf("os.Remove(%q): %v", f.Name(), err)
-		}
-	}
-
-	return f.Name(), cleanup
+	return filename
 }

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"reflect"
 	"strings"
@@ -374,7 +374,7 @@ func TestIssue57(t *testing.T) {
 	} {
 		t.Run(strings.Join(append([]string{"foo"}, testcase.args...), " "), func(t *testing.T) {
 			fs := flag.NewFlagSet("·", flag.ContinueOnError)
-			fs.SetOutput(ioutil.Discard)
+			fs.SetOutput(io.Discard)
 
 			var (
 				baz = &ffcli.Command{Name: "baz", FlagSet: fs, Exec: func(_ context.Context, args []string) error { return nil }}
