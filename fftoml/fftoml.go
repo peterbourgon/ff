@@ -54,8 +54,8 @@ type Option func(*ConfigFileParser)
 //
 // For example, given the following TOML
 //
-//     [section.subsection]
-//     value = 10
+//	[section.subsection]
+//	value = 10
 //
 // Parse will match to a flag with the name `-section.subsection.value` by default.
 // If the delimiter is "-", Parse will match to `-section-subsection-value` instead.
