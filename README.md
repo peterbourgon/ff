@@ -104,7 +104,7 @@ func main() {
 		port  = fs.Int("port", 8080, "listen port for server (also via PORT)")
 		debug = fs.Bool("debug", false, "log debug information (also via DEBUG)")
 	)
-	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix()); err != nil {
+	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVars()); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
