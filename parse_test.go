@@ -2,6 +2,7 @@ package ff_test
 
 import (
 	"context"
+	"embed"
 	"flag"
 	"os"
 	"testing"
@@ -11,6 +12,9 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/peterbourgon/ff/v3/fftest"
 )
+
+//go:embed testdata
+var testdata embed.FS
 
 func TestParseBasics(t *testing.T) {
 	t.Parallel()
@@ -262,56 +266,83 @@ func TestParseConfigFile(t *testing.T) {
 }
 
 func TestParseConfigFileVia(t *testing.T) {
-	t.Parallel()
+	for _, path := range []string{"", os.TempDir()} {
+		path2 := path // making go vet happy
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
 
-	var (
-		rootFS = flag.NewFlagSet("root", flag.ContinueOnError)
-		config = rootFS.String("config-file", "", "")
-		i      = rootFS.Int("i", 0, "")
-		s      = rootFS.String("s", "", "")
-		subFS  = flag.NewFlagSet("subcommand", flag.ContinueOnError)
-		d      = subFS.Duration("d", time.Second, "")
-		b      = subFS.Bool("b", false, "")
-	)
+			changedir(t, path2)
 
-	subCommand := &ffcli.Command{
-		Name:    "subcommand",
-		FlagSet: subFS,
-		Options: []ff.Option{
-			ff.WithConfigFileParser(ff.PlainParser),
-			ff.WithConfigFileVia(config),
-			ff.WithIgnoreUndefined(true),
-		},
-		Exec: func(ctx context.Context, args []string) error { return nil },
-	}
+			var (
+				rootFS = flag.NewFlagSet("root", flag.ContinueOnError)
+				config = rootFS.String("config-file", "", "")
+				i      = rootFS.Int("i", 0, "")
+				s      = rootFS.String("s", "", "")
+				subFS  = flag.NewFlagSet("subcommand", flag.ContinueOnError)
+				d      = subFS.Duration("d", time.Second, "")
+				b      = subFS.Bool("b", false, "")
+			)
 
-	root := &ffcli.Command{
-		Name:    "root",
-		FlagSet: rootFS,
-		Options: []ff.Option{
-			ff.WithConfigFileParser(ff.PlainParser),
-			ff.WithConfigFileFlag("config-file"),
-			ff.WithIgnoreUndefined(true),
-		},
-		Exec:        func(ctx context.Context, args []string) error { return nil },
-		Subcommands: []*ffcli.Command{subCommand},
-	}
+			subCommand := &ffcli.Command{
+				Name:    "subcommand",
+				FlagSet: subFS,
+				Options: []ff.Option{
+					ff.WithConfigFileParser(ff.PlainParser),
+					ff.WithConfigFileVia(config),
+					ff.WithIgnoreUndefined(true),
+					ff.WithEmbeddedFileSystem(testdata),
+				},
+				Exec: func(ctx context.Context, args []string) error { return nil },
+			}
 
-	err := root.ParseAndRun(context.Background(), []string{"-config-file", "testdata/1.conf", "subcommand", "-b"})
-	if err != nil {
-		t.Fatal(err)
-	}
+			root := &ffcli.Command{
+				Name:    "root",
+				FlagSet: rootFS,
+				Options: []ff.Option{
+					ff.WithConfigFileParser(ff.PlainParser),
+					ff.WithConfigFileFlag("config-file"),
+					ff.WithIgnoreUndefined(true),
+					ff.WithEmbeddedFileSystem(testdata),
+				},
+				Exec:        func(ctx context.Context, args []string) error { return nil },
+				Subcommands: []*ffcli.Command{subCommand},
+			}
 
-	if want, have := time.Hour, *d; want != have {
-		t.Errorf("d: want %v, have %v", want, have)
+			err := root.ParseAndRun(context.Background(), []string{"-config-file", "testdata/1.conf", "subcommand", "-b"})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if want, have := time.Hour, *d; want != have {
+				t.Errorf("d: want %v, have %v", want, have)
+			}
+			if want, have := true, *b; want != have {
+				t.Errorf("b: want %v, have %v", want, have)
+			}
+			if want, have := "bar", *s; want != have {
+				t.Errorf("s: want %q, have %q", want, have)
+			}
+			if want, have := 99, *i; want != have {
+				t.Errorf("i: want %d, have %d", want, have)
+			}
+		})
 	}
-	if want, have := true, *b; want != have {
-		t.Errorf("b: want %v, have %v", want, have)
-	}
-	if want, have := "bar", *s; want != have {
-		t.Errorf("s: want %q, have %q", want, have)
-	}
-	if want, have := 99, *i; want != have {
-		t.Errorf("i: want %d, have %d", want, have)
+}
+
+func changedir(t testing.TB, dir string) {
+	t.Helper()
+
+	if dir != "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.Chdir(dir); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			_ = os.Chdir(wd)
+		})
 	}
 }

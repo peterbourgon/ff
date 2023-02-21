@@ -1,9 +1,11 @@
 package ff
 
 import (
+	"embed"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 )
@@ -18,7 +20,9 @@ type lookupFunc func(fs *flag.FlagSet, name string) *flag.Flag
 // args. Additional options may be provided to have Parse also read from a
 // config file, and/or environment variables, in that priority order.
 func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
-	var c Context
+	c := Context{
+		fileSystem: physicalFileSystem(os.Open),
+	}
 	for _, option := range options {
 		option(&c)
 	}
@@ -109,7 +113,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		parseConfigFile = haveConfigFile && haveParser
 	)
 	if parseConfigFile {
-		f, err := os.Open(configFile)
+		f, err := c.fileSystem.Open(configFile)
 		switch {
 		case err == nil:
 			defer f.Close()
@@ -168,6 +172,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 
 // Context contains private fields used during parsing.
 type Context struct {
+	fileSystem             fs.FS
 	configFileVia          *string
 	configFileFlagName     string
 	configFileParser       ConfigFileParser
@@ -181,6 +186,14 @@ type Context struct {
 
 // Option controls some aspect of Parse behavior.
 type Option func(*Context)
+
+// WithEmbeddedFileSystem tells Parse to fallback to embedded data
+// if a given configuration file cannot be found in the host file system.
+func WithEmbeddedFileSystem(fs embed.FS) Option {
+	return func(c *Context) {
+		c.fileSystem = fs
+	}
+}
 
 // WithConfigFile tells Parse to read the provided filename as a config file.
 // Requires WithConfigFileParser, and overrides WithConfigFileFlag. Because
@@ -296,4 +309,14 @@ func maybeSplit(value, split string) []string {
 		return []string{value}
 	}
 	return strings.Split(value, split)
+}
+
+type physicalFileSystem func(name string) (*os.File, error)
+
+func (s physicalFileSystem) Open(name string) (fs.File, error) {
+	f, err := s(name)
+	if err != nil {
+		//fmt.Printf("%s %s\n", name, err)
+	}
+	return f, err
 }
