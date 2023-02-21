@@ -314,9 +314,5 @@ func maybeSplit(value, split string) []string {
 type physicalFileSystem func(name string) (*os.File, error)
 
 func (s physicalFileSystem) Open(name string) (fs.File, error) {
-	f, err := s(name)
-	if err != nil {
-		//fmt.Printf("%s %s\n", name, err)
-	}
-	return f, err
+	return s(name)
 }
