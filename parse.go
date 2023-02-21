@@ -21,7 +21,7 @@ type lookupFunc func(fs *flag.FlagSet, name string) *flag.Flag
 // config file, and/or environment variables, in that priority order.
 func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 	c := Context{
-		fileSystem: physicalFileSystem(os.Open),
+		fileSystem: hostFileSystem(os.Open),
 	}
 	for _, option := range options {
 		option(&c)
@@ -311,8 +311,8 @@ func maybeSplit(value, split string) []string {
 	return strings.Split(value, split)
 }
 
-type physicalFileSystem func(name string) (*os.File, error)
+type hostFileSystem func(name string) (*os.File, error)
 
-func (s physicalFileSystem) Open(name string) (fs.File, error) {
+func (s hostFileSystem) Open(name string) (fs.File, error) {
 	return s(name)
 }
