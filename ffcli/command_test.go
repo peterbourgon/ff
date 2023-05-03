@@ -439,6 +439,62 @@ func TestIssue57(t *testing.T) {
 	}
 }
 
+func TestDefaultUsageFuncFlagHelp(t *testing.T) {
+	t.Parallel()
+
+	for _, testcase := range []struct {
+		name string // name of test case
+		def  string // default value, if any
+		help string // help text for flag
+		want string // expected usage text
+	}{
+		{
+			name: "plain text",
+			help: "does stuff",
+			want: "-x string  does stuff",
+		},
+		{
+			name: "placeholder",
+			help: "reads from `file` instead of stdout",
+			want: "-x file  reads from file instead of stdout",
+		},
+		{
+			name: "default",
+			def:  "www",
+			help: "path to output directory",
+			want: "-x www  path to output directory",
+		},
+		{
+			name: "default with placeholder",
+			def:  "www",
+			help: "path to output `directory`",
+			want: "-x www  path to output directory",
+		},
+	} {
+		testcase := testcase
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
+			fset.String("x", testcase.def, testcase.help)
+
+			usage := ffcli.DefaultUsageFunc(&ffcli.Command{
+				FlagSet: fset,
+			})
+
+			// Discard everything before the FLAGS section.
+			_, flagUsage, ok := strings.Cut(usage, "\nFLAGS\n")
+			if !ok {
+				t.Fatalf("FLAGS section not found in:\n%s", usage)
+			}
+
+			assertMultilineString(t,
+				strings.TrimSpace(testcase.want),
+				strings.TrimSpace(flagUsage))
+		})
+	}
+}
+
 func ExampleCommand_Parse_then_Run() {
 	// Assume our CLI will use some client that requires a token.
 	type FooClient struct {
@@ -543,10 +599,10 @@ USAGE
 Some long help.
 
 FLAGS
-  -b=false  bool
-  -d 0s     time.Duration
-  -f 0      float64
-  -i 0      int
-  -s ...    string
-  -x ...    collection of strings (repeatable)
+  -b=false   bool
+  -d 0s      time.Duration
+  -f 0       float64
+  -i 0       int
+  -s string  string
+  -x ...     collection of strings (repeatable)
 `) + "\n\n"

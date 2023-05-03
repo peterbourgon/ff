@@ -231,12 +231,33 @@ func DefaultUsageFunc(c *Command) string {
 				space = "="
 			}
 
-			def := f.DefValue
-			if def == "" {
+			// If the help text contains backticks,
+			// e.g. "foo `bar` baz"`, we'll get:
+			//
+			//   argname = "bar"
+			//   usage   = "foo bar baz"
+			//
+			// Otherwise, it's an educated guess for a placeholder,
+			// or an empty string if one couldn't be determined.
+			argname, usage := flag.UnquoteUsage(f)
+
+			// For the argument name printed in the help,
+			// the order of preference is:
+			//
+			//  1. the default value
+			//  2. the back-quoted name from the help text
+			//  3. the '...' placeholder
+			var def string
+			switch {
+			case f.DefValue != "":
+				def = f.DefValue
+			case argname != "":
+				def = argname
+			default:
 				def = "..."
 			}
 
-			fmt.Fprintf(tw, "  -%s%s%s\t%s\n", f.Name, space, def, f.Usage)
+			fmt.Fprintf(tw, "  -%s%s%s\t%s\n", f.Name, space, def, usage)
 		})
 		tw.Flush()
 		fmt.Fprintf(&b, "\n")
