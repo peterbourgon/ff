@@ -13,19 +13,83 @@ import (
 // Parser is a parser for YAML file format. Flags and their values are read
 // from the key/value pairs defined in the config file.
 func Parser(r io.Reader, set func(name, value string) error) error {
+	return New().Parse(r, set)
+}
+
+// ConfigFileParser is a parser for the YAML file format. Flags and their values
+// are read from the key/value pairs defined in the config file.
+// Nested nodes and keys are concatenated with a delimiter to derive the
+// relevant flag name.
+type ConfigFileParser struct {
+	delimiter string
+}
+
+// New constructs and configures a ConfigFileParser using the provided options.
+func New(opts ...Option) (c ConfigFileParser) {
+	c.delimiter = "."
+	for _, opt := range opts {
+		opt(&c)
+	}
+	return c
+}
+
+// Parse parses the provided io.Reader as a YAML file and uses the provided set function
+// to set flag names derived from the node names and their key/value pairs.
+func (c ConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	d := yaml.NewDecoder(r)
 	if err := d.Decode(&m); err != nil && err != io.EOF {
 		return ParseError{err}
 	}
-	for key, val := range m {
-		values, err := valsToStrs(val)
-		if err != nil {
-			return ParseError{err}
+	return parseNode(m, "", c.delimiter, set)
+}
+
+// Option is a function which changes the behavior of the YAML config file parser.
+type Option func(*ConfigFileParser)
+
+// WithNodeDelimiter is an option which configures a delimiter
+// used to prefix node names onto keys when constructing
+// their associated flag name.
+// The default delimiter is "."
+//
+// For example, given the following YAML
+//
+//	section:
+//		subsection:
+//			value: 10
+//
+// Parse will match to a flag with the name `-section.subsection.value` by default.
+// If the delimiter is "-", Parse will match to `-section-subsection-value` instead.
+func WithNodeDelimiter(d string) Option {
+	return func(c *ConfigFileParser) {
+		c.delimiter = d
+	}
+}
+
+func parseNode(node map[string]interface{}, parent, delimiter string, set func(name, value string) error) error {
+	for key, val := range node {
+		name := key
+		if parent != "" {
+			name = parent + delimiter + key
 		}
-		for _, value := range values {
-			if err := set(key, value); err != nil {
+		switch n := val.(type) {
+		case map[interface{}]interface{}:
+			m := make(map[string]interface{})
+			for k, v := range n {
+				m[fmt.Sprint(k)] = v
+			}
+			if err := parseNode(m, name, delimiter, set); err != nil {
 				return err
+			}
+		default:
+			values, err := valsToStrs(n)
+			if err != nil {
+				return ParseError{Inner: err}
+			}
+			for _, value := range values {
+				if err = set(name, value); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -49,7 +113,6 @@ func valsToStrs(val interface{}) ([]string, error) {
 		return nil, err
 	}
 	return []string{s}, nil
-
 }
 
 func valToStr(val interface{}) (string, error) {
