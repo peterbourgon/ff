@@ -132,7 +132,7 @@ func TestParser_WithNested(t *testing.T) {
 			stringsKey: "strings.nested.key",
 		},
 		{
-			name:       "defaults",
+			name:       "delimiter",
 			opts:       []ffyaml.Option{ffyaml.WithNodeDelimiter("-")},
 			stringKey:  "string-key",
 			boolKey:    "string-false",
