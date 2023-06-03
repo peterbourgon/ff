@@ -7,16 +7,49 @@ import (
 	"strconv"
 
 	"github.com/peterbourgon/ff/v3"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Parser is a parser for YAML file format. Flags and their values are read
 // from the key/value pairs defined in the config file.
 func Parser(r io.Reader, set func(name, value string) error) error {
+	return New().Parse(r, set)
+}
+
+// ConfigFileParser is a parser for the YAML file format. Flags and their
+// values are read from the key/value pairs defined in the config file. The
+// parser can be pointed to a section of the file via a key path. This allows
+// one to: place different configurations in the same file, use same file for
+// other tools, or use the same file for different instances of this parser.
+type ConfigFileParser struct {
+	path []string
+}
+
+// New constructs and configures a ConfigFileParser using the provided options.
+func New(opts ...Option) (c ConfigFileParser) {
+	for _, opt := range opts {
+		opt(&c)
+	}
+	return c
+}
+
+// Parse parses the provided io.Reader as a YAML file and uses the set function
+// to set flag names derived from their key/value pairs.
+func (c ConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	d := yaml.NewDecoder(r)
 	if err := d.Decode(&m); err != nil && err != io.EOF {
 		return ParseError{err}
+	}
+	for i, key := range c.path {
+		val, ok := m[key]
+		if !ok {
+			return ParseError{fmt.Errorf("key path '%s' not found", c.path[0:i+1])}
+		}
+		m, ok = val.(map[string]interface{})
+		if !ok {
+			return ParseError{fmt.Errorf("key path '%s' not a YAML map", c.path[0:i+1])}
+		}
 	}
 	for key, val := range m {
 		values, err := valsToStrs(val)
@@ -30,6 +63,28 @@ func Parser(r io.Reader, set func(name, value string) error) error {
 		}
 	}
 	return nil
+}
+
+// Option is a function which changes the behavior of the YAML config file parser.
+type Option func(*ConfigFileParser)
+
+// WithKeyPath is an option that specifies a path of keys leading to the section
+// of the YAML config used by the configuration parser. The default path is nil,
+// which means the root configuration is used.
+//
+// For example, given the following YAML
+//
+//	config:
+//	  dev:
+//	    value: 10
+//	  prod:
+//	    value: 100
+//
+// Specifying a path []string{"config", "dev"} will yield a value of 10 for value.
+func WithKeyPath(path ...string) Option {
+	return func(c *ConfigFileParser) {
+		c.path = path
+	}
 }
 
 func valsToStrs(val interface{}) ([]string, error) {

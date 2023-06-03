@@ -18,6 +18,7 @@ func TestParser(t *testing.T) {
 		vars func(*flag.FlagSet) *fftest.Vars
 		name string
 		file string
+		opts []ffyaml.Option
 		miss bool // AllowMissingConfigFiles
 		want fftest.Vars
 	}{
@@ -90,6 +91,75 @@ func TestParser(t *testing.T) {
 			vars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(testcase.file),
 				ff.WithConfigFileParser(ffyaml.Parser),
+				ff.WithAllowMissingConfigFile(testcase.miss),
+			)
+			fftest.Compare(t, &testcase.want, vars)
+		})
+	}
+}
+
+func TestParserWithKeyPath(t *testing.T) {
+	t.Parallel()
+
+	for _, testcase := range []struct {
+		vars func(*flag.FlagSet) *fftest.Vars
+		name string
+		file string
+		opts []ffyaml.Option
+		miss bool // AllowMissingConfigFiles
+		want fftest.Vars
+	}{
+		{
+			name: "key path",
+			file: "testdata/key_path.yaml",
+			opts: []ffyaml.Option{ffyaml.WithKeyPath("root", "child1")},
+			want: fftest.Vars{S: "child1 value"},
+		},
+		{
+			name: "another key path",
+			file: "testdata/key_path.yaml",
+			opts: []ffyaml.Option{ffyaml.WithKeyPath("root", "child2")},
+			want: fftest.Vars{S: "child2 value"},
+		},
+		{
+			name: "no key path without a terminal map",
+			file: "testdata/key_path.yaml",
+			opts: []ffyaml.Option{ffyaml.WithKeyPath()},
+			want: fftest.Vars{WantParseErrorString: "error parsing YAML config: couldn't convert map"},
+		},
+		{
+			name: "invalid prefix",
+			file: "testdata/invalid_prefix.yaml",
+			want: fftest.Vars{WantParseErrorString: "found character that cannot start any token"},
+		},
+		{
+			name: "no such key path",
+			file: "testdata/key_path.yaml",
+			opts: []ffyaml.Option{ffyaml.WithKeyPath("root", "child3")},
+			want: fftest.Vars{WantParseErrorString: "error parsing YAML config: key path '[root child3]' not found"},
+		},
+		{
+			name: "key path does not point to a terminal map",
+			file: "testdata/key_path.yaml",
+			opts: []ffyaml.Option{ffyaml.WithKeyPath("root", "child2", "s")},
+			want: fftest.Vars{WantParseErrorString: "not a YAML map"},
+		},
+		{
+			name: "key path does not terminate at a terminal map",
+			file: "testdata/key_path.yaml",
+			opts: []ffyaml.Option{ffyaml.WithKeyPath("root")},
+			want: fftest.Vars{WantParseErrorString: "error parsing YAML config: couldn't convert map"},
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			if testcase.vars == nil {
+				testcase.vars = fftest.DefaultVars
+			}
+			fs := flag.NewFlagSet("fftest", flag.ContinueOnError)
+			vars := testcase.vars(fs)
+			vars.ParseError = ff.Parse(fs, []string{},
+				ff.WithConfigFile(testcase.file),
+				ff.WithConfigFileParser(ffyaml.New(testcase.opts...).Parse),
 				ff.WithAllowMissingConfigFile(testcase.miss),
 			)
 			fftest.Compare(t, &testcase.want, vars)
