@@ -46,7 +46,7 @@ func (p *ConfigFileParser) Parse(r io.Reader, set func(name, value string) error
 	return parseNode(m, "", p.delimiter, set)
 }
 
-// Option is a function which changes the behavior of the YAML config file parser.
+// Option changes the behavior of the YAML config file parser.
 type Option func(*ConfigFileParser)
 
 // WithDelimiter is an option which configures a delimiter
