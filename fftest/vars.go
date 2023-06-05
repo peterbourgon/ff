@@ -3,6 +3,7 @@ package fftest
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -42,6 +43,19 @@ func NonzeroDefaultVars(fs *flag.FlagSet) *Vars {
 	fs.DurationVar(&v.D, "d", 3*time.Hour, "time.Duration")
 	fs.Var(&v.X, "x", "collection of strings (repeatable)")
 	return &v
+}
+
+// NestedDefaultVars is similar to DefaultVars, but uses nested flag syntax
+func NestedDefaultVars(delimiter string) func(fs *flag.FlagSet) *Vars {
+	return func(fs *flag.FlagSet) *Vars {
+		var v Vars
+		fs.StringVar(&v.S, fmt.Sprintf("foo%ss", delimiter), "", "string")
+		fs.IntVar(&v.I, fmt.Sprintf("bar%[1]snested%[1]si", delimiter), 0, "int")
+		fs.Float64Var(&v.F, fmt.Sprintf("bar%[1]snested%[1]sf", delimiter), 0., "float64")
+		fs.BoolVar(&v.B, fmt.Sprintf("foo%sb", delimiter), false, "bool")
+		fs.Var(&v.X, fmt.Sprintf("baz%[1]snested%[1]sx", delimiter), "collection of strings (repeatable)")
+		return &v
+	}
 }
 
 // Vars are a common set of variables used for testing.

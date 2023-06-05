@@ -13,7 +13,7 @@ import (
 // Parser is a parser for YAML file format. Flags and their values are read
 // from the key/value pairs defined in the config file.
 func Parser(r io.Reader, set func(name, value string) error) error {
-	return New().Parse(r, set)
+	return NewConfigFileParser().Parse(r, set)
 }
 
 // ConfigFileParser is a parser for the YAML file format. Flags and their values
@@ -35,7 +35,7 @@ func NewConfigFileParser(opts ...Option) *ConfigFileParser {
 	return p
 }
 
-// Parse parses the provided io.Reader as a YAML file and uses the provided set function
+// Parse a YAML document from the provided io.Reader, using the provided set function
 // to set flag names derived from the node names and their key/value pairs.
 func (p *ConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
@@ -43,13 +43,13 @@ func (p *ConfigFileParser) Parse(r io.Reader, set func(name, value string) error
 	if err := d.Decode(&m); err != nil && err != io.EOF {
 		return ParseError{err}
 	}
-	return parseNode(m, "", c.delimiter, set)
+	return parseNode(m, "", p.delimiter, set)
 }
 
 // Option is a function which changes the behavior of the YAML config file parser.
 type Option func(*ConfigFileParser)
 
-// WithNodeDelimiter is an option which configures a delimiter
+// WithDelimiter is an option which configures a delimiter
 // used to prefix node names onto keys when constructing
 // their associated flag name.
 // The default delimiter is "."
@@ -62,7 +62,7 @@ type Option func(*ConfigFileParser)
 //
 // Parse will match to a flag with the name `-section.subsection.value` by default.
 // If the delimiter is "-", Parse will match to `-section-subsection-value` instead.
-func WithNodeDelimiter(d string) Option {
+func WithDelimiter(d string) Option {
 	return func(c *ConfigFileParser) {
 		c.delimiter = d
 	}

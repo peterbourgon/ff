@@ -3,7 +3,6 @@ package ffyaml_test
 import (
 	"flag"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
@@ -21,6 +20,7 @@ func TestParser(t *testing.T) {
 		file string
 		miss bool // AllowMissingConfigFiles
 		want fftest.Vars
+		opts []ffyaml.Option
 	}{
 		{
 			name: "empty",
@@ -81,6 +81,19 @@ func TestParser(t *testing.T) {
 			miss: false,
 			want: fftest.Vars{WantParseErrorIs: os.ErrNotExist},
 		},
+		{
+			vars: fftest.NestedDefaultVars("."),
+			name: "nested nodes",
+			file: "testdata/nested.yaml",
+			want: fftest.Vars{S: "a string", B: true, I: 123, F: 1.23, X: []string{"one", "two", "three"}},
+		},
+		{
+			vars: fftest.NestedDefaultVars("-"),
+			name: "nested nodes hyphen delimiter",
+			file: "testdata/nested.yaml",
+			want: fftest.Vars{S: "a string", B: true, I: 123, F: 1.23, X: []string{"one", "two", "three"}},
+			opts: []ffyaml.Option{ffyaml.WithDelimiter("-")},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			if testcase.vars == nil {
@@ -90,77 +103,10 @@ func TestParser(t *testing.T) {
 			vars := testcase.vars(fs)
 			vars.ParseError = ff.Parse(fs, []string{},
 				ff.WithConfigFile(testcase.file),
-				ff.WithConfigFileParser(ffyaml.Parser),
+				ff.WithConfigFileParser(ffyaml.NewConfigFileParser(testcase.opts...).Parse),
 				ff.WithAllowMissingConfigFile(testcase.miss),
 			)
 			fftest.Compare(t, &testcase.want, vars)
-		})
-	}
-}
-
-func TestParser_WithNested(t *testing.T) {
-	t.Parallel()
-
-	type fields struct {
-		String  string
-		Bool    bool
-		Float   float64
-		Strings fftest.StringSlice
-	}
-
-	expected := fields{
-		String:  "a string",
-		Bool:    true,
-		Float:   1.23,
-		Strings: fftest.StringSlice{"one", "two", "three"},
-	}
-
-	for _, testcase := range []struct {
-		name string
-		opts []ffyaml.Option
-		// expectations
-		stringKey  string
-		boolKey    string
-		floatKey   string
-		stringsKey string
-	}{
-		{
-			name:       "defaults",
-			stringKey:  "string.key",
-			boolKey:    "string.false",
-			floatKey:   "float.nested.key",
-			stringsKey: "strings.nested.key",
-		},
-		{
-			name:       "delimiter",
-			opts:       []ffyaml.Option{ffyaml.WithNodeDelimiter("-")},
-			stringKey:  "string-key",
-			boolKey:    "string-false",
-			floatKey:   "float-nested-key",
-			stringsKey: "strings-nested-key",
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			var (
-				found fields
-				fs    = flag.NewFlagSet("fftest", flag.ContinueOnError)
-			)
-
-			fs.StringVar(&found.String, testcase.stringKey, "", "string")
-			fs.BoolVar(&found.Bool, testcase.boolKey, false, "bool")
-			fs.Float64Var(&found.Float, testcase.floatKey, 0, "float64")
-			fs.Var(&found.Strings, testcase.stringsKey, "string slice")
-
-			if err := ff.Parse(fs, []string{},
-				ff.WithConfigFile("testdata/nested.yaml"),
-				ff.WithConfigFileParser(ffyaml.New(testcase.opts...).Parse),
-			); err != nil {
-				t.Fatal(err)
-			}
-
-			if !reflect.DeepEqual(expected, found) {
-				t.Errorf(`expected %v, to be %v`, found, expected)
-			}
 		})
 	}
 }

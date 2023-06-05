@@ -1,12 +1,13 @@
-string:
-  key: "a string"
-  false: true
-float:
+foo:
+  s: a string
+  b: true
+bar:
   nested:
-    key: 1.23
-strings:
+    i: 123
+    f: 1.23
+baz:
   nested:
-    key:
-      - "one"
-      - "two"
-      - "three"
+    x:
+      - one
+      - two
+      - three

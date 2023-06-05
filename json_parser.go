@@ -12,7 +12,7 @@ import (
 // values as flag values. If the value is an array, the flag will be set
 // multiple times.
 func JSONParser(r io.Reader, set func(name, value string) error) error {
-	return NewJSONParser().Parse(r, set)
+	return NewJSONConfigFileParser().Parse(r, set)
 }
 
 // JSONConfigFileParser is a parser for the JSON file format. Flags and their values
@@ -43,13 +43,13 @@ func (p *JSONConfigFileParser) Parse(r io.Reader, set func(name, value string) e
 	if err := d.Decode(&m); err != nil {
 		return JSONParseError{Inner: err}
 	}
-	return parseObject(m, "", c.delimiter, set)
+	return parseObject(m, "", p.delimiter, set)
 }
 
 // JSONOption changes the behavior of the JSON config file parser.
 type JSONOption func(*JSONConfigFileParser)
 
-// WithObjectDelimiter is an option which configures a delimiter
+// WithJSONDelimiter is an option which configures a delimiter
 // used to prefix object names onto keys when constructing
 // their associated flag name.
 // The default delimiter is "."
@@ -66,7 +66,7 @@ type JSONOption func(*JSONConfigFileParser)
 //
 // Parse will match to a flag with the name `-section.subsection.value` by default.
 // If the delimiter is "-", Parse will match to `-section-subsection-value` instead.
-func WithObjectDelimiter(d string) JSONOption {
+func WithJSONDelimiter(d string) JSONOption {
 	return func(p *JSONConfigFileParser) {
 		p.delimiter = d
 	}

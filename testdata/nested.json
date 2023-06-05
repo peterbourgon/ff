@@ -1,16 +1,17 @@
 {
-  "string": {
-    "key": "a string",
-    "bool": true
+  "foo": {
+    "s": "a string",
+    "b": true
   },
-  "float": {
+  "bar": {
     "nested": {
-      "key": 1.23
+      "i": 123,
+      "f": 1.23
     }
   },
-  "strings": {
+  "baz": {
     "nested": {
-      "key": [
+      "x": [
         "one",
         "two",
         "three"
