@@ -12,20 +12,84 @@ import (
 // values as flag values. If the value is an array, the flag will be set
 // multiple times.
 func JSONParser(r io.Reader, set func(name, value string) error) error {
+	return NewJSONParser().Parse(r, set)
+}
+
+// JSONConfigFileParser is a parser for the JSON file format. Flags and their values
+// are read from the key/value pairs defined in the config file.
+// Nested objects and keys are concatenated with a delimiter to derive the
+// relevant flag name.
+type JSONConfigFileParser struct {
+	delimiter string
+}
+
+// NewJSONParser constructs and configures a JSONConfigFileParser using the provided options.
+func NewJSONParser(opts ...JSONOption) (c JSONConfigFileParser) {
+	c.delimiter = "."
+	for _, opt := range opts {
+		opt(&c)
+	}
+	return c
+}
+
+// Parse parses the provided io.Reader as a JSON file and uses the provided set function
+// to set flag names derived from the node names and their key/value pairs.
+func (c JSONConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	d := json.NewDecoder(r)
 	d.UseNumber() // must set UseNumber for stringifyValue to work
 	if err := d.Decode(&m); err != nil {
 		return JSONParseError{Inner: err}
 	}
-	for key, val := range m {
-		values, err := stringifySlice(val)
-		if err != nil {
-			return JSONParseError{Inner: err}
+	return parseObject(m, "", c.delimiter, set)
+}
+
+// JSONOption is a function which changes the behavior of the YAML config file parser.
+type JSONOption func(*JSONConfigFileParser)
+
+// WithObjectDelimiter is an option which configures a delimiter
+// used to prefix object names onto keys when constructing
+// their associated flag name.
+// The default delimiter is "."
+//
+// For example, given the following JSON
+//
+//	{
+//		"section": {
+//			"subsection": {
+//				"value": 10
+//			}
+//		}
+//	}
+//
+// Parse will match to a flag with the name `-section.subsection.value` by default.
+// If the delimiter is "-", Parse will match to `-section-subsection-value` instead.
+func WithObjectDelimiter(d string) JSONOption {
+	return func(c *JSONConfigFileParser) {
+		c.delimiter = d
+	}
+}
+
+func parseObject(obj map[string]interface{}, parent, delimiter string, set func(name, value string) error) error {
+	for key, val := range obj {
+		name := key
+		if parent != "" {
+			name = parent + delimiter + key
 		}
-		for _, value := range values {
-			if err := set(key, value); err != nil {
+		switch n := val.(type) {
+		case map[string]interface{}:
+			if err := parseObject(n, name, delimiter, set); err != nil {
 				return err
+			}
+		default:
+			values, err := stringifySlice(val)
+			if err != nil {
+				return JSONParseError{Inner: err}
+			}
+			for _, value := range values {
+				if err := set(name, value); err != nil {
+					return err
+				}
 			}
 		}
 	}

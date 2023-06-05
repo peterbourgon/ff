@@ -1,0 +1,20 @@
+{
+  "string": {
+    "key": "a string",
+    "bool": true
+  },
+  "float": {
+    "nested": {
+      "key": 1.23
+    }
+  },
+  "strings": {
+    "nested": {
+      "key": [
+        "one",
+        "two",
+        "three"
+      ]
+    }
+  }
+}
