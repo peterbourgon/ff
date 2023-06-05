@@ -24,18 +24,20 @@ type ConfigFileParser struct {
 	delimiter string
 }
 
-// New constructs and configures a ConfigFileParser using the provided options.
-func New(opts ...Option) (c ConfigFileParser) {
-	c.delimiter = "."
-	for _, opt := range opts {
-		opt(&c)
+// NewConfigFileParser returns a ConfigFileParser with the provided options.
+func NewConfigFileParser(opts ...Option) *ConfigFileParser {
+	p := &ConfigFileParser{
+		delimiter: ".",
 	}
-	return c
+	for _, opt := range opts {
+		opt(p)
+	}
+	return p
 }
 
 // Parse parses the provided io.Reader as a YAML file and uses the provided set function
 // to set flag names derived from the node names and their key/value pairs.
-func (c ConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
+func (p *ConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	d := yaml.NewDecoder(r)
 	if err := d.Decode(&m); err != nil && err != io.EOF {

@@ -23,18 +23,20 @@ type JSONConfigFileParser struct {
 	delimiter string
 }
 
-// NewJSONParser constructs and configures a JSONConfigFileParser using the provided options.
-func NewJSONParser(opts ...JSONOption) (c JSONConfigFileParser) {
-	c.delimiter = "."
-	for _, opt := range opts {
-		opt(&c)
+// NewJSONConfigFileParser returns a JSONConfigFileParser using the provided options.
+func NewJSONConfigFileParser(opts ...JSONOption) *JSONConfigFileParser {
+	p := &JSONConfigFileParser{
+		delimiter: ".",
 	}
-	return c
+	for _, opt := range opts {
+		opt(p)
+	}
+	return p
 }
 
-// Parse parses the provided io.Reader as a JSON file and uses the provided set function
+// Parse a JSON object from the provided io.Reader, using the provided set function
 // to set flag names derived from the node names and their key/value pairs.
-func (c JSONConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
+func (p *JSONConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
 	var m map[string]interface{}
 	d := json.NewDecoder(r)
 	d.UseNumber() // must set UseNumber for stringifyValue to work
@@ -44,7 +46,7 @@ func (c JSONConfigFileParser) Parse(r io.Reader, set func(name, value string) er
 	return parseObject(m, "", c.delimiter, set)
 }
 
-// JSONOption is a function which changes the behavior of the YAML config file parser.
+// JSONOption changes the behavior of the JSON config file parser.
 type JSONOption func(*JSONConfigFileParser)
 
 // WithObjectDelimiter is an option which configures a delimiter
@@ -65,8 +67,8 @@ type JSONOption func(*JSONConfigFileParser)
 // Parse will match to a flag with the name `-section.subsection.value` by default.
 // If the delimiter is "-", Parse will match to `-section-subsection-value` instead.
 func WithObjectDelimiter(d string) JSONOption {
-	return func(c *JSONConfigFileParser) {
-		c.delimiter = d
+	return func(p *JSONConfigFileParser) {
+		p.delimiter = d
 	}
 }
 
