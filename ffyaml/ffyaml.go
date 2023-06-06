@@ -4,9 +4,9 @@ package ffyaml
 import (
 	"fmt"
 	"io"
-	"strconv"
 
 	"github.com/peterbourgon/ff/v3"
+	"github.com/peterbourgon/ff/v3/internal"
 	"gopkg.in/yaml.v2"
 )
 
@@ -43,7 +43,11 @@ func (p *ConfigFileParser) Parse(r io.Reader, set func(name, value string) error
 	if err := d.Decode(&m); err != nil && err != io.EOF {
 		return ParseError{err}
 	}
-	return parseNode(m, "", p.delimiter, set)
+
+	if err := internal.TraverseMap(m, p.delimiter, set); err != nil {
+		return ff.StringConversionError{Value: err}
+	}
+	return nil
 }
 
 // Option changes the behavior of the YAML config file parser.
@@ -65,78 +69,6 @@ type Option func(*ConfigFileParser)
 func WithDelimiter(d string) Option {
 	return func(c *ConfigFileParser) {
 		c.delimiter = d
-	}
-}
-
-func parseNode(node map[string]interface{}, parent, delimiter string, set func(name, value string) error) error {
-	for key, val := range node {
-		name := key
-		if parent != "" {
-			name = parent + delimiter + key
-		}
-		switch n := val.(type) {
-		case map[interface{}]interface{}:
-			m := make(map[string]interface{})
-			for k, v := range n {
-				m[fmt.Sprint(k)] = v
-			}
-			if err := parseNode(m, name, delimiter, set); err != nil {
-				return err
-			}
-		default:
-			values, err := valsToStrs(n)
-			if err != nil {
-				return ParseError{Inner: err}
-			}
-			for _, value := range values {
-				if err = set(name, value); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func valsToStrs(val interface{}) ([]string, error) {
-	if vals, ok := val.([]interface{}); ok {
-		ss := make([]string, len(vals))
-		for i := range vals {
-			s, err := valToStr(vals[i])
-			if err != nil {
-				return nil, err
-			}
-			ss[i] = s
-		}
-		return ss, nil
-	}
-	s, err := valToStr(val)
-	if err != nil {
-		return nil, err
-	}
-	return []string{s}, nil
-}
-
-func valToStr(val interface{}) (string, error) {
-	switch v := val.(type) {
-	case byte:
-		return string([]byte{v}), nil
-	case string:
-		return v, nil
-	case bool:
-		return strconv.FormatBool(v), nil
-	case uint64:
-		return strconv.FormatUint(v, 10), nil
-	case int:
-		return strconv.Itoa(v), nil
-	case int64:
-		return strconv.FormatInt(v, 10), nil
-	case float64:
-		return strconv.FormatFloat(v, 'g', -1, 64), nil
-	case nil:
-		return "", nil
-	default:
-		return "", ff.StringConversionError{Value: val}
 	}
 }
 

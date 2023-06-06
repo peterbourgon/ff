@@ -4,10 +4,10 @@ package fftoml
 import (
 	"fmt"
 	"io"
-	"strconv"
 
 	"github.com/pelletier/go-toml"
 	"github.com/peterbourgon/ff/v3"
+	"github.com/peterbourgon/ff/v3/internal"
 )
 
 // Parser is a parser for TOML file format. Flags and their values are read
@@ -36,12 +36,16 @@ func New(opts ...Option) (c ConfigFileParser) {
 // Parse parses the provided io.Reader as a TOML file and uses the provided set function
 // to set flag names derived from the tables names and their key/value pairs.
 func (c ConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
-	tree, err := toml.LoadReader(r)
-	if err != nil {
+	var m map[string]interface{}
+	d := toml.NewDecoder(r)
+	if err := d.Decode(&m); err != nil {
 		return ParseError{Inner: err}
 	}
 
-	return parseTree(tree, "", c.delimiter, set)
+	if err := internal.TraverseMap(m, c.delimiter, set); err != nil {
+		return ff.StringConversionError{Value: err}
+	}
+	return nil
 }
 
 // Option is a function which changes the behavior of the TOML config file parser.
@@ -62,69 +66,6 @@ type Option func(*ConfigFileParser)
 func WithTableDelimiter(d string) Option {
 	return func(c *ConfigFileParser) {
 		c.delimiter = d
-	}
-}
-
-func parseTree(tree *toml.Tree, parent, delimiter string, set func(name, value string) error) error {
-	for _, key := range tree.Keys() {
-		name := key
-		if parent != "" {
-			name = parent + delimiter + key
-		}
-		switch t := tree.Get(key).(type) {
-		case *toml.Tree:
-			if err := parseTree(t, name, delimiter, set); err != nil {
-				return err
-			}
-		case interface{}:
-			values, err := valsToStrs(t)
-			if err != nil {
-				return ParseError{Inner: err}
-			}
-			for _, value := range values {
-				if err = set(name, value); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func valsToStrs(val interface{}) ([]string, error) {
-	if vals, ok := val.([]interface{}); ok {
-		ss := make([]string, len(vals))
-		for i := range vals {
-			s, err := valToStr(vals[i])
-			if err != nil {
-				return nil, err
-			}
-			ss[i] = s
-		}
-		return ss, nil
-	}
-	s, err := valToStr(val)
-	if err != nil {
-		return nil, err
-	}
-	return []string{s}, nil
-
-}
-
-func valToStr(val interface{}) (string, error) {
-	switch v := val.(type) {
-	case string:
-		return v, nil
-	case bool:
-		return strconv.FormatBool(v), nil
-	case uint64:
-		return strconv.FormatUint(v, 10), nil
-	case int64:
-		return strconv.FormatInt(v, 10), nil
-	case float64:
-		return strconv.FormatFloat(v, 'g', -1, 64), nil
-	default:
-		return "", ff.StringConversionError{Value: val}
 	}
 }
 

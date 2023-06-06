@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
+
+	"github.com/peterbourgon/ff/v3/internal"
 )
 
 // JSONParser is a parser for config files in JSON format. Input should be
@@ -43,7 +44,11 @@ func (p *JSONConfigFileParser) Parse(r io.Reader, set func(name, value string) e
 	if err := d.Decode(&m); err != nil {
 		return JSONParseError{Inner: err}
 	}
-	return parseObject(m, "", p.delimiter, set)
+
+	if err := internal.TraverseMap(m, p.delimiter, set); err != nil {
+		return StringConversionError{Value: err}
+	}
+	return nil
 }
 
 // JSONOption changes the behavior of the JSON config file parser.
@@ -69,64 +74,6 @@ type JSONOption func(*JSONConfigFileParser)
 func WithJSONDelimiter(d string) JSONOption {
 	return func(p *JSONConfigFileParser) {
 		p.delimiter = d
-	}
-}
-
-func parseObject(obj map[string]interface{}, parent, delimiter string, set func(name, value string) error) error {
-	for key, val := range obj {
-		name := key
-		if parent != "" {
-			name = parent + delimiter + key
-		}
-		switch n := val.(type) {
-		case map[string]interface{}:
-			if err := parseObject(n, name, delimiter, set); err != nil {
-				return err
-			}
-		default:
-			values, err := stringifySlice(val)
-			if err != nil {
-				return JSONParseError{Inner: err}
-			}
-			for _, value := range values {
-				if err := set(name, value); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func stringifySlice(val interface{}) ([]string, error) {
-	if vals, ok := val.([]interface{}); ok {
-		ss := make([]string, len(vals))
-		for i := range vals {
-			s, err := stringifyValue(vals[i])
-			if err != nil {
-				return nil, err
-			}
-			ss[i] = s
-		}
-		return ss, nil
-	}
-	s, err := stringifyValue(val)
-	if err != nil {
-		return nil, err
-	}
-	return []string{s}, nil
-}
-
-func stringifyValue(val interface{}) (string, error) {
-	switch v := val.(type) {
-	case string:
-		return v, nil
-	case json.Number:
-		return v.String(), nil
-	case bool:
-		return strconv.FormatBool(v), nil
-	default:
-		return "", StringConversionError{Value: val}
 	}
 }
 
