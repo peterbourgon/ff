@@ -1,9 +1,12 @@
 package ff
 
 import (
+	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"strings"
 )
@@ -103,13 +106,19 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		}
 	}
 
+	if c.configFileOpenFunc == nil {
+		c.configFileOpenFunc = func(s string) (iofs.File, error) {
+			return os.Open(s)
+		}
+	}
+
 	var (
 		haveConfigFile  = configFile != ""
 		haveParser      = c.configFileParser != nil
 		parseConfigFile = haveConfigFile && haveParser
 	)
 	if parseConfigFile {
-		f, err := os.Open(configFile)
+		f, err := c.configFileOpenFunc(configFile)
 		switch {
 		case err == nil:
 			defer f.Close()
@@ -151,7 +160,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 				return err
 			}
 
-		case os.IsNotExist(err) && c.allowMissingConfigFile:
+		case errors.Is(err, iofs.ErrNotExist) && c.allowMissingConfigFile:
 			// no problem
 
 		default:
@@ -172,6 +181,7 @@ type Context struct {
 	configFileFlagName     string
 	configFileParser       ConfigFileParser
 	configFileLookup       lookupFunc
+	configFileOpenFunc     func(string) (iofs.File, error)
 	allowMissingConfigFile bool
 	readEnvVars            bool
 	envVarPrefix           string
@@ -275,6 +285,15 @@ func WithEnvVarSplit(delimiter string) Option {
 func WithIgnoreUndefined(ignore bool) Option {
 	return func(c *Context) {
 		c.ignoreUndefined = ignore
+	}
+}
+
+// WithFilesystem tells Parse to use the provided filesystem when accessing
+// files on disk, for example when reading a config file. By default, the host
+// filesystem is used, via [os.Open].
+func WithFilesystem(fs embed.FS) Option {
+	return func(c *Context) {
+		c.configFileOpenFunc = fs.Open
 	}
 }
 
