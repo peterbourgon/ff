@@ -2,6 +2,7 @@ package ff_test
 
 import (
 	"context"
+	"embed"
 	"flag"
 	"os"
 	"testing"
@@ -11,6 +12,9 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/peterbourgon/ff/v3/fftest"
 )
+
+//go:embed testdata/*.conf
+var testdataConfigFS embed.FS
 
 func TestParseBasics(t *testing.T) {
 	t.Parallel()
@@ -148,6 +152,11 @@ func TestParseBasics(t *testing.T) {
 			env:  map[string]string{"S": "xxx", "F": "9.87"},
 			opts: []ff.Option{ff.WithEnvVarNoPrefix()},
 			want: fftest.Vars{S: "xxx", F: 9.87},
+		},
+		{
+			name: "WithFilesystem testdata/1.conf",
+			opts: []ff.Option{ff.WithFilesystem(testdataConfigFS), ff.WithConfigFile("testdata/1.conf"), ff.WithConfigFileParser(ff.PlainParser)},
+			want: fftest.Vars{S: "bar", I: 99, B: true, D: 1 * time.Hour},
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {

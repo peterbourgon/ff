@@ -1,9 +1,12 @@
 package ff
 
 import (
+	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"strings"
 )
@@ -11,8 +14,6 @@ import (
 // ConfigFileParser interprets the config file represented by the reader
 // and calls the set function for each parsed flag pair.
 type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
-
-type lookupFunc func(fs *flag.FlagSet, name string) *flag.Flag
 
 // Parse the flags in the flag set from the provided (presumably commandline)
 // args. Additional options may be provided to have Parse also read from a
@@ -97,9 +98,9 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		}
 	}
 
-	if c.configFileLookup == nil {
-		c.configFileLookup = func(fs *flag.FlagSet, name string) *flag.Flag {
-			return fs.Lookup(name)
+	if c.configFileOpenFunc == nil {
+		c.configFileOpenFunc = func(s string) (iofs.File, error) {
+			return os.Open(s)
 		}
 	}
 
@@ -109,7 +110,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 		parseConfigFile = haveConfigFile && haveParser
 	)
 	if parseConfigFile {
-		f, err := os.Open(configFile)
+		f, err := c.configFileOpenFunc(configFile)
 		switch {
 		case err == nil:
 			defer f.Close()
@@ -151,7 +152,7 @@ func Parse(fs *flag.FlagSet, args []string, options ...Option) error {
 				return err
 			}
 
-		case os.IsNotExist(err) && c.allowMissingConfigFile:
+		case errors.Is(err, iofs.ErrNotExist) && c.allowMissingConfigFile:
 			// no problem
 
 		default:
@@ -171,7 +172,7 @@ type Context struct {
 	configFileVia          *string
 	configFileFlagName     string
 	configFileParser       ConfigFileParser
-	configFileLookup       lookupFunc
+	configFileOpenFunc     func(string) (iofs.File, error)
 	allowMissingConfigFile bool
 	readEnvVars            bool
 	envVarPrefix           string
@@ -275,6 +276,15 @@ func WithEnvVarSplit(delimiter string) Option {
 func WithIgnoreUndefined(ignore bool) Option {
 	return func(c *Context) {
 		c.ignoreUndefined = ignore
+	}
+}
+
+// WithFilesystem tells Parse to use the provided filesystem when accessing
+// files on disk, for example when reading a config file. By default, the host
+// filesystem is used, via [os.Open].
+func WithFilesystem(fs embed.FS) Option {
+	return func(c *Context) {
+		c.configFileOpenFunc = fs.Open
 	}
 }
 
