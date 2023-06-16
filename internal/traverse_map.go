@@ -46,6 +46,16 @@ func traverseMap(key string, val any, delimiter string, set func(name, value str
 				return err
 			}
 		}
+	case map[any]any:
+		for k, v := range v {
+			ks := fmt.Sprint(k)
+			if key != "" {
+				ks = key + delimiter + ks
+			}
+			if err := traverseMap(ks, v, delimiter, set); err != nil {
+				return err
+			}
+		}
 	default:
 		return fmt.Errorf("couldn't convert %q (type %T) to string", val, val)
 	}
