@@ -200,6 +200,12 @@ func (e NoExecError) Error() string {
 func DefaultUsageFunc(c *Command) string {
 	var b strings.Builder
 
+	if c.ShortHelp != "" {
+		fmt.Fprintf(&b, "DESCRIPTION\n")
+		fmt.Fprintf(&b, "  %s\n", c.ShortHelp)
+		fmt.Fprintf(&b, "\n")
+	}
+
 	fmt.Fprintf(&b, "USAGE\n")
 	if c.ShortUsage != "" {
 		fmt.Fprintf(&b, "  %s\n", c.ShortUsage)
