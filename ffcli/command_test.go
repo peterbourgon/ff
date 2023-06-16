@@ -593,6 +593,9 @@ func assertStringSlice(t *testing.T, want, have []string) {
 }
 
 var defaultUsageFuncOutput = strings.TrimSpace(`
+DESCRIPTION
+  Some short help.
+
 USAGE
   TestHelpUsage [flags] <args>
 
