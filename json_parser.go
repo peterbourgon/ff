@@ -2,6 +2,7 @@ package ff
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/peterbourgon/ff/v3/internal"
@@ -32,8 +33,28 @@ func (pc *JSONParseConfig) Parse(r io.Reader, set func(name, value string) error
 
 	var m map[string]interface{}
 	if err := d.Decode(&m); err != nil {
-		return err
+		return JSONParseError{Inner: err}
 	}
 
-	return internal.TraverseMap(m, pc.Delimiter, set)
+	if err := internal.TraverseMap(m, pc.Delimiter, set); err != nil {
+		return JSONParseError{Inner: err}
+	}
+
+	return nil
+}
+
+// JSONParseError wraps all errors originating from the JSONParser.
+type JSONParseError struct {
+	Inner error
+}
+
+// Error implenents the error interface.
+func (e JSONParseError) Error() string {
+	return fmt.Sprintf("error parsing JSON config: %v", e.Inner)
+}
+
+// Unwrap implements the errors.Wrapper interface, allowing errors.Is and
+// errors.As to work with JSONParseErrors.
+func (e JSONParseError) Unwrap() error {
+	return e.Inner
 }

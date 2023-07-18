@@ -2,6 +2,7 @@
 package fftoml
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/pelletier/go-toml"
@@ -36,10 +37,14 @@ func New(opts ...Option) (c ConfigFileParser) {
 func (c ConfigFileParser) Parse(r io.Reader, set func(name, value string) error) error {
 	var m map[string]any
 	if err := toml.NewDecoder(r).Decode(&m); err != nil {
-		return err
+		return ParseError{Inner: err}
 	}
 
-	return internal.TraverseMap(m, c.delimiter, set)
+	if err := internal.TraverseMap(m, c.delimiter, set); err != nil {
+		return ParseError{Inner: err}
+	}
+
+	return nil
 }
 
 // Option is a function which changes the behavior of the TOML config file parser.
@@ -61,4 +66,20 @@ func WithTableDelimiter(d string) Option {
 	return func(c *ConfigFileParser) {
 		c.delimiter = d
 	}
+}
+
+// ParseError wraps all errors originating from the TOML parser.
+type ParseError struct {
+	Inner error
+}
+
+// Error implenents the error interface.
+func (e ParseError) Error() string {
+	return fmt.Sprintf("error parsing TOML config: %v", e.Inner)
+}
+
+// Unwrap implements the errors.Wrapper interface, allowing errors.Is and
+// errors.As to work with ParseErrors.
+func (e ParseError) Unwrap() error {
+	return e.Inner
 }

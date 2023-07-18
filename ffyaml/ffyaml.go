@@ -3,6 +3,7 @@ package ffyaml
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/peterbourgon/ff/v3/internal"
@@ -31,8 +32,28 @@ func (pc *ParseConfig) Parse(r io.Reader, set func(name, value string) error) er
 
 	var m map[string]interface{}
 	if err := yaml.NewDecoder(r).Decode(&m); err != nil && !errors.Is(err, io.EOF) {
-		return err
+		return ParseError{Inner: err}
 	}
 
-	return internal.TraverseMap(m, pc.Delimiter, set)
+	if err := internal.TraverseMap(m, pc.Delimiter, set); err != nil {
+		return ParseError{Inner: err}
+	}
+
+	return nil
+}
+
+// ParseError wraps all errors originating from the YAML parser.
+type ParseError struct {
+	Inner error
+}
+
+// Error implenents the error interface.
+func (e ParseError) Error() string {
+	return fmt.Sprintf("error parsing YAML config: %v", e.Inner)
+}
+
+// Unwrap implements the errors.Wrapper interface, allowing errors.Is and
+// errors.As to work with ParseErrors.
+func (e ParseError) Unwrap() error {
+	return e.Inner
 }
