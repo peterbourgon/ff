@@ -95,6 +95,20 @@ func TestTraverseMap(t *testing.T) {
 				"m-m2-i=123": {},
 			},
 		},
+		{
+			Name: "nested map[any]any",
+			M: map[string]any{
+				"m": map[any]any{
+					"m2": map[string]any{
+						"i": 999,
+					},
+				},
+			},
+			Delim: ".",
+			Want: map[string]struct{}{
+				"m.m2.i=999": {},
+			},
+		},
 	}
 
 	for _, test := range tests {
