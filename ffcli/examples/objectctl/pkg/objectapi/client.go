@@ -102,17 +102,17 @@ func (s *mockServer) list(token string) ([]Object, error) {
 }
 
 var defaultObjects = map[string]Object{
-	"apple": Object{
+	"apple": {
 		Key:    "apple",
 		Value:  "The fruit of any of certain other species of tree of the same genus.",
 		Access: mustParseTime(time.RFC3339, "2019-03-15T15:01:00Z"),
 	},
-	"beach": Object{
+	"beach": {
 		Key:    "beach",
 		Value:  "The shore of a body of water, especially when sandy or pebbly.",
 		Access: mustParseTime(time.RFC3339, "2019-04-20T12:21:30Z"),
 	},
-	"carillon": Object{
+	"carillon": {
 		Key:    "carillon",
 		Value:  "A stationary set of chromatically tuned bells in a tower.",
 		Access: mustParseTime(time.RFC3339, "2019-07-04T23:59:59Z"),
