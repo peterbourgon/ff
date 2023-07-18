@@ -80,13 +80,11 @@ func TestParser_WithTables(t *testing.T) {
 				fs.Var(&xval, xkey, "strings")
 			}
 
-			pc := fftoml.ParseConfig{
-				Delimiter: delim,
-			}
+			parseConfig := fftoml.New(fftoml.WithTableDelimiter(delim))
 
 			if err := ff.Parse(fs, []string{},
 				ff.WithConfigFile("testdata/table.toml"),
-				ff.WithConfigFileParser(pc.Parse),
+				ff.WithConfigFileParser(parseConfig.Parse),
 			); err != nil {
 				t.Fatal(err)
 			}
