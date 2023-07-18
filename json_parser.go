@@ -9,11 +9,11 @@ import (
 
 // JSONParser is a helper function that uses a default JSONParseConfig.
 func JSONParser(r io.Reader, set func(name, value string) error) error {
-	return (&ParseConfig{}).Parse(r, set)
+	return (&JSONParseConfig{}).Parse(r, set)
 }
 
 // JSONParseConfig collects parameters for the JSON config file parser.
-type ParseConfig struct {
+type JSONParseConfig struct {
 	// Delimiter is used when concatenating nested node keys into a flag name.
 	// The default delimiter is ".".
 	Delimiter string
@@ -22,7 +22,7 @@ type ParseConfig struct {
 // Parse a JSON document from the provided io.Reader, using the provided set
 // function to set flag values. Flag names are derived from the node names and
 // their key/value pairs.
-func (pc *ParseConfig) Parse(r io.Reader, set func(name, value string) error) error {
+func (pc *JSONParseConfig) Parse(r io.Reader, set func(name, value string) error) error {
 	if pc.Delimiter == "" {
 		pc.Delimiter = "."
 	}
