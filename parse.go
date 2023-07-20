@@ -307,3 +307,15 @@ func maybeSplit(value, split string) []string {
 	}
 	return strings.Split(value, split)
 }
+
+// StringConversionError was returned by config file parsers in certain cases.
+//
+// DEPRECATED: this error is no longer returned by anything.
+type StringConversionError struct {
+	Value interface{}
+}
+
+// Error implements the error interface.
+func (e StringConversionError) Error() string {
+	return fmt.Sprintf("couldn't convert %q (type %T) to string", e.Value, e.Value)
+}

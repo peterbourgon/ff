@@ -16,7 +16,7 @@ func TempFile(t *testing.T, content string) string {
 
 	filename := filepath.Join(t.TempDir(), strconv.Itoa(rand.Int()))
 
-	if err := os.WriteFile(filename, []byte(content), 0600); err != nil {
+	if err := os.WriteFile(filename, []byte(content), 0o0600); err != nil {
 		t.Fatal(err)
 	}
 

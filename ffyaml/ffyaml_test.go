@@ -80,6 +80,12 @@ func TestParser(t *testing.T) {
 			miss: false,
 			want: fftest.Vars{WantParseErrorIs: os.ErrNotExist},
 		},
+		{
+			name: "nested nodes",
+			file: "testdata/nested.yaml",
+			vars: fftest.NestedDefaultVars("."),
+			want: fftest.Vars{S: "a string", B: true, I: 123, F: 1.23, X: []string{"one", "two", "three"}},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			if testcase.vars == nil {

@@ -2,7 +2,9 @@ package fftoml_test
 
 import (
 	"flag"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,61 +58,48 @@ func TestParser(t *testing.T) {
 func TestParser_WithTables(t *testing.T) {
 	t.Parallel()
 
-	type fields struct {
-		String  string
-		Float   float64
-		Strings fftest.StringSlice
-	}
-
-	expected := fields{
-		String:  "a string",
-		Float:   1.23,
-		Strings: fftest.StringSlice{"one", "two", "three"},
-	}
-
-	for _, testcase := range []struct {
-		name string
-		opts []fftoml.Option
-		// expectations
-		stringKey  string
-		floatKey   string
-		stringsKey string
-	}{
-		{
-			name:       "defaults",
-			stringKey:  "string.key",
-			floatKey:   "float.nested.key",
-			stringsKey: "strings.nested.key",
-		},
-		{
-			name:       "defaults",
-			opts:       []fftoml.Option{fftoml.WithTableDelimiter("-")},
-			stringKey:  "string-key",
-			floatKey:   "float-nested-key",
-			stringsKey: "strings-nested-key",
-		},
+	for _, delim := range []string{
+		".",
+		"-",
 	} {
-		t.Run(testcase.name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("delim=%q", delim), func(t *testing.T) {
 			var (
-				found fields
-				fs    = flag.NewFlagSet("fftest", flag.ContinueOnError)
+				skey = strings.Join([]string{"string", "key"}, delim)
+				fkey = strings.Join([]string{"float", "nested", "key"}, delim)
+				xkey = strings.Join([]string{"strings", "nested", "key"}, delim)
+
+				sval string
+				fval float64
+				xval fftest.StringSlice
 			)
 
-			fs.StringVar(&found.String, testcase.stringKey, "", "string")
-			fs.Float64Var(&found.Float, testcase.floatKey, 0, "float64")
-			fs.Var(&found.Strings, testcase.stringsKey, "string slice")
+			fs := flag.NewFlagSet("fftest", flag.ContinueOnError)
+			{
+				fs.StringVar(&sval, skey, "xxx", "string")
+				fs.Float64Var(&fval, fkey, 999, "float64")
+				fs.Var(&xval, xkey, "strings")
+			}
+
+			parseConfig := fftoml.New(fftoml.WithTableDelimiter(delim))
 
 			if err := ff.Parse(fs, []string{},
 				ff.WithConfigFile("testdata/table.toml"),
-				ff.WithConfigFileParser(fftoml.New(testcase.opts...).Parse),
+				ff.WithConfigFileParser(parseConfig.Parse),
 			); err != nil {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(expected, found) {
-				t.Errorf(`expected %v, to be %v`, found, expected)
+			if want, have := "a string", sval; want != have {
+				t.Errorf("string key: want %q, have %q", want, have)
+			}
+
+			if want, have := 1.23, fval; want != have {
+				t.Errorf("float nested key: want %v, have %v", want, have)
+			}
+
+			if want, have := (fftest.StringSlice{"one", "two", "three"}), xval; !reflect.DeepEqual(want, have) {
+				t.Errorf("strings nested key: want %v, have %v", want, have)
 			}
 		})
 	}
-
 }
