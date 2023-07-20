@@ -44,6 +44,8 @@ func (pc *JSONParseConfig) Parse(r io.Reader, set func(name, value string) error
 }
 
 // JSONParseError wraps all errors originating from the JSONParser.
+//
+// DEPRECATED: callers should test the inner error instead of this wrapper.
 type JSONParseError struct {
 	Inner error
 }
