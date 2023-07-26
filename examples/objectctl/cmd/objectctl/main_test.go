@@ -47,6 +47,11 @@ func TestExec(t *testing.T) {
 			wantStderr: listUsage,
 			wantErr:    ff.ErrHelp,
 		},
+		{
+			name:       "list --token=SECRET",
+			args:       []string{"list", "--token=SECRET"},
+			wantStdout: listOutput,
+		},
 	}
 
 	for _, test := range testcases {
@@ -90,7 +95,7 @@ func TestExec(t *testing.T) {
 	}
 }
 
-var rootUsage = `
+const rootUsage = `
 COMMAND
   objectctl
 
@@ -107,7 +112,7 @@ FLAGS
   -v, --verbose        log verbose output (default: false)
 `
 
-var listUsage = `
+const listUsage = `
 COMMAND
   list -- list available objects
 
@@ -120,4 +125,12 @@ FLAGS
 FLAGS (objectctl)
       --token STRING   secret token for object API
   -v, --verbose        log verbose output (default: false)
+`
+
+const listOutput = `
+KEY       VALUE
+aardvark  A nocturnal burrowing mammal with long ears, a tubular snout, and a long extensible tongue.
+apple     The fruit of any of certain other species of tree of the same genus.
+beach     The shore of a body of water, especially when sandy or pebbly.
+carillon  A stationary set of chromatically tuned bells in a tower.
 `
