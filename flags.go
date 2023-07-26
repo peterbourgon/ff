@@ -3,33 +3,34 @@ package ff
 // Flags describes a collection of flags, typically associated with a specific
 // command (or sub-command) executed by an end user.
 //
-// Any valid Flags can be provided to [Parse], or used as the flag set in a
+// Any valid Flags can be provided to [Parse], or used as the Flags field in a
 // [Command]. This allows custom flag set implementations to take advantage of
-// primary package features like config file and env var flag lookups.
+// the primary features of this module.
 type Flags interface {
 	// GetName should return the name of the flag set.
 	GetName() string
 
 	// Parse should parse the provided args against the flag set, setting flags
-	// as appropriate, and saving leftover args to be returned by GetArgs. The
-	// args should not include the program name. That is, callers should pass
-	// os.Args[1:].
+	// as appropriate, and saving leftover args to be returned by GetArgs. Args
+	// should not include the program name: callers will pass os.Args[1:], not
+	// os.Args.
 	Parse(args []string) error
 
 	// IsParsed should return true if the flag set was successfully parsed.
 	IsParsed() bool
 
-	// WalkFlags should call the given fn for each flag known to the flag set,
-	// and which the flag set can successfully parse. Note that this may include
-	// flags that are actually defined in different "parent" flag sets. If fn
-	// returns an error, WalkFlags should immediately return that error.
+	// WalkFlags should call the given fn for each flag known to the flag set.
+	// Note that this may include flags that are actually defined in different
+	// "parent" flag sets. If fn returns an error, WalkFlags should immediately
+	// return that error.
 	WalkFlags(fn func(Flag) error) error
 
 	// GetFlag should find and return the first flag with the given name, if
-	// such a flag is known to the flag set. A single-character name should be
-	// compared against both the short and long name of candidate flags. Note
-	// that this may return a flag that is actually defined in a different
-	// "parent" flag set.
+	// such a flag is known to the flag set. Name should always be compared
+	// against valid flag long names, and if name is a single valid rune, it
+	// should also be compared against valid flag short names. Note that this
+	// may return a flag that is actually defined in a different "parent" flag
+	// set.
 	GetFlag(name string) (Flag, bool)
 
 	// GetArgs should return the args left over after a successful call to
@@ -38,11 +39,11 @@ type Flags interface {
 	GetArgs() []string
 }
 
-// Flag describes a single runtime configuration parameter, defined within a
-// flag set, and with a value that's parsed from a variety of sources.
+// Flag describes a single runtime configuration parameter, defined within a set
+// of flags, and with a value that's parsed from a string.
 type Flag interface {
-	// GetFlagsName should return the name of the parent flag set of this flag.
-	// It's primarily used for help output.
+	// GetFlagsName should return the name of the set of flags in which this
+	// flag is defined. It's primarily used for help output.
 	GetFlagsName() string
 
 	// GetShortName should return the short name for this flag, if one is
@@ -82,11 +83,11 @@ type Flag interface {
 	IsSet() bool
 }
 
-// Resetter may optionally be implemented by a flag set.
+// Resetter may optionally be implemented by a [Flags] implementation.
 type Resetter interface {
-	// Reset should revert the flag set, and all of the flags defined in the
-	// flag set, to their initial state. If reset returns successfully, the flag
-	// set should be as if it were newly constructed. That is, IsParsed should
-	// return false, GetArgs should return an empty slice, etc.
+	// Reset should revert the set of flags to its initial state, including all
+	// of the flags defined in the set of flags. If reset returns successfully,
+	// the flag set should be as if it were newly constructed. That is, IsParsed
+	// should return false, GetArgs should return an empty slice, etc.
 	Reset() error
 }

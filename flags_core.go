@@ -65,9 +65,9 @@ func NewStdFlags(stdfs *flag.FlagSet) *CoreFlags {
 }
 
 // SetParent assigns a parent flag set to this one. In this case, all of the
-// parent flags are available, recursively, to the child. For example, Parse
-// will match against any parent flag, WalkFlags will traverse all parent flags,
-// etc.
+// flags in all parent flag sets are available, recursively, to the child. For
+// example, Parse will match against any parent flag, WalkFlags will traverse
+// all parent flags, etc.
 //
 // This method returns its receiver to allow for builder-style initialization.
 func (fs *CoreFlags) SetParent(parent *CoreFlags) *CoreFlags {
