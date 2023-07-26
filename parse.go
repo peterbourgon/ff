@@ -211,7 +211,7 @@ func parseFlags(fs Flags, args []string, options ...Option) error {
 // Any leading hyphens on flag names are ignored. Lines with a flag name but no
 // value are interpreted as booleans and the value is set to true. Values are
 // trimmed of leading and trailing whitespace but otherwise unmodified. In
-// particular, values are not quote-unescaped, and control characters line \n
+// particular, values are not quote-unescaped, and control characters like \n
 // are treated as literals.
 //
 // Comments are supported via "#". End-of-line comments require a space between
