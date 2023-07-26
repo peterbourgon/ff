@@ -1,0 +1,17 @@
+{
+    "foo": {
+        "bar": {
+            "s": "foo bar"
+        }
+    },
+    "nested": {
+        "i": 34
+    },
+    "x": {
+        "value": [
+            "alpha",
+            "beta",
+            "delta"
+        ]
+    }
+}

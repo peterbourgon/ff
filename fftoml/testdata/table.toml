@@ -1,7 +1,7 @@
-[string]
-key = "a string"
-[float]
-[float.nested]
-key = 1.23
-[strings.nested]
-key = ["one", "two", "three"]
+[nested]
+f = 1.23
+[foo]
+[foo.bar]
+s = "a string"
+[x]
+value = ["one", "two", "three"]

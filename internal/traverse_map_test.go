@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/peterbourgon/ff/v3/internal"
+	"github.com/peterbourgon/ff/v4/internal"
 )
 
 func TestTraverseMap(t *testing.T) {

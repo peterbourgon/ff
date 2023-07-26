@@ -1,9 +1,11 @@
-// Package ff is a flags-first helper package for configuring programs.
+// Package ff provides a flags-first approach to runtime configuration.
 //
-// Runtime configuration must always be specified as commandline flags, so that
-// the configuration surface area of a program is self-describing. Package ff
-// provides an easy way to populate those flags from environment variables and
-// config files.
+// [Parse] populates a flag set with runtime configuration from environment
+// variables and config files.
 //
-// See the README at https://github.com/peterbourgon/ff for more information.
+// [Command] can be used to build hierarchical command-line applications in a
+// declarative style.
+//
+// [FlagSet] is the core interface of the package. Consumers may use the
+// getopts(3)-inspired [CoreFlagSet] implementation, or provide their own.
 package ff

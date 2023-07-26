@@ -2,70 +2,20 @@ package fftest
 
 import (
 	"errors"
-	"flag"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
 
-// Pair defines and returns an empty flag set and vars assigned to it.
-func Pair() (*flag.FlagSet, *Vars) {
-	fs := flag.NewFlagSet("fftest", flag.ContinueOnError)
-	vars := DefaultVars(fs)
-	return fs, vars
-}
-
-// DefaultVars registers a predefined set of variables to the flag set.
-// Tests can call parse on the flag set with a variety of flags, config files,
-// and env vars, and check the resulting effect on the vars.
-func DefaultVars(fs *flag.FlagSet) *Vars {
-	var v Vars
-	fs.StringVar(&v.S, "s", "", "string")
-	fs.IntVar(&v.I, "i", 0, "int")
-	fs.Float64Var(&v.F, "f", 0., "float64")
-	fs.BoolVar(&v.B, "b", false, "bool")
-	fs.DurationVar(&v.D, "d", 0*time.Second, "time.Duration")
-	fs.Var(&v.X, "x", "collection of strings (repeatable)")
-	return &v
-}
-
-// NonzeroDefaultVars is like DefaultVars, but provides each primitive flag with
-// a nonzero default value. This is useful for tests that explicitly provide a
-// zero value for the type.
-func NonzeroDefaultVars(fs *flag.FlagSet) *Vars {
-	var v Vars
-	fs.StringVar(&v.S, "s", "foo", "string")
-	fs.IntVar(&v.I, "i", 123, "int")
-	fs.Float64Var(&v.F, "f", 9.99, "float64")
-	fs.BoolVar(&v.B, "b", true, "bool")
-	fs.DurationVar(&v.D, "d", 3*time.Hour, "time.Duration")
-	fs.Var(&v.X, "x", "collection of strings (repeatable)")
-	return &v
-}
-
-// NestedDefaultVars is similar to DefaultVars, but uses nested flag names.
-func NestedDefaultVars(delimiter string) func(fs *flag.FlagSet) *Vars {
-	return func(fs *flag.FlagSet) *Vars {
-		var v Vars
-		fs.StringVar(&v.S, fmt.Sprintf("foo%ss", delimiter), "", "string")
-		fs.IntVar(&v.I, fmt.Sprintf("bar%[1]snested%[1]si", delimiter), 0, "int")
-		fs.Float64Var(&v.F, fmt.Sprintf("bar%[1]snested%[1]sf", delimiter), 0., "float64")
-		fs.BoolVar(&v.B, fmt.Sprintf("foo%sb", delimiter), false, "bool")
-		fs.Var(&v.X, fmt.Sprintf("baz%[1]snested%[1]sx", delimiter), "collection of strings (repeatable)")
-		return &v
-	}
-}
-
 // Vars are a common set of variables used for testing.
 type Vars struct {
-	S string
-	I int
-	F float64
-	B bool
-	D time.Duration
-	X StringSlice
+	S       string        // flag name `s`
+	I       int           // flag name `i`
+	F       float64       // flag name `f`
+	A, B, C bool          // flag name `a`, `b`, `c`
+	D       time.Duration // flag name `d`
+	X       StringSlice   // flag name `x`
 
 	// ParseError should be assigned as the result of Parse in tests.
 	ParseError error
@@ -79,6 +29,9 @@ type Vars struct {
 	// it can specify part of that error string here. The Compare
 	// helper will look for it using strings.Contains.
 	WantParseErrorString string
+
+	// Args left over after a successful parse.
+	Args []string
 }
 
 // Compare one set of vars with another
@@ -106,7 +59,7 @@ func Compare(t *testing.T, want, have *Vars) {
 	}
 
 	if have.ParseError != nil {
-		t.Errorf("error: %v", have.ParseError)
+		t.Errorf("parse error: %v", have.ParseError)
 	}
 
 	if want.S != have.S {
@@ -118,14 +71,26 @@ func Compare(t *testing.T, want, have *Vars) {
 	if want.F != have.F {
 		t.Errorf("var F: want %f, have %f", want.F, have.F)
 	}
+	if want.A != have.A {
+		t.Errorf("var A: want %v, have %v", want.A, have.A)
+	}
 	if want.B != have.B {
 		t.Errorf("var B: want %v, have %v", want.B, have.B)
+	}
+	if want.C != have.C {
+		t.Errorf("var C: want %v, have %v", want.C, have.C)
 	}
 	if want.D != have.D {
 		t.Errorf("var D: want %s, have %s", want.D, have.D)
 	}
 	if !reflect.DeepEqual(want.X, have.X) {
 		t.Errorf("var X: want %v, have %v", want.X, have.X)
+	}
+
+	if len(want.Args) > 0 {
+		if !reflect.DeepEqual(want.Args, have.Args) {
+			t.Errorf("post-parse args: want %v, have %v", want.Args, have.Args)
+		}
 	}
 }
 
@@ -143,7 +108,12 @@ func (ss *StringSlice) Set(s string) error {
 // strings, or "..." if no strings have been added.
 func (ss *StringSlice) String() string {
 	if len(*ss) <= 0 {
-		return "..."
+		return ""
 	}
 	return strings.Join(*ss, ", ")
+}
+
+// Placeholder is called by the default usage function(s).
+func (ss *StringSlice) Placeholder() string {
+	return "STRING"
 }

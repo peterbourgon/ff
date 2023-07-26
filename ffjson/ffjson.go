@@ -1,10 +1,10 @@
-// Package fftoml provides a TOML config file paser.
-package fftoml
+// Package ffjson provides a JSON config file paser.
+package ffjson
 
 import (
+	"encoding/json"
 	"io"
 
-	"github.com/pelletier/go-toml/v2"
 	"github.com/peterbourgon/ff/v4/internal"
 )
 
@@ -13,14 +13,14 @@ func Parse(r io.Reader, set func(name, value string) error) error {
 	return (&Parser{}).Parse(r, set)
 }
 
-// Parser collects parameters for the TOML config file parser.
+// Parser collects parameters for the JSON config file parser.
 type Parser struct {
 	// Delimiter is used when concatenating nested node keys into a flag name.
 	// The default delimiter is ".".
 	Delimiter string
 }
 
-// Parse a TOML document from the provided io.Reader, using the provided set
+// Parse a JSON document from the provided io.Reader, using the provided set
 // function to set flag values. Flag names are derived from the node names and
 // their key/value pairs.
 func (p Parser) Parse(r io.Reader, set func(name, value string) error) error {
@@ -28,8 +28,11 @@ func (p Parser) Parse(r io.Reader, set func(name, value string) error) error {
 		p.Delimiter = "."
 	}
 
-	var m map[string]any
-	if err := toml.NewDecoder(r).Decode(&m); err != nil {
+	d := json.NewDecoder(r)
+	d.UseNumber() // required for stringifying values
+
+	var m map[string]interface{}
+	if err := d.Decode(&m); err != nil {
 		return err
 	}
 
