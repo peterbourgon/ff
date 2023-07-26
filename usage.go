@@ -10,14 +10,14 @@ import (
 
 const defaultUsageIndent = "  "
 
-// DefaultFlagSetUsage produces a simple usage text for the flag set. It's meant
+// DefaultFlagsUsage produces a simple usage text for the flag set. It's meant
 // to be a reasonable default, and to serve as an example. Users with more
 // sophisticated needs should implement their own usage function.
-func DefaultFlagSetUsage(fs FlagSet) string {
+func DefaultFlagsUsage(fs Flags) string {
 	var buf bytes.Buffer
 
 	fmt.Fprintf(&buf, "COMMAND\n")
-	fmt.Fprintf(&buf, "%s%s\n", defaultUsageIndent, fs.GetFlagSetName())
+	fmt.Fprintf(&buf, "%s%s\n", defaultUsageIndent, fs.GetName())
 	fmt.Fprintf(&buf, "\n")
 
 	writeFlagGroups(fs, &buf)
@@ -74,7 +74,7 @@ func DefaultCommandUsage(cmd *Command) string {
 	}
 
 	{
-		writeFlagGroups(cmd.FlagSet, &buf)
+		writeFlagGroups(cmd.Flags, &buf)
 	}
 
 	return strings.TrimSpace(buf.String())
@@ -84,7 +84,7 @@ func DefaultCommandUsage(cmd *Command) string {
 //
 //
 
-func writeFlagGroups(fs FlagSet, w io.Writer) {
+func writeFlagGroups(fs Flags, w io.Writer) {
 	for i, g := range makeFlagGroups(fs) {
 		switch {
 		case i == 0, g.name == "":
@@ -104,13 +104,13 @@ type flagGroup struct {
 	help []string
 }
 
-func makeFlagGroups(fs FlagSet) []flagGroup {
+func makeFlagGroups(fs Flags) []flagGroup {
 	var (
 		order = []string{}
 		index = map[string][]Flag{}
 	)
 	fs.WalkFlags(func(f Flag) error {
-		name := f.GetFlagSetName()
+		name := f.GetFlagsName()
 		if _, ok := index[name]; !ok {
 			order = append(order, name)
 		}

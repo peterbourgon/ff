@@ -14,21 +14,21 @@ import (
 // tree, and how to give subcommands access to parent command flags.
 
 func main() {
-	rootSet := ff.NewSet("textctl")
+	rootSet := ff.NewFlags("textctl")
 	verbose := rootSet.Bool('v', "verbose", false, "increase log verbosity")
 	rootCmd := &ff.Command{
-		Name:    "textctl",
-		Usage:   "textctl [FLAGS] <SUBCOMMAND>",
-		FlagSet: rootSet,
+		Name:  "textctl",
+		Usage: "textctl [FLAGS] <SUBCOMMAND>",
+		Flags: rootSet,
 	}
 
-	repeatSet := ff.NewSet("repeat").SetParent(rootSet) // SetParent allows this flag set to parse any parent flag
+	repeatSet := ff.NewFlags("repeat").SetParent(rootSet) // SetParent allows this flag set to parse any parent flag
 	n := repeatSet.IntShort('n', 3, "how many times to repeat")
 	repeatCmd := &ff.Command{
 		Name:      "repeat",
 		Usage:     "textctl repeat [-n TIMES] <ARG>",
 		ShortHelp: "repeatedly print the argument to stdout",
-		FlagSet:   repeatSet,
+		Flags:     repeatSet,
 		Exec: func(_ context.Context, args []string) error { // defining Exec inline allows it to access the e.g. verbose flag
 			if n := len(args); n != 1 {
 				return fmt.Errorf("repeat requires exactly 1 argument, but you provided %d", n)
@@ -49,7 +49,7 @@ func main() {
 		Name:      "count",
 		Usage:     "textctl count [<ARG> ...]",
 		ShortHelp: "count the number of bytes in the arguments",
-		FlagSet:   ff.NewSet("count").SetParent(rootSet), // count has no flags itself, but it should still be able to parse root flags
+		Flags:     ff.NewFlags("count").SetParent(rootSet), // count has no flags itself, but it should still be able to parse root flags
 		Exec: func(_ context.Context, args []string) error {
 			if *verbose {
 				fmt.Fprintf(os.Stderr, "count: argument count %d\n", len(args))

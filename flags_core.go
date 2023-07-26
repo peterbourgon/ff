@@ -9,34 +9,30 @@ import (
 	"unicode/utf8"
 )
 
-// CoreFlagSet is the default implementation of a [FlagSet]. It's largely
-// inspired by getopt(3), but is not equivalent to, or compatible with, that
-// tool.
+// CoreFlags is the default implementation of a [Flags]. It's largely inspired
+// by getopt(3), but is not equivalent to, or compatible with, that tool.
 //
 // Flags may be defined with short (-f) and/or long (--foo) names. Flags use the
 // [flag.Value] interface to parse and maintain their underlying data.
 //
-// A flag set may optionally be assigned a parent. In this case, all of the
-// flags in parent flag sets are recursively accessible to the child. Every
-// method which interacts with flags is affected. For example, WalkFlags will
-// enumerate the complete set of flags; Parse is able to set any of those flags;
-// etc. This is useful in commmand hierarchies, so that flags defined in a base
-// command are visible, and parsable, by subcommands.
-type CoreFlagSet struct {
-	flagSetName   string
+// A core flag set may optionally be assigned a parent. In this case, all of the
+// flags in parent flag sets are recursively accessible to the children. See
+// [CoreFlags.SetParent].
+type CoreFlags struct {
+	setName       string
 	flagSlice     []*coreFlag
 	isParsed      bool
 	postParseArgs []string
 	isStdAdapter  bool // stdlib package flag behavior: treat -foo the same as --foo
-	parent        *CoreFlagSet
+	parent        *CoreFlags
 }
 
-var _ FlagSet = (*CoreFlagSet)(nil)
+var _ Flags = (*CoreFlags)(nil)
 
-// NewSet returns a new core flag set with the given name.
-func NewSet(name string) *CoreFlagSet {
-	return &CoreFlagSet{
-		flagSetName:   name,
+// NewFlags returns a new core flag set with the given name.
+func NewFlags(name string) *CoreFlags {
+	return &CoreFlags{
+		setName:       name,
 		flagSlice:     []*coreFlag{},
 		isParsed:      false,
 		postParseArgs: []string{},
@@ -45,16 +41,16 @@ func NewSet(name string) *CoreFlagSet {
 	}
 }
 
-// NewStdSet returns a core flag set which acts as an adapter for the provided
-// [flag.FlagSet], allowing it to implement the [FlagSet] interface.
+// NewStdFlags returns a core flag set which acts as an adapter for the provided
+// [flag.FlagSet], allowing it to implement the [Flags] interface.
 //
 // The returned core flag set behaves differently than normal. It's a fixed
 // "snapshot" of the provided standard flag set, and so doesn't reflect changes
 // made to the standard flag set in the future, and doesn't allow new flags to
 // be added. Also, it parses every flag name as a long name, even if it has just
 // a single leading hyphen, to approximate the standard parsing behavior.
-func NewStdSet(stdfs *flag.FlagSet) *CoreFlagSet {
-	corefs := NewSet(stdfs.Name())
+func NewStdFlags(stdfs *flag.FlagSet) *CoreFlags {
+	corefs := NewFlags(stdfs.Name())
 	stdfs.VisitAll(func(f *flag.Flag) {
 		if err := corefs.AddFlag(CoreFlagConfig{
 			LongName: f.Name,
@@ -74,14 +70,14 @@ func NewStdSet(stdfs *flag.FlagSet) *CoreFlagSet {
 // etc.
 //
 // This method returns its receiver to allow for builder-style initialization.
-func (fs *CoreFlagSet) SetParent(parent *CoreFlagSet) *CoreFlagSet {
+func (fs *CoreFlags) SetParent(parent *CoreFlags) *CoreFlags {
 	fs.parent = parent
 	return fs
 }
 
-// GetFlagSetName returns the name of the flag set provided during construction.
-func (fs *CoreFlagSet) GetFlagSetName() string {
-	return fs.flagSetName
+// GetName returns the name of the flag set provided during construction.
+func (fs *CoreFlags) GetName() string {
+	return fs.setName
 }
 
 // Parse the provided args against the flag set, assigning flag values as
@@ -90,7 +86,7 @@ func (fs *CoreFlagSet) GetFlagSetName() string {
 // be found, parse fails with [ErrUnknownFlag]. After a successful parse,
 // subsequent calls to parse fail with [ErrAlreadyParsed], until and unless the
 // flag set is reset.
-func (fs *CoreFlagSet) Parse(args []string) error {
+func (fs *CoreFlags) Parse(args []string) error {
 	if fs.isParsed {
 		return ErrAlreadyParsed
 	}
@@ -105,7 +101,7 @@ func (fs *CoreFlagSet) Parse(args []string) error {
 	return err
 }
 
-func (fs *CoreFlagSet) parseArgs(args []string) error {
+func (fs *CoreFlags) parseArgs(args []string) error {
 	fs.postParseArgs = args
 
 	for len(args) > 0 {
@@ -156,7 +152,7 @@ func (fs *CoreFlagSet) parseArgs(args []string) error {
 	return nil
 }
 
-func (fs *CoreFlagSet) findFlag(short rune, long string) *coreFlag {
+func (fs *CoreFlags) findFlag(short rune, long string) *coreFlag {
 	var (
 		haveShort = isValidShortName(short)
 		haveLong  = isValidLongName(long)
@@ -174,15 +170,15 @@ func (fs *CoreFlagSet) findFlag(short rune, long string) *coreFlag {
 	return nil
 }
 
-func (fs *CoreFlagSet) findShortFlag(short rune) *coreFlag {
+func (fs *CoreFlags) findShortFlag(short rune) *coreFlag {
 	return fs.findFlag(short, "")
 }
 
-func (fs *CoreFlagSet) findLongFlag(long string) *coreFlag {
+func (fs *CoreFlags) findLongFlag(long string) *coreFlag {
 	return fs.findFlag(0, long)
 }
 
-func (fs *CoreFlagSet) parseShortFlag(arg string, args []string) ([]string, error) {
+func (fs *CoreFlags) parseShortFlag(arg string, args []string) ([]string, error) {
 	arg = strings.TrimPrefix(arg, "-")
 
 	for i, r := range arg {
@@ -226,7 +222,7 @@ func (fs *CoreFlagSet) parseShortFlag(arg string, args []string) ([]string, erro
 	return args, nil
 }
 
-func (fs *CoreFlagSet) parseLongFlag(arg string, args []string) ([]string, error) {
+func (fs *CoreFlags) parseLongFlag(arg string, args []string) ([]string, error) {
 	var (
 		name  string
 		value string
@@ -278,13 +274,13 @@ func (fs *CoreFlagSet) parseLongFlag(arg string, args []string) ([]string, error
 }
 
 // IsParsed returns true if the flag set has been successfully parsed.
-func (fs *CoreFlagSet) IsParsed() bool {
+func (fs *CoreFlags) IsParsed() bool {
 	return fs.isParsed
 }
 
 // WalkFlags calls fn for every flag known to the flag set. This includes all
 // parent flags, if a parent has been set.
-func (fs *CoreFlagSet) WalkFlags(fn func(Flag) error) error {
+func (fs *CoreFlags) WalkFlags(fn func(Flag) error) error {
 	for cursor := fs; cursor != nil; cursor = cursor.parent {
 		for _, f := range cursor.flagSlice {
 			if err := fn(f); err != nil {
@@ -299,7 +295,7 @@ func (fs *CoreFlagSet) WalkFlags(fn func(Flag) error) error {
 // name. This includes all parent flags, if a parent has been set. The name is
 // compared against each flag's long name, and, if the name is a single rune,
 // it's also compared against each flag's short name.
-func (fs *CoreFlagSet) GetFlag(name string) (Flag, bool) {
+func (fs *CoreFlags) GetFlag(name string) (Flag, bool) {
 	if name == "" {
 		return nil, false
 	}
@@ -317,14 +313,14 @@ func (fs *CoreFlagSet) GetFlag(name string) (Flag, bool) {
 }
 
 // GetArgs returns the args left over after a successful parse.
-func (fs *CoreFlagSet) GetArgs() []string {
+func (fs *CoreFlags) GetArgs() []string {
 	return fs.postParseArgs
 }
 
 // Reset the flag set, and all of the flags defined in the flag set, to their
 // initial state. After a successful reset, the flag set may be parsed as if it
 // were newly constructed.
-func (fs *CoreFlagSet) Reset() error {
+func (fs *CoreFlags) Reset() error {
 	for _, f := range fs.flagSlice {
 		if err := f.Reset(); err != nil {
 			return newFlagError(f, err)
@@ -387,8 +383,8 @@ type CoreFlagConfig struct {
 // in the flag set with the same short or long name.
 //
 // This is a fairly low level method. Consumers may prefer type-specific helpers
-// like [CoreFlagSet.Bool], [CoreFlagSet.StringVar], etc.
-func (fs *CoreFlagSet) AddFlag(cfg CoreFlagConfig) error {
+// like [CoreFlags.Bool], [CoreFlags.StringVar], etc.
+func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) error {
 	if fs.isStdAdapter {
 		return fmt.Errorf("cannot add flags to standard flag set adapter")
 	}
@@ -443,161 +439,161 @@ func (fs *CoreFlagSet) AddFlag(cfg CoreFlagConfig) error {
 }
 
 // BoolVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) BoolVar(pointer *bool, short rune, long string, def bool, usage string) {
+func (fs *CoreFlags) BoolVar(pointer *bool, short rune, long string, def bool, usage string) {
 	mustDefineFlag(fs, pointer, short, long, def, usage)
 }
 
 // Bool defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Bool(short rune, long string, def bool, usage string) *bool {
+func (fs *CoreFlags) Bool(short rune, long string, def bool, usage string) *bool {
 	var value bool
 	fs.BoolVar(&value, short, long, def, usage)
 	return &value
 }
 
 // BoolShort defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) BoolShort(short rune, def bool, usage string) *bool {
+func (fs *CoreFlags) BoolShort(short rune, def bool, usage string) *bool {
 	return fs.Bool(short, "", def, usage)
 }
 
 // BoolLong defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) BoolLong(long string, def bool, usage string) *bool {
+func (fs *CoreFlags) BoolLong(long string, def bool, usage string) *bool {
 	return fs.Bool(0, long, def, usage)
 }
 
 // StringVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) StringVar(pointer *string, short rune, long string, def string, usage string) {
+func (fs *CoreFlags) StringVar(pointer *string, short rune, long string, def string, usage string) {
 	mustDefineFlag(fs, pointer, short, long, def, usage)
 }
 
 // String defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) String(short rune, long string, def string, usage string) *string {
+func (fs *CoreFlags) String(short rune, long string, def string, usage string) *string {
 	var value string
 	fs.StringVar(&value, short, long, def, usage)
 	return &value
 }
 
 // StringShort defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) StringShort(short rune, def string, usage string) *string {
+func (fs *CoreFlags) StringShort(short rune, def string, usage string) *string {
 	return fs.String(short, "", def, usage)
 }
 
 // StringLong defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) StringLong(long string, def string, usage string) *string {
+func (fs *CoreFlags) StringLong(long string, def string, usage string) *string {
 	return fs.String(0, long, def, usage)
 }
 
 // Float64Var defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Float64Var(pointer *float64, short rune, long string, def float64, usage string) {
+func (fs *CoreFlags) Float64Var(pointer *float64, short rune, long string, def float64, usage string) {
 	mustDefineFlag(fs, pointer, short, long, def, usage)
 }
 
 // Float64 defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Float64(short rune, long string, def float64, usage string) *float64 {
+func (fs *CoreFlags) Float64(short rune, long string, def float64, usage string) *float64 {
 	var value float64
 	fs.Float64Var(&value, short, long, def, usage)
 	return &value
 }
 
 // Float64Short defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Float64Short(short rune, def float64, usage string) *float64 {
+func (fs *CoreFlags) Float64Short(short rune, def float64, usage string) *float64 {
 	return fs.Float64(short, "", def, usage)
 }
 
 // Float64Long defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Float64Long(long string, def float64, usage string) *float64 {
+func (fs *CoreFlags) Float64Long(long string, def float64, usage string) *float64 {
 	return fs.Float64(0, long, def, usage)
 }
 
 // IntVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) IntVar(pointer *int, short rune, long string, def int, usage string) {
+func (fs *CoreFlags) IntVar(pointer *int, short rune, long string, def int, usage string) {
 	mustDefineFlag(fs, pointer, short, long, def, usage)
 }
 
 // Int defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Int(short rune, long string, def int, usage string) *int {
+func (fs *CoreFlags) Int(short rune, long string, def int, usage string) *int {
 	var value int
 	fs.IntVar(&value, short, long, def, usage)
 	return &value
 }
 
 // IntShort defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) IntShort(short rune, def int, usage string) *int {
+func (fs *CoreFlags) IntShort(short rune, def int, usage string) *int {
 	return fs.Int(short, "", def, usage)
 }
 
 // IntLong defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) IntLong(long string, def int, usage string) *int {
+func (fs *CoreFlags) IntLong(long string, def int, usage string) *int {
 	return fs.Int(0, long, def, usage)
 }
 
 // UintVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) UintVar(pointer *uint, short rune, long string, def uint, usage string) {
+func (fs *CoreFlags) UintVar(pointer *uint, short rune, long string, def uint, usage string) {
 	mustDefineFlag(fs, pointer, short, long, def, usage)
 }
 
 // Uint defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Uint(short rune, long string, def uint, usage string) *uint {
+func (fs *CoreFlags) Uint(short rune, long string, def uint, usage string) *uint {
 	var value uint
 	fs.UintVar(&value, short, long, def, usage)
 	return &value
 }
 
 // UintShort defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) UintShort(short rune, def uint, usage string) *uint {
+func (fs *CoreFlags) UintShort(short rune, def uint, usage string) *uint {
 	return fs.Uint(short, "", def, usage)
 }
 
 // UintLong defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) UintLong(long string, def uint, usage string) *uint {
+func (fs *CoreFlags) UintLong(long string, def uint, usage string) *uint {
 	return fs.Uint(0, long, def, usage)
 }
 
 // Uint64Var defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Uint64Var(pointer *uint64, short rune, long string, def uint64, usage string) {
+func (fs *CoreFlags) Uint64Var(pointer *uint64, short rune, long string, def uint64, usage string) {
 	mustDefineFlag(fs, pointer, short, long, def, usage)
 }
 
 // Uint64 defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Uint64(short rune, long string, def uint64, usage string) *uint64 {
+func (fs *CoreFlags) Uint64(short rune, long string, def uint64, usage string) *uint64 {
 	var value uint64
 	fs.Uint64Var(&value, short, long, def, usage)
 	return &value
 }
 
 // Uint64Short defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Uint64Short(short rune, def uint64, usage string) *uint64 {
+func (fs *CoreFlags) Uint64Short(short rune, def uint64, usage string) *uint64 {
 	return fs.Uint64(short, "", def, usage)
 }
 
 // Uint64Long defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Uint64Long(long string, def uint64, usage string) *uint64 {
+func (fs *CoreFlags) Uint64Long(long string, def uint64, usage string) *uint64 {
 	return fs.Uint64(0, long, def, usage)
 }
 
 // DurationVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) DurationVar(pointer *time.Duration, short rune, long string, def time.Duration, usage string) {
+func (fs *CoreFlags) DurationVar(pointer *time.Duration, short rune, long string, def time.Duration, usage string) {
 	mustDefineFlag(fs, pointer, short, long, def, usage)
 }
 
 // Duration defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Duration(short rune, long string, def time.Duration, usage string) *time.Duration {
+func (fs *CoreFlags) Duration(short rune, long string, def time.Duration, usage string) *time.Duration {
 	var value time.Duration
 	fs.DurationVar(&value, short, long, def, usage)
 	return &value
 }
 
 // DurationShort defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) DurationShort(short rune, def time.Duration, usage string) *time.Duration {
+func (fs *CoreFlags) DurationShort(short rune, def time.Duration, usage string) *time.Duration {
 	return fs.Duration(short, "", def, usage)
 }
 
 // DurationLong defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) DurationLong(long string, def time.Duration, usage string) *time.Duration {
+func (fs *CoreFlags) DurationLong(long string, def time.Duration, usage string) *time.Duration {
 	return fs.Duration(0, long, def, usage)
 }
 
 // Func defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) Func(short rune, long string, fn func(string) error, usage string) {
+func (fs *CoreFlags) Func(short rune, long string, fn func(string) error, usage string) {
 	stdfs := flag.NewFlagSet("flagset-name", flag.ContinueOnError)
 	stdfs.Func("flag-name", "flag-usage", fn)
 	value := stdfs.Lookup("flag-name").Value
@@ -613,16 +609,16 @@ func (fs *CoreFlagSet) Func(short rune, long string, fn func(string) error, usag
 }
 
 // FuncShort defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) FuncShort(short rune, fn func(string) error, usage string) {
+func (fs *CoreFlags) FuncShort(short rune, fn func(string) error, usage string) {
 	fs.Func(short, "", fn, usage)
 }
 
 // FuncLong defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlagSet) FuncLong(long string, fn func(string) error, usage string) {
+func (fs *CoreFlags) FuncLong(long string, fn func(string) error, usage string) {
 	fs.Func(0, long, fn, usage)
 }
 
-func mustDefineFlag[T FlagValueType](fs *CoreFlagSet, pointer *T, short rune, long string, def T, usage string) {
+func mustDefineFlag[T FlagValueType](fs *CoreFlags, pointer *T, short rune, long string, def T, usage string) {
 	value := MakeFlagValue(def, pointer)
 	if err := fs.AddFlag(CoreFlagConfig{
 		ShortName: short,
@@ -675,7 +671,7 @@ func MakeFlagValue[T FlagValueType](defaultValue T, pointer *T) flag.Value {
 //
 
 type coreFlag struct {
-	flagSet      *CoreFlagSet
+	flagSet      *CoreFlags
 	shortName    rune
 	longName     string
 	placeholder  string
@@ -688,8 +684,8 @@ type coreFlag struct {
 
 var _ Flag = (*coreFlag)(nil)
 
-func (f *coreFlag) GetFlagSetName() string {
-	return f.flagSet.flagSetName
+func (f *coreFlag) GetFlagsName() string {
+	return f.flagSet.setName
 }
 
 func (f *coreFlag) GetShortName() (rune, bool) {

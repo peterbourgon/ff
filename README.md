@@ -1,10 +1,10 @@
-# ff [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/v3) [![Latest Release](https://img.shields.io/github/v/release/peterbourgon/ff?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) ![Build Status](https://github.com/peterbourgon/ff/actions/workflows/test.yaml/badge.svg?branch=main)
+# ff [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/v4) [![Latest Release](https://img.shields.io/github/v/release/peterbourgon/ff?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) ![Build Status](https://github.com/peterbourgon/ff/actions/workflows/test.yaml/badge.svg?branch=main)
 
 ff is a flags-first approach for programs to receive runtime configuration.
 
 As the name suggests, it's all based on flags. Every config parameter is
-expected to be defined as a flag in a flag set. This ensures that `myprogram -h`
-will reliably describe the complete configuration surface area of the program.
+expected to be defined as a flag, to ensure that `myprogram -h` will reliably
+describe the complete configuration surface area of the program.
 
 Building a command-line application in the style of `kubectl` or `docker`?
 [Command](#command) offers a declarative approach that may be simpler and easier
@@ -12,12 +12,10 @@ to maintain than common alternatives.
 
 ## Usage
 
-Everything starts with a flag set.
-
-The package provides a getopts(3)-style flag set, which can be used as follows.
+This module provides a getopts(3)-style flag set, which can be used as follows.
 
 ```go
-fs := ff.NewSet("myprogram")
+fs := ff.NewFlags("myprogram")
 var (
 	listenAddr = fs.StringLong("listen", "localhost:8080", "listen address")
 	refresh    = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
@@ -40,7 +38,8 @@ var (
 )
 ```
 
-Once you have a flag set, use ff.Parse to parse it.
+Once you have a set of flags, use ff.Parse to parse it. Options can be provided
+to influence parsing behavior.
 
 ```go
 err := ff.Parse(fs, os.Args[1:],
@@ -53,11 +52,16 @@ err := ff.Parse(fs, os.Args[1:],
 Flags are always set from the provided command-line arguments first. In the
 above example, flags will also be set from env vars beginning with `MY_PROGRAM`.
 Finally, if the user specifies a config file, flags will be set from values in
-that file, as parsed by the PlainParser.
+that file, as parsed by ff.PlainParser.
 
 ## Environment variables
 
-One common use case is to allow configuration from both flags and env vars.
+It's possible to take runtime configuration from env vars. The options
+[WithEnvVars][withenvvars] and [WithEnvVarPrefix][withenvvarprefix] enable this
+feature and determine how env var keys are mapped to flag names.
+
+[withenvvars]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVars
+[withenvvarprefix]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVarPrefix
 
 ```go
 fs := flag.NewFlagSet("myservice", flag.ContinueOnError)
@@ -78,9 +82,15 @@ port 1234, debug true
 
 ## Config files
 
-It's also possible to take runtime configuration from config files. This module
-includes support for JSON, YAML, TOML, and .env config files, and also defines
-its own simple config file format.
+It's also possible to take runtime configuration from config files. The options
+[WithConfigFile][withconfigfile], [WithConfigFileFlag][withconfigfileflag], and
+[WithConfigFileParser][withconfigfileparser] control how config files are
+specified and parsed. This module includes support for JSON, YAML, TOML, and
+.env config files, and also defines its own simple config file format.
+
+[withconfigfile]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFile
+[withconfigfileflag]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileFlag
+[withconfigfileparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileParser
 
 ```go
 fs := flag.NewFlagSet("myservice", flag.ContinueOnError)
@@ -113,10 +123,11 @@ configuration.
 Config files have the lowest priority, because they represent config that's
 static to the host -- we call config files the "host" configuration.
 
-# Command
+# Commands
 
-[Command][command] is a lightweight alternative to common CLI frameworks like
-[spf13/cobra][cobra], [urfave/cli][urfave], or [alecthomas/kingpin][kingpin].
+[Command][command] is a declarative and lightweight alternative to common CLI
+frameworks like [spf13/cobra][cobra], [urfave/cli][urfave], or
+[alecthomas/kingpin][kingpin].
 
 [command]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Command
 [cobra]: https://github.com/spf13/cobra

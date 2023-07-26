@@ -124,7 +124,7 @@ func TestParse(t *testing.T) {
 	testcases.Run(t)
 }
 
-func TestParse_CoreFlagSet(t *testing.T) {
+func TestParse_CoreFlags(t *testing.T) {
 	t.Parallel()
 
 	testcases := fftest.TestCases{

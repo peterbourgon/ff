@@ -11,7 +11,7 @@ import (
 	"github.com/peterbourgon/ff/v4/fftest"
 )
 
-func TestCoreFlagSetBasics(t *testing.T) {
+func TestCoreFlagsBasics(t *testing.T) {
 	t.Parallel()
 
 	for _, argstr := range []string{
@@ -23,20 +23,20 @@ func TestCoreFlagSetBasics(t *testing.T) {
 		"--duration 250ms --string=nondefault",
 	} {
 		t.Run(argstr, func(t *testing.T) {
-			fs := ff.NewSet("myset")
+			fs := ff.NewFlags("myset")
 			fs.Bool('b', "boolean", false, "boolean flag")
 			fs.StringLong("string", "default", "string flag")
 			fs.Duration('d', "duration", 250*time.Millisecond, "duration flag")
-			fftest.TestFlagSet(t, fs, strings.Fields(argstr))
+			fftest.TestFlags(t, fs, strings.Fields(argstr))
 		})
 	}
 }
 
-func TestCoreFlagSetBool(t *testing.T) {
+func TestCoreFlagsBool(t *testing.T) {
 	t.Parallel()
 
 	var (
-		fs     = ff.NewSet(t.Name())
+		fs     = ff.NewFlags(t.Name())
 		bflag  bool
 		bvalue = ff.MakeFlagValue(true, &bflag)
 	)
@@ -57,10 +57,10 @@ func TestCoreFlagSetBool(t *testing.T) {
 	}
 }
 
-func TestCoreFlagSetHelpFlag(t *testing.T) {
+func TestCoreFlagsHelpFlag(t *testing.T) {
 	t.Parallel()
 
-	fs := ff.NewSet(t.Name())
+	fs := ff.NewFlags(t.Name())
 	helpflag := fs.BoolLong("help", false, "alternative help flag")
 
 	// -h should still trigger ErrHelp.
@@ -81,7 +81,7 @@ func TestCoreFlagSetHelpFlag(t *testing.T) {
 	}
 }
 
-func TestStdFlagSetBasics(t *testing.T) {
+func TestStdFlagsBasics(t *testing.T) {
 	t.Parallel()
 
 	for _, argstr := range []string{
@@ -97,13 +97,13 @@ func TestStdFlagSetBasics(t *testing.T) {
 			stdfs.Bool("b", false, "boolean flag")
 			stdfs.String("string", "default", "string flag")
 			stdfs.Duration("d", 250*time.Millisecond, "duration flag")
-			corefs := ff.NewStdSet(stdfs)
-			fftest.TestFlagSet(t, corefs, strings.Fields(argstr))
+			corefs := ff.NewStdFlags(stdfs)
+			fftest.TestFlags(t, corefs, strings.Fields(argstr))
 		})
 	}
 }
 
-func TestStdFlagSetBool(t *testing.T) {
+func TestStdFlagsBool(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
@@ -132,7 +132,7 @@ func TestStdFlagSetBool(t *testing.T) {
 			stdfs := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 			xflag := stdfs.Bool("xflag", false, "one boolean flag")
 			yflag := stdfs.Bool("y", true, "another boolean flag")
-			corefs := ff.NewStdSet(stdfs)
+			corefs := ff.NewStdFlags(stdfs)
 			err := corefs.Parse(test.args)
 			switch {
 			case test.wantErr == nil && err == nil:

@@ -11,7 +11,7 @@ import (
 	"github.com/peterbourgon/ff/v4"
 )
 
-func TestCommandNoFlagSet(t *testing.T) {
+func TestCommandNoFlags(t *testing.T) {
 	t.Parallel()
 
 	var (
@@ -82,36 +82,36 @@ func makeTestCommand(t *testing.T) (*ff.Command, *testCommandVars) {
 
 	var vars testCommandVars
 
-	rootFlagSet := ff.NewSet("root")
-	rootFlagSet.BoolVar(&vars.Verbose, 'v', "verbose", false, "verbose logging")
-	rootFlagSet.StringVar(&vars.ConfigFile, 0, "config-file", "", "config file")
+	rootFlags := ff.NewFlags("root")
+	rootFlags.BoolVar(&vars.Verbose, 'v', "verbose", false, "verbose logging")
+	rootFlags.StringVar(&vars.ConfigFile, 0, "config-file", "", "config file")
 	rootCommand := &ff.Command{
 		Name:     "testcmd",
 		Usage:    "testcmd [FLAGS] <SUBCOMMAND> ...",
 		LongHelp: loremIpsum,
-		FlagSet:  rootFlagSet,
+		Flags:    rootFlags,
 	}
 
-	fooFlagSet := ff.NewSet("foo").SetParent(rootFlagSet)
-	fooFlagSet.IntVar(&vars.Alpha, 'a', "alpha", 10, "alpha integer")
-	fooFlagSet.BoolVar(&vars.Beta, 'b', "beta", false, "beta boolean")
+	fooFlags := ff.NewFlags("foo").SetParent(rootFlags)
+	fooFlags.IntVar(&vars.Alpha, 'a', "alpha", 10, "alpha integer")
+	fooFlags.BoolVar(&vars.Beta, 'b', "beta", false, "beta boolean")
 	fooCommand := &ff.Command{
 		Name:      "foo",
 		Usage:     "foo [FLAGS] <SUBCOMMAND> ...",
 		ShortHelp: "the foo subcommand",
-		FlagSet:   fooFlagSet,
+		Flags:     fooFlags,
 		Exec:      func(_ context.Context, args []string) error { t.Logf("foo %+v %#v", vars, args); return nil },
 	}
 	rootCommand.Subcommands = append(rootCommand.Subcommands, fooCommand)
 
-	barFlagSet := ff.NewSet("bar").SetParent(fooFlagSet)
-	barFlagSet.DurationVar(&vars.Delta, 'd', "delta", 3*time.Second, "delta `δ` duration")
-	barFlagSet.Float64Var(&vars.Epsilon, 'e', "epsilon", 3.21, "epsilon float")
+	barFlags := ff.NewFlags("bar").SetParent(fooFlags)
+	barFlags.DurationVar(&vars.Delta, 'd', "delta", 3*time.Second, "delta `δ` duration")
+	barFlags.Float64Var(&vars.Epsilon, 'e', "epsilon", 3.21, "epsilon float")
 	barCommand := &ff.Command{
 		Name:      "bar",
 		Usage:     "bar [FLAGS] ...",
 		ShortHelp: "the bar subcommand",
-		FlagSet:   barFlagSet,
+		Flags:     barFlags,
 		Exec:      func(_ context.Context, args []string) error { t.Logf("bar %+v %#v", vars, args); return nil },
 	}
 	fooCommand.Subcommands = append(fooCommand.Subcommands, barCommand)

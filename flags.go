@@ -1,14 +1,14 @@
 package ff
 
-// FlagSet describes a collection of flags, typically associated with a specific
+// Flags describes a collection of flags, typically associated with a specific
 // command (or sub-command) executed by an end user.
 //
-// Any valid FlagSet can be provided to [Parse], or used as the flag set in a
+// Any valid Flags can be provided to [Parse], or used as the flag set in a
 // [Command]. This allows custom flag set implementations to take advantage of
 // primary package features like config file and env var flag lookups.
-type FlagSet interface {
-	// GetFlagSetName should return the name of the flag set.
-	GetFlagSetName() string
+type Flags interface {
+	// GetName should return the name of the flag set.
+	GetName() string
 
 	// Parse should parse the provided args against the flag set, setting flags
 	// as appropriate, and saving leftover args to be returned by GetArgs. The
@@ -41,9 +41,9 @@ type FlagSet interface {
 // Flag describes a single runtime configuration parameter, defined within a
 // flag set, and with a value that's parsed from a variety of sources.
 type Flag interface {
-	// GetFlagSetName should return the name of the parent flag set of this
-	// flag. It's primarily used for help output.
-	GetFlagSetName() string
+	// GetFlagsName should return the name of the parent flag set of this flag.
+	// It's primarily used for help output.
+	GetFlagsName() string
 
 	// GetShortName should return the short name for this flag, if one is
 	// defined. A short name is always a single character (rune) which is

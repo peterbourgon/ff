@@ -13,7 +13,7 @@ type RootConfig struct {
 	Token   string
 	Verbose bool
 	Client  *objectapi.Client
-	FlagSet *ff.CoreFlagSet
+	Flags   *ff.CoreFlags
 	Command *ff.Command
 }
 
@@ -21,13 +21,13 @@ func New(stdout, stderr io.Writer) *RootConfig {
 	var cfg RootConfig
 	cfg.Stdout = stdout
 	cfg.Stderr = stderr
-	cfg.FlagSet = ff.NewSet("objectctl")
-	cfg.FlagSet.StringVar(&cfg.Token, 0, "token", "", "secret token for object API")
-	cfg.FlagSet.BoolVar(&cfg.Verbose, 'v', "verbose", false, "log verbose output")
+	cfg.Flags = ff.NewFlags("objectctl")
+	cfg.Flags.StringVar(&cfg.Token, 0, "token", "", "secret token for object API")
+	cfg.Flags.BoolVar(&cfg.Verbose, 'v', "verbose", false, "log verbose output")
 	cfg.Command = &ff.Command{
-		Name:    "objectctl",
-		Usage:   "objectctl [FLAGS] <SUBCOMMAND> ...",
-		FlagSet: cfg.FlagSet,
+		Name:  "objectctl",
+		Usage: "objectctl [FLAGS] <SUBCOMMAND> ...",
+		Flags: cfg.Flags,
 	}
 	return &cfg
 }

@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleParse() {
-	fs := ff.NewSet("myprogram")
+	fs := ff.NewFlags("myprogram")
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
@@ -32,7 +32,7 @@ func ExampleParse() {
 }
 
 func ExampleParse_env() {
-	fs := ff.NewSet("myprogram")
+	fs := ff.NewFlags("myprogram")
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
@@ -58,7 +58,7 @@ func ExampleParse_env() {
 }
 
 func ExampleParse_config() {
-	fs := ff.NewSet("myprogram")
+	fs := ff.NewFlags("myprogram")
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")

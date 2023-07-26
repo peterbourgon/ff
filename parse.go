@@ -15,20 +15,20 @@ import (
 // influence parse behavior. For example, options exist to read flags from
 // environment variables, config files, etc.
 //
-// The fs parameter must be of type [FlagSet] or [*flag.FlagSet]. Any other type
+// The fs parameter must be of type [Flags] or [*flag.FlagSet]. Any other type
 // will result in an error.
 func Parse(fs any, args []string, options ...Option) error {
 	switch reified := fs.(type) {
 	case *flag.FlagSet:
-		return parseFlagSet(NewStdSet(reified), args, options...)
-	case FlagSet:
-		return parseFlagSet(reified, args, options...)
+		return parseFlags(NewStdFlags(reified), args, options...)
+	case Flags:
+		return parseFlags(reified, args, options...)
 	default:
 		return fmt.Errorf("unsupported flag set %T", fs)
 	}
 }
 
-func parseFlagSet(fs FlagSet, args []string, options ...Option) error {
+func parseFlags(fs Flags, args []string, options ...Option) error {
 	// The parse context manages options.
 	var pc ParseContext
 	for _, option := range options {

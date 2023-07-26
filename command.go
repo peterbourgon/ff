@@ -50,7 +50,7 @@ type Command struct {
 	// Optional.
 	LongHelp string
 
-	// FlagSet is the set of flags associated with, and parsed by, this command.
+	// Flags is the set of flags associated with, and parsed by, this command.
 	//
 	// When building a command tree, it's often useful to allow flags defined by
 	// parent commands to be specified by any subcommand. The core flag set
@@ -59,7 +59,7 @@ type Command struct {
 	//
 	// Optional. If not provided, an empty flag set will be constructed and used
 	// so that the -h, --help flag works as expected.
-	FlagSet FlagSet
+	Flags Flags
 
 	// Subcommands which are available underneath (i.e. after) this command.
 	// Selecting a subcommand is done via a case-insensitive comparision of the
@@ -97,12 +97,12 @@ func (cmd *Command) Parse(args []string, options ...Option) error {
 	}
 
 	// If no flag set was given, set an empty default, so -h, --help works.
-	if cmd.FlagSet == nil {
-		cmd.FlagSet = NewSet(cmd.Name)
+	if cmd.Flags == nil {
+		cmd.Flags = NewFlags(cmd.Name)
 	}
 
 	// Parse this command's flag set from the provided args.
-	if err := parseFlagSet(cmd.FlagSet, args, options...); err != nil {
+	if err := parseFlags(cmd.Flags, args, options...); err != nil {
 		cmd.selected = cmd // allow GetSelected to work even with errors
 		return fmt.Errorf("%s: %w", cmd.Name, err)
 	}
@@ -111,7 +111,7 @@ func (cmd *Command) Parse(args []string, options ...Option) error {
 	cmd.isParsed = true
 
 	// Set this command's args to the args left over after parsing.
-	cmd.args = cmd.FlagSet.GetArgs()
+	cmd.args = cmd.Flags.GetArgs()
 
 	// If there were any args, we might need to descend to a subcommand.
 	if len(cmd.args) > 0 {
@@ -192,9 +192,9 @@ func (cmd *Command) Reset() error {
 	var check func(*Command) error
 
 	check = func(c *Command) error {
-		if c.FlagSet != nil {
-			if _, ok := c.FlagSet.(Resetter); !ok {
-				return fmt.Errorf("flag set (%T) doesn't implement Resetter", c.FlagSet)
+		if c.Flags != nil {
+			if _, ok := c.Flags.(Resetter); !ok {
+				return fmt.Errorf("flag set (%T) doesn't implement Resetter", c.Flags)
 			}
 		}
 		for _, sc := range c.Subcommands {
@@ -209,10 +209,10 @@ func (cmd *Command) Reset() error {
 		return err
 	}
 
-	if cmd.FlagSet != nil {
-		r, ok := cmd.FlagSet.(Resetter)
+	if cmd.Flags != nil {
+		r, ok := cmd.Flags.(Resetter)
 		if !ok {
-			panic(fmt.Errorf("flag set (%T) doesn't implement Resetter, even after check (programmer error)", cmd.FlagSet))
+			panic(fmt.Errorf("flag set (%T) doesn't implement Resetter, even after check (programmer error)", cmd.Flags))
 		}
 		if err := r.Reset(); err != nil {
 			return fmt.Errorf("reset flags: %w", err)

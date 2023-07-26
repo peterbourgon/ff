@@ -9,14 +9,14 @@ import (
 	"github.com/peterbourgon/ff/v4"
 )
 
-// TestFlagSet checks the core invariants of a flag set and its flags. The
+// TestFlags checks the core invariants of a flag set and its flags. The
 // provided flag set should contain at least two flags, and calling parse with
 // the provided args should succeed.
-func TestFlagSet(t *testing.T, fs ff.FlagSet, args []string) {
+func TestFlags(t *testing.T, fs ff.Flags, args []string) {
 	t.Helper()
 
-	if fs.GetFlagSetName() == "" {
-		t.Errorf("GetFlagSetName: empty")
+	if fs.GetName() == "" {
+		t.Errorf("GetName: empty")
 	}
 
 	if fs.IsParsed() {
@@ -80,8 +80,8 @@ func TestFlagSet(t *testing.T, fs ff.FlagSet, args []string) {
 			t.Errorf("%s: IsSet: returned true before parse", name)
 		}
 
-		if f.GetFlagSetName() == "" {
-			t.Errorf("%s: GetFlagSetName: returned empty string", name)
+		if f.GetFlagsName() == "" {
+			t.Errorf("%s: GetFlagsName: returned empty string", name)
 		}
 
 		if f.GetDefault() != f.GetValue() {

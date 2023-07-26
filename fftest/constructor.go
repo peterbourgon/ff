@@ -16,16 +16,16 @@ type Constructor struct {
 	// Make should return a flag set and vars structure, where each value in the
 	// vars structure is updated by a corresponding flag in the flag set. The
 	// default value for each flag should be taken from the def parameter.
-	Make func(def Vars) (ff.FlagSet, *Vars)
+	Make func(def Vars) (ff.Flags, *Vars)
 }
 
 // CoreConstructor produces a core flag set, with both short and long flag names
 // for each value.
 var CoreConstructor = Constructor{
 	Name: "core",
-	Make: func(def Vars) (ff.FlagSet, *Vars) {
+	Make: func(def Vars) (ff.Flags, *Vars) {
 		var v Vars
-		fs := ff.NewSet("fftest")
+		fs := ff.NewFlags("fftest")
 		fs.StringVar(&v.S, 's', "str", def.S, "string")
 		fs.IntVar(&v.I, 'i', "int", def.I, "int")
 		fs.Float64Var(&v.F, 'f', "flt", def.F, "float64")
@@ -41,7 +41,7 @@ var CoreConstructor = Constructor{
 // StdConstructor produces a stdlib flag set adapter.
 var StdConstructor = Constructor{
 	Name: "std",
-	Make: func(def Vars) (ff.FlagSet, *Vars) {
+	Make: func(def Vars) (ff.Flags, *Vars) {
 		var v Vars
 		fs := flag.NewFlagSet("fftest", flag.ContinueOnError)
 		fs.StringVar(&v.S, "s", def.S, "string")
@@ -52,7 +52,7 @@ var StdConstructor = Constructor{
 		fs.BoolVar(&v.C, "c", def.C, "bool c")
 		fs.DurationVar(&v.D, "d", def.D, "time.Duration")
 		fs.Var(&v.X, "x", "collection of strings (repeatable)")
-		return ff.NewStdSet(fs), &v
+		return ff.NewStdFlags(fs), &v
 	},
 }
 
@@ -68,7 +68,7 @@ var DefaultConstructors = []Constructor{
 func NewNestedConstructor(delim string) Constructor {
 	return Constructor{
 		Name: fmt.Sprintf("nested delimiter '%s'", delim),
-		Make: func(def Vars) (ff.FlagSet, *Vars) {
+		Make: func(def Vars) (ff.Flags, *Vars) {
 			var (
 				skey = strings.Join([]string{"foo", "bar", "s"}, delim)
 				ikey = strings.Join([]string{"nested", "i"}, delim)
@@ -87,7 +87,7 @@ func NewNestedConstructor(delim string) Constructor {
 			fs.BoolVar(&v.B, bkey, def.B, "bool var b")
 			fs.BoolVar(&v.C, ckey, def.C, "bool var c")
 			fs.Var(&v.X, xkey, "x var")
-			return ff.NewStdSet(fs), &v
+			return ff.NewStdFlags(fs), &v
 		},
 	}
 }

@@ -12,20 +12,20 @@ import (
 type DeleteConfig struct {
 	*rootcmd.RootConfig
 	Force   bool
-	FlagSet *ff.CoreFlagSet
+	Flags   *ff.CoreFlags
 	Command *ff.Command
 }
 
 func New(parent *rootcmd.RootConfig) *DeleteConfig {
 	var cfg DeleteConfig
 	cfg.RootConfig = parent
-	cfg.FlagSet = ff.NewSet("delete").SetParent(parent.FlagSet)
-	cfg.FlagSet.BoolVar(&cfg.Force, 0, "force", false, "force delete")
+	cfg.Flags = ff.NewFlags("delete").SetParent(parent.Flags)
+	cfg.Flags.BoolVar(&cfg.Force, 0, "force", false, "force delete")
 	cfg.Command = &ff.Command{
 		Name:      "delete",
 		Usage:     "objectctl delete <KEY>",
 		ShortHelp: "delete an object",
-		FlagSet:   cfg.FlagSet,
+		Flags:     cfg.Flags,
 		Exec:      cfg.Exec,
 	}
 	cfg.RootConfig.Command.Subcommands = append(cfg.RootConfig.Command.Subcommands, cfg.Command)

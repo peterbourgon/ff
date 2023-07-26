@@ -13,20 +13,20 @@ import (
 type CreateConfig struct {
 	*rootcmd.RootConfig
 	Overwrite bool
-	FlagSet   *ff.CoreFlagSet
+	Flags     *ff.CoreFlags
 	Command   *ff.Command
 }
 
 func New(rootConfig *rootcmd.RootConfig) *CreateConfig {
 	var cfg CreateConfig
 	cfg.RootConfig = rootConfig
-	cfg.FlagSet = ff.NewSet("create").SetParent(cfg.RootConfig.FlagSet)
-	cfg.FlagSet.BoolVar(&cfg.Overwrite, 0, "overwrite", false, "overwrite an existing object")
+	cfg.Flags = ff.NewFlags("create").SetParent(cfg.RootConfig.Flags)
+	cfg.Flags.BoolVar(&cfg.Overwrite, 0, "overwrite", false, "overwrite an existing object")
 	cfg.Command = &ff.Command{
 		Name:      "create",
 		Usage:     "objectctl create [FLAGS] <KEY> <VALUE>",
 		ShortHelp: "create or overwrite an object",
-		FlagSet:   cfg.FlagSet,
+		Flags:     cfg.Flags,
 		Exec:      cfg.Exec,
 	}
 	cfg.RootConfig.Command.Subcommands = append(cfg.RootConfig.Command.Subcommands, cfg.Command)

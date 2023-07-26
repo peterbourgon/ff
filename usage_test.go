@@ -10,20 +10,20 @@ import (
 	"github.com/peterbourgon/ff/v4/fftest"
 )
 
-func TestDefaultFlagSetUsage(t *testing.T) {
+func TestDefaultFlagsUsage(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
 		constr fftest.Constructor
 		want   string
 	}{
-		{fftest.CoreConstructor, coreFlagSetDefaultUsage},
+		{fftest.CoreConstructor, coreFlagsDefaultUsage},
 		{fftest.StdConstructor, stdFlagSetDefaultUsage},
 	} {
 		t.Run(test.constr.Name, func(t *testing.T) {
 			fs, _ := test.constr.Make(fftest.Vars{A: true})
 			want := strings.TrimSpace(test.want)
-			have := strings.TrimSpace(ff.DefaultFlagSetUsage(fs))
+			have := strings.TrimSpace(ff.DefaultFlagsUsage(fs))
 			if want != have {
 				t.Errorf("\n%s", fftest.DiffString(want, have))
 			}
@@ -31,7 +31,7 @@ func TestDefaultFlagSetUsage(t *testing.T) {
 	}
 }
 
-var coreFlagSetDefaultUsage = strings.TrimSpace(`
+var coreFlagsDefaultUsage = strings.TrimSpace(`
 COMMAND
   fftest
 

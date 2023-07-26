@@ -14,19 +14,19 @@ type Config struct {
 	*rootcmd.RootConfig
 	WithAccessTimes bool
 	Command         *ff.Command
-	FlagSet         *ff.CoreFlagSet
+	Flags           *ff.CoreFlags
 }
 
 func New(parent *rootcmd.RootConfig) *Config {
 	var cfg Config
 	cfg.RootConfig = parent
-	cfg.FlagSet = ff.NewSet("list").SetParent(parent.FlagSet)
-	cfg.FlagSet.BoolVar(&cfg.WithAccessTimes, 'a', "atime", false, "include last access time of each object")
+	cfg.Flags = ff.NewFlags("list").SetParent(parent.Flags)
+	cfg.Flags.BoolVar(&cfg.WithAccessTimes, 'a', "atime", false, "include last access time of each object")
 	cfg.Command = &ff.Command{
 		Name:      "list",
 		Usage:     "objectctl list [FLAGS]",
 		ShortHelp: "list available objects",
-		FlagSet:   cfg.FlagSet,
+		Flags:     cfg.Flags,
 		Exec:      cfg.Exec,
 	}
 	cfg.RootConfig.Command.Subcommands = append(cfg.RootConfig.Command.Subcommands, cfg.Command)
