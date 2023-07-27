@@ -11,16 +11,16 @@ type Option func(*ParseContext)
 
 // ParseContext receives and maintains parse options.
 type ParseContext struct {
-	readEnvVars  bool
-	envVarPrefix string
-	envVarSplit  string
+	envVarEnabled bool
+	envVarPrefix  string
+	envVarSplit   string
 
-	configFileFilename     string
-	configFileFlagName     string
-	configFileParseFunc    ConfigFileParseFunc
-	configFileOpenFunc     func(string) (iofs.File, error)
-	allowMissingConfigFile bool
-	ignoreUndefined        bool
+	configFileName             string
+	configFlagName             string
+	configParseFunc            ConfigFileParseFunc
+	configOpenFunc             func(string) (iofs.File, error)
+	configAllowMissingFile     bool
+	configIgnoreUndefinedFlags bool
 }
 
 // ConfigFileParseFunc is a function that consumes the provided reader as a config
@@ -35,7 +35,7 @@ type ConfigFileParseFunc func(r io.Reader, set func(name, value string) error) e
 // rarely be used; prefer [WithConfigFileFlag].
 func WithConfigFile(filename string) Option {
 	return func(pc *ParseContext) {
-		pc.configFileFilename = filename
+		pc.configFileName = filename
 	}
 }
 
@@ -46,7 +46,7 @@ func WithConfigFile(filename string) Option {
 // value of the corresponding flag.
 func WithConfigFileFlag(flagname string) Option {
 	return func(pc *ParseContext) {
-		pc.configFileFlagName = flagname
+		pc.configFlagName = flagname
 	}
 }
 
@@ -55,7 +55,7 @@ func WithConfigFileFlag(flagname string) Option {
 // config files are ignored.
 func WithConfigFileParser(pf ConfigFileParseFunc) Option {
 	return func(pc *ParseContext) {
-		pc.configFileParseFunc = pf
+		pc.configParseFunc = pf
 	}
 }
 
@@ -65,7 +65,7 @@ func WithConfigFileParser(pf ConfigFileParseFunc) Option {
 // By default, missing config files result in a parse error.
 func WithConfigAllowMissingFile() Option {
 	return func(pc *ParseContext) {
-		pc.allowMissingConfigFile = true
+		pc.configAllowMissingFile = true
 	}
 }
 
@@ -76,7 +76,7 @@ func WithConfigAllowMissingFile() Option {
 // By default, undefined flags in config files result in a parse error.
 func WithConfigIgnoreUndefinedFlags() Option {
 	return func(pc *ParseContext) {
-		pc.ignoreUndefined = true
+		pc.configIgnoreUndefinedFlags = true
 	}
 }
 
@@ -87,7 +87,7 @@ func WithConfigIgnoreUndefinedFlags() Option {
 // By default, flags are not parsed from environment variables at all.
 func WithEnvVars() Option {
 	return func(pc *ParseContext) {
-		pc.readEnvVars = true
+		pc.envVarEnabled = true
 	}
 }
 
@@ -100,7 +100,7 @@ func WithEnvVars() Option {
 // By default, flags are not parsed from environment variables at all.
 func WithEnvVarPrefix(prefix string) Option {
 	return func(pc *ParseContext) {
-		pc.readEnvVars = true
+		pc.envVarEnabled = true
 		pc.envVarPrefix = prefix
 	}
 }
@@ -117,7 +117,7 @@ func WithEnvVarPrefix(prefix string) Option {
 // By default, no splitting of environment variable values occurs.
 func WithEnvVarSplit(delimiter string) Option {
 	return func(pc *ParseContext) {
-		pc.readEnvVars = true
+		pc.envVarEnabled = true
 		pc.envVarSplit = delimiter
 	}
 }
@@ -127,6 +127,6 @@ func WithEnvVarSplit(delimiter string) Option {
 // filesystem is used, via [os.Open].
 func WithFilesystem(fs embed.FS) Option {
 	return func(pc *ParseContext) {
-		pc.configFileOpenFunc = fs.Open
+		pc.configOpenFunc = fs.Open
 	}
 }

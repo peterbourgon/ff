@@ -75,7 +75,7 @@ func parseFlags(fs Flags, args []string, options ...Option) error {
 
 	// Second priority: the environment, i.e. the session.
 	{
-		if pc.readEnvVars {
+		if pc.envVarEnabled {
 			if err := fs.WalkFlags(func(f Flag) error {
 				// If the flag has already been set, we can't do anything.
 				if provided.has(f) {
@@ -120,20 +120,20 @@ func parseFlags(fs Flags, args []string, options ...Option) error {
 	{
 		// First, prefer an explicit filename string.
 		var configFile string
-		if pc.configFileFilename != "" {
-			configFile = pc.configFileFilename
+		if pc.configFileName != "" {
+			configFile = pc.configFileName
 		}
 
 		// Next, check the flag name.
-		if configFile == "" && pc.configFileFlagName != "" {
-			if f, ok := fs.GetFlag(pc.configFileFlagName); ok {
+		if configFile == "" && pc.configFlagName != "" {
+			if f, ok := fs.GetFlag(pc.configFlagName); ok {
 				configFile = f.GetValue()
 			}
 		}
 
 		// If they didn't provide an open func, set the default.
-		if pc.configFileOpenFunc == nil {
-			pc.configFileOpenFunc = func(s string) (iofs.File, error) {
+		if pc.configOpenFunc == nil {
+			pc.configOpenFunc = func(s string) (iofs.File, error) {
 				return os.Open(s)
 			}
 		}
@@ -141,15 +141,15 @@ func parseFlags(fs Flags, args []string, options ...Option) error {
 		// Config files require both a filename and a parser.
 		var (
 			haveConfigFile  = configFile != ""
-			haveParser      = pc.configFileParseFunc != nil
+			haveParser      = pc.configParseFunc != nil
 			parseConfigFile = haveConfigFile && haveParser
 		)
 		if parseConfigFile {
-			configFile, err := pc.configFileOpenFunc(configFile)
+			configFile, err := pc.configOpenFunc(configFile)
 			switch {
 			case err == nil:
 				defer configFile.Close()
-				if err := pc.configFileParseFunc(configFile, func(name, value string) error {
+				if err := pc.configParseFunc(configFile, func(name, value string) error {
 					// The parser calls us with a name=value pair. We want to
 					// allow the name to be either the actual flag name, or its
 					// env var representation (to support .env files).
@@ -163,9 +163,9 @@ func parseFlags(fs Flags, args []string, options ...Option) error {
 						target = setFlag
 					case !fromSet && fromEnv:
 						target = envFlag
-					case !fromSet && !fromEnv && pc.ignoreUndefined:
+					case !fromSet && !fromEnv && pc.configIgnoreUndefinedFlags:
 						return nil
-					case !fromSet && !fromEnv && !pc.ignoreUndefined:
+					case !fromSet && !fromEnv && !pc.configIgnoreUndefinedFlags:
 						return fmt.Errorf("%s: %w", name, ErrUnknownFlag)
 					}
 
@@ -185,7 +185,7 @@ func parseFlags(fs Flags, args []string, options ...Option) error {
 					return fmt.Errorf("parse config file: %w", err)
 				}
 
-			case errors.Is(err, iofs.ErrNotExist) && pc.allowMissingConfigFile:
+			case errors.Is(err, iofs.ErrNotExist) && pc.configAllowMissingFile:
 				// no problem
 
 			default:
