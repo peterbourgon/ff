@@ -12,8 +12,7 @@ type Flags interface {
 
 	// Parse should parse the provided args against the flag set, setting flags
 	// as appropriate, and saving leftover args to be returned by GetArgs. Args
-	// should not include the program name: callers will pass os.Args[1:], not
-	// os.Args.
+	// don't include the program name: callers pass os.Args[1:], not os.Args.
 	Parse(args []string) error
 
 	// IsParsed should return true if the flag set was successfully parsed.
@@ -85,9 +84,9 @@ type Flag interface {
 
 // Resetter may optionally be implemented by a [Flags] implementation.
 type Resetter interface {
-	// Reset should revert the set of flags to its initial state, including all
-	// of the flags defined in the set of flags. If reset returns successfully,
-	// the flag set should be as if it were newly constructed. That is, IsParsed
-	// should return false, GetArgs should return an empty slice, etc.
+	// Reset should revert the flags to its initial state, including all defined
+	// flags. If reset returns successfully, the flags should be as if it were
+	// newly constructed: IsParsed should return false, GetArgs should return an
+	// empty slice, etc.
 	Reset() error
 }

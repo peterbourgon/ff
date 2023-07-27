@@ -12,12 +12,8 @@ import (
 // CoreFlags is the default implementation of a [Flags]. It's largely inspired
 // by getopt(3), but is not equivalent to, or compatible with, that tool.
 //
-// Flags may be defined with short (-f) and/or long (--foo) names. Flags use the
-// [flag.Value] interface to parse and maintain their underlying data.
-//
-// A core flag set may optionally be assigned a parent. In this case, all of the
-// flags in parent flag sets are recursively accessible to the children. See
-// [CoreFlags.SetParent].
+// Individual flags can be defined with short (-f) and/or long (--foo) names.
+// The [flag.Value] interface is used to parse and maintain underlying data.
 type CoreFlags struct {
 	setName       string
 	flagSlice     []*coreFlag
@@ -47,8 +43,8 @@ func NewFlags(name string) *CoreFlags {
 // The returned core flag set behaves differently than normal. It's a fixed
 // "snapshot" of the provided standard flag set, and so doesn't reflect changes
 // made to the standard flag set in the future, and doesn't allow new flags to
-// be added. Also, it parses every flag name as a long name, even if it has just
-// a single leading hyphen, to approximate the standard parsing behavior.
+// be defined. Also, it parses every flag name as a long name, even if it has
+// just a single leading hyphen, to approximate the standard parsing behavior.
 func NewStdFlags(stdfs *flag.FlagSet) *CoreFlags {
 	corefs := NewFlags(stdfs.Name())
 	stdfs.VisitAll(func(f *flag.Flag) {
