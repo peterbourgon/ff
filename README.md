@@ -1,18 +1,20 @@
 # ff [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/v4) [![Latest Release](https://img.shields.io/github/v/release/peterbourgon/ff?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) ![Build Status](https://github.com/peterbourgon/ff/actions/workflows/test.yaml/badge.svg?branch=main)
 
-ff is a flags-first approach for programs to receive runtime configuration.
+ff is a flags-first approach to configuration.
 
-As the name suggests, it's all based on flags. Every config parameter is
-expected to be defined as a flag, to ensure that `myprogram -h` will reliably
-describe the complete configuration surface area of the program.
+The basic rationale is that that `myprogram -h` should reliably describe the
+complete configuration "surface area" of a program. Therefore, every config
+parameter should be defined as a flag. This module provides a simple and robust
+way to define those flags, and to parse them from command-line arguments,
+environment variables, and/or a config file.
 
 Building a command-line application in the style of `kubectl` or `docker`?
-[Command](#command) offers a declarative approach that may be simpler and easier
-to maintain than common alternatives.
+[Command](#command) provides a declarative approach that's simpler to write, and
+easier to maintain, than many common alternatives.
 
 ## Usage
 
-This module provides a getopts(3)-style flag set, which can be used as follows.
+This module provides a getopts(3)-inspired flag set, used as follows.
 
 ```go
 fs := ff.NewFlags("myprogram")
@@ -24,9 +26,9 @@ var (
 )
 ```
 
-You can also use a standard library flag set. If you do, be sure to use the
-[flag.ContinueOnError] error handling strategy. Other options either panic or
-terminate the program on parse errors. Rude!
+It's also possible to adapt a standard library flag set. In this case, be sure
+to use the ContinueOnError error handling strategy. Other options either panic
+or terminate the program on parse errors. Rude!
 
 ```go
 fs := flag.NewFlagSet("myprogram", flag.ContinueOnError)
@@ -38,8 +40,8 @@ var (
 )
 ```
 
-Once you have a set of flags, use [ff.Parse] to parse it. Options can be
-provided to control parsing behavior.
+Once you have a set of flags, you can parse them as follows; options can be
+provided to control parse behavior.
 
 ```go
 err := ff.Parse(fs, os.Args[1:],
@@ -49,16 +51,15 @@ err := ff.Parse(fs, os.Args[1:],
 )
 ```
 
-Flags are always set from the provided command-line arguments first. In the
-above example, flags will also be set from env vars beginning with `MY_PROGRAM`,
-and then, if the user specifies a config file, from values in that file, as
-parsed by [ff.PlainParser].
+In the above example, flags are set from the provided command-line arguments
+first; from env vars beginning with `MY_PROGRAM` next; and finally, if the user
+specifies a config file, from values in that file, as parsed by PlainParser.
 
 ## Environment variables
 
 It's possible to take runtime configuration from the environment. The options
 [WithEnvVars][withenvvars] and [WithEnvVarPrefix][withenvvarprefix] enable this
-feature and determine how flag names are mapped to environment variable names.
+feature, and determine how flag names are mapped to environment variable names.
 
 [withenvvars]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVars
 [withenvvarprefix]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVarPrefix
@@ -86,11 +87,12 @@ It's possible to take runtime configuration from config files. The options
 [WithConfigFile][withconfigfile], [WithConfigFileFlag][withconfigfileflag], and
 [WithConfigFileParser][withconfigfileparser] control how config files are
 specified and parsed. This module includes support for JSON, YAML, TOML, and
-.env config files, and also defines its own simple config file format.
+.env config files, as well as the simple [PlainParser][plainparser] format.
 
 [withconfigfile]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFile
 [withconfigfileflag]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileFlag
 [withconfigfileparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileParser
+[plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#PlainParser
 
 ```go
 fs := ff.NewFlags("myservice")
