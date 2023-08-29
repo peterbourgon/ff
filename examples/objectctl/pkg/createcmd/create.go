@@ -8,6 +8,7 @@ import (
 
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/examples/objectctl/pkg/rootcmd"
+	"github.com/peterbourgon/ff/v4/ffval"
 )
 
 type CreateConfig struct {
@@ -21,7 +22,12 @@ func New(rootConfig *rootcmd.RootConfig) *CreateConfig {
 	var cfg CreateConfig
 	cfg.RootConfig = rootConfig
 	cfg.Flags = ff.NewFlags("create").SetParent(cfg.RootConfig.Flags)
-	cfg.Flags.BoolVar(&cfg.Overwrite, 0, "overwrite", false, "overwrite an existing object")
+	cfg.Flags.AddFlag(ff.CoreFlagConfig{
+		LongName:  "overwrite",
+		Value:     ffval.NewValue(&cfg.Overwrite),
+		Usage:     "overwrite an existing object",
+		NoDefault: true,
+	})
 	cfg.Command = &ff.Command{
 		Name:      "create",
 		Usage:     "objectctl create [FLAGS] <KEY> <VALUE>",

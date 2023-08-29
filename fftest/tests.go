@@ -2,11 +2,11 @@ package fftest
 
 import (
 	"errors"
-	"strings"
 	"testing"
 	"unicode/utf8"
 
 	"github.com/peterbourgon/ff/v4"
+	"github.com/peterbourgon/ff/v4/ffhelp"
 )
 
 // TestFlags checks the core invariants of a flag set and its flags. The
@@ -56,7 +56,7 @@ func TestFlags(t *testing.T, fs ff.Flags, args []string) {
 
 	for i, f := range flags {
 		var (
-			name             = getFlagName(f)
+			name             = ffhelp.FormatFlag(f, "%s")
 			short, haveShort = f.GetShortName()
 			long, haveLong   = f.GetLongName()
 		)
@@ -80,8 +80,8 @@ func TestFlags(t *testing.T, fs ff.Flags, args []string) {
 			t.Errorf("%s: IsSet: returned true before parse", name)
 		}
 
-		if f.GetFlagsName() == "" {
-			t.Errorf("%s: GetFlagsName: returned empty string", name)
+		if f.GetFlags() == nil {
+			t.Errorf("%s: GetFlags: returned nil", name)
 		}
 
 		if f.GetDefault() != f.GetValue() {
@@ -92,7 +92,7 @@ func TestFlags(t *testing.T, fs ff.Flags, args []string) {
 			if ff, ok := fs.GetFlag(string(short)); !ok {
 				t.Errorf("%s: GetFlag(%s): returned ok=false", name, string(short))
 			} else if ff != f {
-				t.Errorf("%s: GetFlag(%s): returned different flag (%s)", name, string(short), getFlagName(ff))
+				t.Errorf("%s: GetFlag(%s): returned different flag (%s)", name, string(short), ffhelp.FormatFlag(ff, "%s"))
 			}
 		}
 
@@ -100,7 +100,7 @@ func TestFlags(t *testing.T, fs ff.Flags, args []string) {
 			if ff, ok := fs.GetFlag(long); !ok {
 				t.Errorf("%s: GetFlag(%s): returned ok=false", name, long)
 			} else if ff != f {
-				t.Errorf("%s: GetFlag(%s): returned different flag (%s)", name, long, getFlagName(ff))
+				t.Errorf("%s: GetFlag(%s): returned different flag (%s)", name, long, ffhelp.FormatFlag(ff, "%s"))
 			}
 		}
 	}
@@ -112,15 +112,4 @@ func TestFlags(t *testing.T, fs ff.Flags, args []string) {
 	if !fs.IsParsed() {
 		t.Errorf("IsParsed: returned false after successful parse")
 	}
-}
-
-func getFlagName(f ff.Flag) string {
-	var names []string
-	if short, ok := f.GetShortName(); ok {
-		names = append(names, string(short))
-	}
-	if long, ok := f.GetLongName(); ok {
-		names = append(names, long)
-	}
-	return strings.Join(names, ", ")
 }

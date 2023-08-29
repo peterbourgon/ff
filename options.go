@@ -40,19 +40,21 @@ func WithConfigFile(filename string) Option {
 }
 
 // WithConfigFileFlag tells [Parse] to treat the flag with the given name as a
-// config file. The flag name must be defined in the flag set that parse
-// consumes. Requires [WithConfigFileParser], and is overridden by
-// [WithConfigFile]. To specify a default config file, provide it as the default
-// value of the corresponding flag.
+// config file. The flag name must be defined in the flag set consumed by parse.
+// Requires [WithConfigFileParser], and is overridden by [WithConfigFile].
+//
+// To specify a default config file, provide it as the default value of the
+// corresponding flag.
 func WithConfigFileFlag(flagname string) Option {
 	return func(pc *ParseContext) {
 		pc.configFlagName = flagname
 	}
 }
 
-// WithConfigFileParser tells [Parse] how to interpret a provided config file.
-// This option is required to parse config files. If this option isn't provided,
-// config files are ignored.
+// WithConfigFileParser tells [Parse] how to interpret a config file. This
+// option must be explicitly provided in order to parse config files.
+//
+// By default, no config file parser is defined, and config files are ignored.
 func WithConfigFileParser(pf ConfigFileParseFunc) Option {
 	return func(pc *ParseContext) {
 		pc.configParseFunc = pf
@@ -69,9 +71,9 @@ func WithConfigAllowMissingFile() Option {
 	}
 }
 
-// WithConfigIgnoreUndefinedFlags tells [Parse] to ignore undefined flags that
-// it encounters in config files. This option only applies to flags in config
-// files.
+// WithConfigIgnoreUndefinedFlags tells [Parse] to ignore flags in config files
+// which are not defined in the parsed flag set. This option only applies to
+// flags in config files.
 //
 // By default, undefined flags in config files result in a parse error.
 func WithConfigIgnoreUndefinedFlags() Option {
@@ -80,9 +82,9 @@ func WithConfigIgnoreUndefinedFlags() Option {
 	}
 }
 
-// WithEnvVars tells [Parse] to set flags from environment variables. Flag names
-// are matched to environment variables by capitalizing the flag name, and
-// replacing separator characters like periods or hyphens with underscores.
+// WithEnvVars tells [Parse] to set flags from environment variables. Flags are
+// matched to environment variables by capitalizing the flag name, and replacing
+// separator characters like periods or hyphens with underscores.
 //
 // By default, flags are not parsed from environment variables at all.
 func WithEnvVars() Option {
@@ -106,13 +108,13 @@ func WithEnvVarPrefix(prefix string) Option {
 }
 
 // WithEnvVarSplit tells [Parse] to split environment variable values on the
-// given delimiter, and to set the flag multiple times, with each token as a
-// distinct value. Values produced in this way are not trimmed of whitespace.
+// given delimiter, and to set the flag multiple times, once for each delimited
+// token. Values produced in this way are not trimmed of whitespace.
 //
 // For example, `FOO=a,b,c` might cause a flag named `foo` to receive a single
-// call to Set with the value `a,b,c`. If the split delimiter were set to `,`
-// then that flag would receive three seperate calls to Set with the strings
-// `a`, `b`, and `c`.
+// call to Set with the value `a,b,c`. If WithEnvVarSplit is provided as an
+// option, with a delimiter of `,`, then that flag would receive three seperate
+// calls to Set with the strings `a`, `b`, and `c`.
 //
 // By default, no splitting of environment variable values occurs.
 func WithEnvVarSplit(delimiter string) Option {
@@ -123,8 +125,9 @@ func WithEnvVarSplit(delimiter string) Option {
 }
 
 // WithFilesystem tells [Parse] to use the provided filesystem when accessing
-// files on disk, for example when reading a config file. By default, the host
-// filesystem is used, via [os.Open].
+// files on disk, typically when reading a config file.
+//
+// By default, the host filesystem is used, via [os.Open].
 func WithFilesystem(fs embed.FS) Option {
 	return func(pc *ParseContext) {
 		pc.configOpenFunc = fs.Open

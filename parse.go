@@ -19,10 +19,10 @@ import (
 // will result in an error.
 func Parse(fs any, args []string, options ...Option) error {
 	switch reified := fs.(type) {
-	case *flag.FlagSet:
-		return parseFlags(NewStdFlags(reified), args, options...)
 	case Flags:
 		return parseFlags(reified, args, options...)
+	case *flag.FlagSet:
+		return parseFlags(NewStdFlags(reified), args, options...)
 	default:
 		return fmt.Errorf("unsupported flag set %T", fs)
 	}
@@ -206,13 +206,14 @@ func parseFlags(fs Flags, args []string, options ...Option) error {
 // PlainParser is a parser for config files in an extremely simple format. Each
 // line is tokenized as a single key/value pair. The first space-delimited token
 // in the line is interpreted as the flag name, and the rest of the line is
-// trimmed of whitespace and interpreted as the value.
+// interpreted as the flag value.
 //
-// Any leading hyphens on flag names are ignored. Lines with a flag name but no
-// value are interpreted as booleans and the value is set to true. Values are
-// trimmed of leading and trailing whitespace but otherwise unmodified. In
-// particular, values are not quote-unescaped, and control characters like \n
-// are treated as literals.
+// Any leading hyphens on the flag name are ignored. Lines with a flag name but
+// no value are interpreted as booleans, and the value is set to true.
+//
+// Flag values are trimmed of leading and trailing whitespace, but are otherwise
+// unmodified. In particular, values are not quote-unescaped, and control
+// characters like \n are not evaluated and instead passed through as literals.
 //
 // Comments are supported via "#". End-of-line comments require a space between
 // the end of the line and the "#" character.
@@ -222,8 +223,9 @@ func parseFlags(fs Flags, args []string, options ...Option) error {
 //	# this is a full-line comment
 //	timeout 250ms     # this is an end-of-line comment
 //	foo     abc def   # set foo to `abc def`
-//	foo     12345678  # flags can be repeated
-//	bar     "abc def" # set bar to `"abc def"` i.e. including quotes
+//	foo     12345678  # repeated flags result in repeated calls to Set
+//	bar     "abc def" # set bar to `"abc def"`, including quotes
+//	baz     x\ny      # set baz to `x\ny`, passing \n literally
 //	verbose           # equivalent to `verbose true`
 func PlainParser(r io.Reader, set func(name, value string) error) error {
 	s := bufio.NewScanner(r)

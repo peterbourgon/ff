@@ -16,9 +16,9 @@ type Command struct {
 	// Required.
 	Name string
 
-	// Usage is a single line which should describe the syntax of the command,
-	// including flags and arguments. It's typically printed at the top of the
-	// help output for the command. For example,
+	// Usage is a single line string which should describe the syntax of the
+	// command, including flags and arguments. It's typically printed at the top
+	// of the help output for the command. For example,
 	//
 	//    USAGE
 	//      cmd [FLAGS] subcmd [FLAGS] <ARG> [<ARG>...]
@@ -44,8 +44,8 @@ type Command struct {
 	// output for the command, separate from other sections.
 	//
 	// Long help should be formatted for user readability. For example, if help
-	// output is written to a terminal, long help should hard-wrap lines at an
-	// appropriate column width for that terminal.
+	// output is written to a terminal, long help should include newlines which
+	// hard-wrap the string at an appropriate column width for that terminal.
 	//
 	// Optional.
 	LongHelp string
@@ -78,15 +78,14 @@ type Command struct {
 	// the terminal command during the parse phase. The args passed to Exec are
 	// the args left over after parsing.
 	//
-	// Optional. If not provided, and this command is identified as the terminal
-	// command during the parse phase, the run phase will return NoExecError.
-	Exec func(context.Context, []string) error
+	// Optional. If not provided, running this command will result in ErrNoExec.
+	Exec func(ctx context.Context, args []string) error
 }
 
 // Parse the args and options against the defined command, which sets relevant
 // flags, traverses the command hierarchy to select a terminal command, and
 // captures the arguments that will be given to that command's exec function.
-// Args should not include the name of the program: os.Args[1:], not os.Args.
+// The args should not include the program name: pass os.Args[1:], not os.Args.
 func (cmd *Command) Parse(args []string, options ...Option) error {
 	// Initial validation and safety checks.
 	if cmd.Name == "" {
@@ -132,9 +131,9 @@ func (cmd *Command) Parse(args []string, options ...Option) error {
 	return nil
 }
 
-// Run the exec function of the command selected during the parse phase, passing
-// the args left over after parsing. Calling run without first calling parse
-// will result in an error.
+// Run the Exec function of the terminal command selected during the parse
+// phase, passing the args left over after parsing. Calling [Command.Run]
+// without first calling [Command.Parse] will result in [ErrNotParsed].
 func (cmd *Command) Run(ctx context.Context) error {
 	switch {
 	case !cmd.isParsed:
@@ -150,7 +149,7 @@ func (cmd *Command) Run(ctx context.Context) error {
 	}
 }
 
-// ParseAndRun calls parse and then, on success, run.
+// ParseAndRun calls [Command.Parse] and, upon success, [Command.Run].
 func (cmd *Command) ParseAndRun(ctx context.Context, args []string, options ...Option) error {
 	if err := cmd.Parse(args, options...); err != nil {
 		return fmt.Errorf("parse: %w", err)
@@ -164,7 +163,7 @@ func (cmd *Command) ParseAndRun(ctx context.Context, args []string, options ...O
 }
 
 // GetSelected returns the terminal command selected during the parse phase, or
-// nil if the command hasn't been parsed.
+// nil if the command hasn't been successfully parsed.
 func (cmd *Command) GetSelected() *Command {
 	if cmd.selected == nil {
 		return nil
@@ -184,10 +183,9 @@ func (cmd *Command) GetParent() *Command {
 	return cmd.parent
 }
 
-// Reset every command in the command tree, including all flag sets, to their
-// initial state. Flag sets must implement [Resetter], or else reset will return
-// an error. After a successful reset, the command can be parsed and run as if
-// it were newly constructed.
+// Reset every command in the command tree to its initial state, including all
+// flag sets. Every flag set must implement [Resetter], or else reset will
+// return an error.
 func (cmd *Command) Reset() error {
 	var check func(*Command) error
 

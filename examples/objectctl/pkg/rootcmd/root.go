@@ -5,6 +5,7 @@ import (
 
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/examples/objectctl/pkg/objectapi"
+	"github.com/peterbourgon/ff/v4/ffval"
 )
 
 type RootConfig struct {
@@ -23,7 +24,13 @@ func New(stdout, stderr io.Writer) *RootConfig {
 	cfg.Stderr = stderr
 	cfg.Flags = ff.NewFlags("objectctl")
 	cfg.Flags.StringVar(&cfg.Token, 0, "token", "", "secret token for object API")
-	cfg.Flags.BoolVar(&cfg.Verbose, 'v', "verbose", false, "log verbose output")
+	cfg.Flags.AddFlag(ff.CoreFlagConfig{
+		ShortName: 'v',
+		LongName:  "verbose",
+		Value:     ffval.NewValue(&cfg.Verbose),
+		Usage:     "log verbose output",
+		NoDefault: true,
+	})
 	cfg.Command = &ff.Command{
 		Name:  "objectctl",
 		Usage: "objectctl [FLAGS] <SUBCOMMAND> ...",

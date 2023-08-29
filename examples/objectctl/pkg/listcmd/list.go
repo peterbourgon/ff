@@ -8,6 +8,7 @@ import (
 
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/examples/objectctl/pkg/rootcmd"
+	"github.com/peterbourgon/ff/v4/ffval"
 )
 
 type Config struct {
@@ -21,7 +22,14 @@ func New(parent *rootcmd.RootConfig) *Config {
 	var cfg Config
 	cfg.RootConfig = parent
 	cfg.Flags = ff.NewFlags("list").SetParent(parent.Flags)
-	cfg.Flags.BoolVar(&cfg.WithAccessTimes, 'a', "atime", false, "include last access time of each object")
+	cfg.Flags.AddFlag(ff.CoreFlagConfig{
+		ShortName: 'a',
+		LongName:  "atime",
+		Value:     ffval.NewValue(&cfg.WithAccessTimes),
+		Usage:     "include last access time of each object",
+		NoDefault: true,
+	})
+
 	cfg.Command = &ff.Command{
 		Name:      "list",
 		Usage:     "objectctl list [FLAGS]",

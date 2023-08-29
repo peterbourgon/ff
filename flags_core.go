@@ -3,17 +3,19 @@ package ff
 import (
 	"flag"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/peterbourgon/ff/v4/ffval"
 )
 
-// CoreFlags is the default implementation of a [Flags]. It's largely inspired
-// by getopt(3), but is not equivalent to, or compatible with, that tool.
+// CoreFlags is the default implementation of a [Flags]. It's broadly similar to
+// a [flag.FlagSet], but with additional capabilities inspired by getopt(3).
 //
-// Individual flags can be defined with short (-f) and/or long (--foo) names.
-// The [flag.Value] interface is used to parse and maintain underlying data.
+// CoreFlags is not safe for concurrent use by multiple goroutines.
 type CoreFlags struct {
 	setName       string
 	flagSlice     []*coreFlag
@@ -40,15 +42,16 @@ func NewFlags(name string) *CoreFlags {
 // NewStdFlags returns a core flag set which acts as an adapter for the provided
 // [flag.FlagSet], allowing it to implement the [Flags] interface.
 //
-// The returned core flag set behaves differently than normal. It's a fixed
-// "snapshot" of the provided standard flag set, and so doesn't reflect changes
-// made to the standard flag set in the future, and doesn't allow new flags to
-// be defined. Also, it parses every flag name as a long name, even if it has
-// just a single leading hyphen, to approximate the standard parsing behavior.
+// The returned core flag set has slightly different behavior than normal. It's
+// a fixed "snapshot" of the provided stdfs, which means it doesn't allow new
+// flags to be defined, and won't reflect changes made to the stdfs in the
+// future. Also, to approximate standard parsing behavior, it treats every flag
+// name as a long name, and treats "-" and "--" equivalently when parsing
+// arguments.
 func NewStdFlags(stdfs *flag.FlagSet) *CoreFlags {
 	corefs := NewFlags(stdfs.Name())
 	stdfs.VisitAll(func(f *flag.Flag) {
-		if err := corefs.AddFlag(CoreFlagConfig{
+		if _, err := corefs.AddFlag(CoreFlagConfig{
 			LongName: f.Name,
 			Usage:    f.Usage,
 			Value:    f.Value,
@@ -98,6 +101,9 @@ func (fs *CoreFlags) Parse(args []string) error {
 }
 
 func (fs *CoreFlags) parseArgs(args []string) error {
+	// Credit where credit is due: this implementation is adapted from
+	// https://pkg.go.dev/github.com/pborman/getopt/v2.
+
 	fs.postParseArgs = args
 
 	for len(args) > 0 {
@@ -124,7 +130,8 @@ func (fs *CoreFlags) parseArgs(args []string) error {
 		)
 
 		// The stdlib package flag parses -abc and --abc the same. If we want to
-		// reproduce that behavior, convert -short flags to --long flags.
+		// reproduce that behavior, convert -short flags to --long flags. This
+		// changes the semantics of concatenated short flags like -abc.
 		if isShortFlag && fs.isStdAdapter {
 			isShortFlag = false
 			isLongFlag = true
@@ -148,6 +155,7 @@ func (fs *CoreFlags) parseArgs(args []string) error {
 	return nil
 }
 
+// findFlag finds the first matching flag in the flags hierarchy.
 func (fs *CoreFlags) findFlag(short rune, long string) *coreFlag {
 	var (
 		haveShort = isValidShortName(short)
@@ -297,9 +305,13 @@ func (fs *CoreFlags) GetFlag(name string) (Flag, bool) {
 	}
 
 	var (
-		short, _ = utf8.DecodeRuneInString(name)
-		long     = name
+		short = rune(0)
+		long  = name
 	)
+	if len(name) == 1 {
+		short, _ = utf8.DecodeRuneInString(name)
+	}
+
 	f := fs.findFlag(short, long)
 	if f == nil {
 		return nil, false
@@ -333,14 +345,14 @@ func (fs *CoreFlags) Reset() error {
 type CoreFlagConfig struct {
 	// ShortName is the short form name of the flag, which can be provided as a
 	// commandline argument with a single dash - prefix. A rune value of 0 or
-	// utf8.RuneError is an invalid short name and is ignored.
+	// utf8.RuneError is considered an invalid short name and is ignored.
 	//
 	// At least one of ShortName and/or LongName is required.
 	ShortName rune
 
 	// LongName is the long form name of the flag, which can be provided as a
-	// commandline argument with a double-dash -- prefix. An empty string is an
-	// invalid long name and is ignored.
+	// commandline argument with a double-dash -- prefix. An empty string is
+	// considered an invalid long name and is ignored.
 	//
 	// At least one of ShortName and/or LongName is required.
 	LongName string
@@ -351,13 +363,31 @@ type CoreFlagConfig struct {
 	//
 	//      -f, --foo BAR   set the foo parameter
 	//
+	// The placeholder is determined by the following logic.
+	//
+	//  - If EmptyPlaceholder is true, use the empty string
+	//  - If Placeholder is non-empty, use that string
+	//  - If Usage contains a `backtick-quoted` substring, use that substring
+	//  - If Value is a boolean with default value false, use the empty string
+	//  - Otherwise, use a simple transformation of the concrete Value type name
+	//
 	// Optional.
 	Placeholder string
 
+	// NoPlaceholder forces the placeholder of the flag to the empty string.
+	// This can be useful if you want to elide the placeholder from help text.
+	NoPlaceholder bool
+
 	// Usage is a short help message for the flag, typically printed after the
-	// flag name(s) on a single line in the help output. The first `backtick`
-	// quoted substring (if any) will be the placeholder, if a placeholder was
-	// not explicitly provided.
+	// flag name(s) on a single line in the help output. For example, a foo flag
+	// might have the usage string "set the foo parameter", which might be
+	// rendered as follows.
+	//
+	//      -f, --foo BAR   set the foo parameter
+	//
+	// If the usage string contains a `backtick` quoted substring, that
+	// substring will be treated as a placeholder, if a placeholder was not
+	// otherwise explicitly provided.
 	//
 	// Recommended.
 	Usage string
@@ -372,6 +402,72 @@ type CoreFlagConfig struct {
 	//
 	// Required.
 	Value flag.Value
+
+	// NoDefault forces the default value of the flag to the empty string. This
+	// can be useful if you want to elide the default value from help text.
+	NoDefault bool
+}
+
+func (cfg CoreFlagConfig) isBoolFlag() bool {
+	bf, ok := cfg.Value.(IsBoolFlagger)
+	if !ok {
+		return false
+	}
+	return bf.IsBoolFlag()
+}
+
+func (cfg CoreFlagConfig) getPlaceholder() string {
+	// If a placeholder is explicitly refused, use an empty string.
+	if cfg.NoPlaceholder {
+		return ""
+	}
+
+	// If a placeholder is explicitly provided, use that.
+	if cfg.Placeholder != "" {
+		return cfg.Placeholder
+	}
+
+	// If the usage text contains a `backticked` substring, use that.
+	for i := 0; i < len(cfg.Usage); i++ {
+		if cfg.Usage[i] == '`' {
+			for j := i + 1; j < len(cfg.Usage); j++ {
+				if cfg.Usage[j] == '`' {
+					return cfg.Usage[i+1 : j]
+				}
+			}
+			break
+		}
+	}
+
+	// Bool flags with default value false should have empty placeholders.
+	if bf, ok := cfg.Value.(IsBoolFlagger); ok && bf.IsBoolFlag() {
+		if b, err := strconv.ParseBool(fmt.Sprint(cfg.Value)); err == nil && !b {
+			return ""
+		}
+	}
+
+	// Otherwise, use a transformation of the flag value type name.
+	var typeName string
+	typeName = fmt.Sprintf("%T", cfg.Value)
+	typeName = strings.ToUpper(typeName)
+	typeName = typeNameDefaultRegexp.ReplaceAllString(typeName, "$1")
+	typeName = strings.TrimSuffix(typeName, "VALUE")
+	if lastDot := strings.LastIndex(typeName, "."); lastDot > 0 {
+		typeName = typeName[lastDot+1:]
+	}
+	return typeName
+}
+
+var typeNameDefaultRegexp = regexp.MustCompile(`[A-Z0-9\_\.\*]+\[(.+)\]`)
+
+func (cfg CoreFlagConfig) getDefaultValue() string {
+	// If the config explicitly declares an empty default, use the empty string.
+	if cfg.NoDefault {
+		return ""
+	}
+
+	// Otherwise, use Value.String.
+	return cfg.Value.String()
 }
 
 // AddFlag adds a flag to the flag set, as specified by the provided config. An
@@ -380,44 +476,37 @@ type CoreFlagConfig struct {
 //
 // This is a fairly low level method. Consumers may prefer type-specific helpers
 // like [CoreFlags.Bool], [CoreFlags.StringVar], etc.
-func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) error {
+func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 	if fs.isStdAdapter {
-		return fmt.Errorf("cannot add flags to standard flag set adapter")
-	}
-
-	var (
-		hasShort = isValidShortName(cfg.ShortName)
-		hasLong  = isValidLongName(cfg.LongName)
-	)
-	if !hasShort && !hasLong {
-		return fmt.Errorf("short name and/or long name is required")
+		return nil, fmt.Errorf("cannot add flags to standard flag set adapter")
 	}
 
 	if cfg.Value == nil {
-		return fmt.Errorf("value is required")
+		return nil, fmt.Errorf("value is required")
 	}
 
-	var isBoolFlag bool
-	if bf, ok := cfg.Value.(interface{ IsBoolFlag() bool }); ok {
-		isBoolFlag = bf.IsBoolFlag()
+	var (
+		hasShort     = isValidShortName(cfg.ShortName)
+		hasLong      = isValidLongName(cfg.LongName)
+		isBoolFlag   = cfg.isBoolFlag()
+		placeholder  = cfg.getPlaceholder()
+		defaultValue = cfg.getDefaultValue()
+	)
+	if !hasShort && !hasLong {
+		return nil, fmt.Errorf("short name and/or long name is required")
 	}
-
 	if isBoolFlag && !hasLong {
-		if defaultTrue, err := strconv.ParseBool(cfg.Value.String()); err == nil && defaultTrue {
-			return fmt.Errorf("%s: default true boolean flag requires a long name", string(cfg.ShortName))
+		if b, err := strconv.ParseBool(defaultValue); err == nil && b {
+			return nil, fmt.Errorf("%s: default true boolean flag requires a long name", string(cfg.ShortName))
 		}
-	}
-
-	if cfg.Placeholder == "" {
-		cfg.Placeholder = getPlaceholderFor(cfg.Value, cfg.Usage)
 	}
 
 	f := &coreFlag{
 		flagSet:      fs,
 		shortName:    cfg.ShortName,
 		longName:     cfg.LongName,
-		placeholder:  cfg.Placeholder,
-		defaultValue: cfg.Value.String(),
+		placeholder:  placeholder,
+		defaultValue: defaultValue,
 		usageText:    cfg.Usage,
 		flagValue:    cfg.Value,
 		isBoolFlag:   isBoolFlag,
@@ -425,18 +514,42 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) error {
 
 	for _, existing := range fs.flagSlice {
 		if isDuplicateCoreFlag(f, existing) {
-			return newFlagError(f, ErrDuplicateFlag)
+			return nil, newFlagError(f, ErrDuplicateFlag)
 		}
 	}
 
 	fs.flagSlice = append(fs.flagSlice, f)
 
-	return nil
+	return f, nil
+}
+
+// Value defines a new flag in the flag set, and panics on any error.
+func (fs *CoreFlags) Value(short rune, long string, value flag.Value, usage string) Flag {
+	f, err := fs.AddFlag(CoreFlagConfig{
+		ShortName: short,
+		LongName:  long,
+		Usage:     usage,
+		Value:     value,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+// ValueShort defines a new flag in the flag set, and panics on any error.
+func (fs *CoreFlags) ValueShort(short rune, value flag.Value, usage string) Flag {
+	return fs.Value(short, "", value, usage)
+}
+
+// ValueLong defines a new flag in the flag set, and panics on any error.
+func (fs *CoreFlags) ValueLong(long string, value flag.Value, usage string) Flag {
+	return fs.Value(0, long, value, usage)
 }
 
 // BoolVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlags) BoolVar(pointer *bool, short rune, long string, def bool, usage string) {
-	mustDefineFlag(fs, pointer, short, long, def, usage)
+func (fs *CoreFlags) BoolVar(pointer *bool, short rune, long string, def bool, usage string) Flag {
+	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Bool defines a new flag in the flag set, and panics on any error.
@@ -457,8 +570,8 @@ func (fs *CoreFlags) BoolLong(long string, def bool, usage string) *bool {
 }
 
 // StringVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlags) StringVar(pointer *string, short rune, long string, def string, usage string) {
-	mustDefineFlag(fs, pointer, short, long, def, usage)
+func (fs *CoreFlags) StringVar(pointer *string, short rune, long string, def string, usage string) Flag {
+	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // String defines a new flag in the flag set, and panics on any error.
@@ -478,9 +591,65 @@ func (fs *CoreFlags) StringLong(long string, def string, usage string) *string {
 	return fs.String(0, long, def, usage)
 }
 
+// StringListVar defines a new flag in the flag set, and panics on any error.
+//
+// The flag represents a list of strings, where each call to Set adds a new
+// value to the list. Duplicate values are permitted.
+func (fs *CoreFlags) StringListVar(pointer *[]string, short rune, long string, usage string) Flag {
+	return fs.Value(short, long, ffval.NewList(pointer), usage)
+}
+
+// StringList defines a new flag in the flag set, and panics on any error.
+// See [StringListVar] for more details.
+func (fs *CoreFlags) StringList(short rune, long string, usage string) *[]string {
+	var value []string
+	fs.StringListVar(&value, short, long, usage)
+	return &value
+}
+
+// StringListShort defines a new flag in the flag set, and panics on any error.
+// See [StringListVar] for more details.
+func (fs *CoreFlags) StringListShort(short rune, usage string) *[]string {
+	return fs.StringList(short, "", usage)
+}
+
+// StringListLong defines a new flag in the flag set, and panics on any error.
+// See [StringListVar] for more details.
+func (fs *CoreFlags) StringListLong(long string, usage string) *[]string {
+	return fs.StringList(0, long, usage)
+}
+
+// StringSetVar defines a new flag in the flag set, and panics on any error.
+//
+// The flag represents a unique list of strings, where each call to Set adds a
+// new value to the list. Duplicate values are silently dropped.
+func (fs *CoreFlags) StringSetVar(pointer *[]string, short rune, long string, usage string) Flag {
+	return fs.Value(short, long, ffval.NewUniqueList(pointer), usage)
+}
+
+// StringSet defines a new flag in the flag set, and panics on any error.
+// See [StringSetVar] for more details.
+func (fs *CoreFlags) StringSet(short rune, long string, usage string) *[]string {
+	var value []string
+	fs.StringSetVar(&value, short, long, usage)
+	return &value
+}
+
+// StringSetShort defines a new flag in the flag set, and panics on any error.
+// See [StringSetVar] for more details.
+func (fs *CoreFlags) StringSetShort(short rune, usage string) *[]string {
+	return fs.StringSet(short, "", usage)
+}
+
+// StringSetLong defines a new flag in the flag set, and panics on any error.
+// See [StringSetVar] for more details.
+func (fs *CoreFlags) StringSetLong(long string, usage string) *[]string {
+	return fs.StringSet(0, long, usage)
+}
+
 // Float64Var defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlags) Float64Var(pointer *float64, short rune, long string, def float64, usage string) {
-	mustDefineFlag(fs, pointer, short, long, def, usage)
+func (fs *CoreFlags) Float64Var(pointer *float64, short rune, long string, def float64, usage string) Flag {
+	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Float64 defines a new flag in the flag set, and panics on any error.
@@ -501,8 +670,8 @@ func (fs *CoreFlags) Float64Long(long string, def float64, usage string) *float6
 }
 
 // IntVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlags) IntVar(pointer *int, short rune, long string, def int, usage string) {
-	mustDefineFlag(fs, pointer, short, long, def, usage)
+func (fs *CoreFlags) IntVar(pointer *int, short rune, long string, def int, usage string) Flag {
+	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Int defines a new flag in the flag set, and panics on any error.
@@ -523,8 +692,8 @@ func (fs *CoreFlags) IntLong(long string, def int, usage string) *int {
 }
 
 // UintVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlags) UintVar(pointer *uint, short rune, long string, def uint, usage string) {
-	mustDefineFlag(fs, pointer, short, long, def, usage)
+func (fs *CoreFlags) UintVar(pointer *uint, short rune, long string, def uint, usage string) Flag {
+	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Uint defines a new flag in the flag set, and panics on any error.
@@ -545,8 +714,8 @@ func (fs *CoreFlags) UintLong(long string, def uint, usage string) *uint {
 }
 
 // Uint64Var defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlags) Uint64Var(pointer *uint64, short rune, long string, def uint64, usage string) {
-	mustDefineFlag(fs, pointer, short, long, def, usage)
+func (fs *CoreFlags) Uint64Var(pointer *uint64, short rune, long string, def uint64, usage string) Flag {
+	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Uint64 defines a new flag in the flag set, and panics on any error.
@@ -567,8 +736,8 @@ func (fs *CoreFlags) Uint64Long(long string, def uint64, usage string) *uint64 {
 }
 
 // DurationVar defines a new flag in the flag set, and panics on any error.
-func (fs *CoreFlags) DurationVar(pointer *time.Duration, short rune, long string, def time.Duration, usage string) {
-	mustDefineFlag(fs, pointer, short, long, def, usage)
+func (fs *CoreFlags) DurationVar(pointer *time.Duration, short rune, long string, def time.Duration, usage string) Flag {
+	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Duration defines a new flag in the flag set, and panics on any error.
@@ -593,15 +762,7 @@ func (fs *CoreFlags) Func(short rune, long string, fn func(string) error, usage 
 	stdfs := flag.NewFlagSet("flagset-name", flag.ContinueOnError)
 	stdfs.Func("flag-name", "flag-usage", fn)
 	value := stdfs.Lookup("flag-name").Value
-
-	if err := fs.AddFlag(CoreFlagConfig{
-		LongName:  long,
-		ShortName: short,
-		Usage:     usage,
-		Value:     value,
-	}); err != nil {
-		panic(err)
-	}
+	fs.Value(short, long, value, usage)
 }
 
 // FuncShort defines a new flag in the flag set, and panics on any error.
@@ -612,54 +773,6 @@ func (fs *CoreFlags) FuncShort(short rune, fn func(string) error, usage string) 
 // FuncLong defines a new flag in the flag set, and panics on any error.
 func (fs *CoreFlags) FuncLong(long string, fn func(string) error, usage string) {
 	fs.Func(0, long, fn, usage)
-}
-
-func mustDefineFlag[T FlagValueType](fs *CoreFlags, pointer *T, short rune, long string, def T, usage string) {
-	value := MakeFlagValue(def, pointer)
-	if err := fs.AddFlag(CoreFlagConfig{
-		ShortName: short,
-		LongName:  long,
-		Usage:     usage,
-		Value:     value,
-	}); err != nil {
-		panic(err)
-	}
-}
-
-// FlagValueType enumerates certain primitive types that can produce a
-// [flag.Value] via the [MakeFlagValue] helper.
-type FlagValueType interface {
-	bool | float64 | int | uint | uint64 | string | time.Duration
-}
-
-// MakeFlagValue is a helper function that produces a [flag.Value] for certain
-// primitive types. The returned value updates the given pointer when set.
-func MakeFlagValue[T FlagValueType](defaultValue T, pointer *T) flag.Value {
-	var (
-		fs = flag.NewFlagSet("flagset-name", flag.ContinueOnError)
-		n  = "flag-name"  // just used to fetch the value from the flag set
-		u  = "flag-usage" // not actually used
-	)
-	switch x := any(defaultValue).(type) {
-	case bool:
-		fs.BoolVar(any(pointer).(*bool), n, x, u)
-	case float64:
-		fs.Float64Var(any(pointer).(*float64), n, x, u)
-	case int:
-		fs.IntVar(any(pointer).(*int), n, x, u)
-	case uint:
-		fs.UintVar(any(pointer).(*uint), n, x, u)
-	case uint64:
-		fs.Uint64Var(any(pointer).(*uint64), n, x, u)
-	case string:
-		fs.StringVar(any(pointer).(*string), n, x, u)
-	case time.Duration:
-		fs.DurationVar(any(pointer).(*time.Duration), n, x, u)
-	default:
-		panic(fmt.Errorf("unsupported type %T", defaultValue))
-	}
-
-	return fs.Lookup(n).Value
 }
 
 //
@@ -680,8 +793,8 @@ type coreFlag struct {
 
 var _ Flag = (*coreFlag)(nil)
 
-func (f *coreFlag) GetFlagsName() string {
-	return f.flagSet.setName
+func (f *coreFlag) GetFlags() Flags {
+	return f.flagSet
 }
 
 func (f *coreFlag) GetShortName() (rune, bool) {
@@ -721,17 +834,30 @@ func (f *coreFlag) IsSet() bool {
 }
 
 func (f *coreFlag) Reset() error {
+	if r, ok := f.flagValue.(Resetter); ok {
+		if err := r.Reset(); err != nil {
+			return err
+		}
+	}
+
 	if err := f.flagValue.Set(f.defaultValue); err != nil {
 		return err
 	}
 	f.isSet = false
+
 	return nil
 }
 
-func isDuplicateCoreFlag(f1, f2 *coreFlag) bool {
+func (f *coreFlag) IsStdFlag() bool {
+	return f.flagSet.isStdAdapter
+}
+
+func isDuplicateCoreFlag(incoming, existing *coreFlag) bool {
 	var (
-		sameShortName = isValidShortName(f1.shortName) && isValidShortName(f2.shortName) && f1.shortName == f2.shortName
-		sameLongName  = isValidLongName(f1.longName) && isValidLongName(f2.longName) && f1.longName == f2.longName
+		sameShortName = isValidShortName(incoming.shortName) && isValidShortName(existing.shortName) && incoming.shortName == existing.shortName
+		sameLongName  = isValidLongName(incoming.longName) && isValidLongName(existing.longName) && incoming.longName == existing.longName
+		shortIsLong   = isValidShortName(incoming.shortName) && isValidLongName(existing.longName) && len(existing.longName) == 1 && string(incoming.shortName) == existing.longName
+		longIsShort   = isValidLongName(incoming.longName) && isValidShortName(existing.shortName) && len(incoming.longName) == 1 && incoming.longName == string(existing.shortName)
 	)
-	return sameShortName || sameLongName
+	return sameShortName || sameLongName || shortIsLong || longIsShort
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/examples/objectctl/pkg/rootcmd"
+	"github.com/peterbourgon/ff/v4/ffval"
 )
 
 type DeleteConfig struct {
@@ -20,10 +21,15 @@ func New(parent *rootcmd.RootConfig) *DeleteConfig {
 	var cfg DeleteConfig
 	cfg.RootConfig = parent
 	cfg.Flags = ff.NewFlags("delete").SetParent(parent.Flags)
-	cfg.Flags.BoolVar(&cfg.Force, 0, "force", false, "force delete")
+	cfg.Flags.AddFlag(ff.CoreFlagConfig{
+		LongName:  "force",
+		Value:     ffval.NewValue(&cfg.Force),
+		Usage:     "force delete",
+		NoDefault: true,
+	})
 	cfg.Command = &ff.Command{
 		Name:      "delete",
-		Usage:     "objectctl delete <KEY>",
+		Usage:     "objectctl delete [FLAGS] <KEY>",
 		ShortHelp: "delete an object",
 		Flags:     cfg.Flags,
 		Exec:      cfg.Exec,

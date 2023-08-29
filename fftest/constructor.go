@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/peterbourgon/ff/v4"
+	"github.com/peterbourgon/ff/v4/ffval"
 )
 
 // Constructor produces a flag set, and a set of vars managed by that flag set.
@@ -33,7 +34,7 @@ var CoreConstructor = Constructor{
 		fs.BoolVar(&v.B, 'b', "bflag", def.B, "bool b")
 		fs.BoolVar(&v.C, 'c', "cflag", def.C, "bool c")
 		fs.DurationVar(&v.D, 'd', "dur", def.D, "time.Duration")
-		fs.AddFlag(ff.CoreFlagConfig{ShortName: 'x', LongName: "xxx", Placeholder: "STR", Usage: "collection of strings (repeatable)", Value: &v.X})
+		fs.AddFlag(ff.CoreFlagConfig{ShortName: 'x', LongName: "xxx", Placeholder: "STR", Usage: "collection of strings (repeatable)", Value: ffval.NewList(&v.X)})
 		return fs, &v
 	},
 }
@@ -51,7 +52,7 @@ var StdConstructor = Constructor{
 		fs.BoolVar(&v.B, "b", def.B, "bool b")
 		fs.BoolVar(&v.C, "c", def.C, "bool c")
 		fs.DurationVar(&v.D, "d", def.D, "time.Duration")
-		fs.Var(&v.X, "x", "collection of strings (repeatable)")
+		fs.Var(ffval.NewList(&v.X), "x", "collection of strings (repeatable)")
 		return ff.NewStdFlags(fs), &v
 	},
 }
@@ -86,7 +87,7 @@ func NewNestedConstructor(delim string) Constructor {
 			fs.BoolVar(&v.A, akey, def.A, "bool var a")
 			fs.BoolVar(&v.B, bkey, def.B, "bool var b")
 			fs.BoolVar(&v.C, ckey, def.C, "bool var c")
-			fs.Var(&v.X, xkey, "x var")
+			fs.Var(ffval.NewList(&v.X), xkey, "x var")
 			return ff.NewStdFlags(fs), &v
 		},
 	}

@@ -19,14 +19,14 @@ fs := ff.NewFlags("myprogram")
 var (
 	listenAddr = fs.StringLong("listen", "localhost:8080", "listen address")
 	refresh    = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
-	debug      = fs.Bool('d', "debug", "log debug information")
+	debug      = fs.Bool('d', "debug", false, "log debug information")
 	_          = fs.StringLong("config", "", "config file (optional)")
 )
 ```
 
 You can also use a standard library flag set. If you do, be sure to use the
-ContinueOnError error handling strategy. Other options either panic or terminate
-the program on parse errors. Rude!
+[flag.ContinueOnError] error handling strategy. Other options either panic or
+terminate the program on parse errors. Rude!
 
 ```go
 fs := flag.NewFlagSet("myprogram", flag.ContinueOnError)
@@ -38,8 +38,8 @@ var (
 )
 ```
 
-Once you have a set of flags, use ff.Parse to parse it. Options can be provided
-to influence parsing behavior.
+Once you have a set of flags, use [ff.Parse] to parse it. Options can be
+provided to control parsing behavior.
 
 ```go
 err := ff.Parse(fs, os.Args[1:],
@@ -50,24 +50,24 @@ err := ff.Parse(fs, os.Args[1:],
 ```
 
 Flags are always set from the provided command-line arguments first. In the
-above example, flags will also be set from env vars beginning with `MY_PROGRAM`.
-Finally, if the user specifies a config file, flags will be set from values in
-that file, as parsed by ff.PlainParser.
+above example, flags will also be set from env vars beginning with `MY_PROGRAM`,
+and then, if the user specifies a config file, from values in that file, as
+parsed by [ff.PlainParser].
 
 ## Environment variables
 
-It's possible to take runtime configuration from env vars. The options
+It's possible to take runtime configuration from the environment. The options
 [WithEnvVars][withenvvars] and [WithEnvVarPrefix][withenvvarprefix] enable this
-feature and determine how env var keys are mapped to flag names.
+feature and determine how flag names are mapped to environment variable names.
 
 [withenvvars]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVars
 [withenvvarprefix]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVarPrefix
 
 ```go
-fs := flag.NewFlagSet("myservice", flag.ContinueOnError)
+fs := ff.NewFlags("myservice")
 var (
-	port  = fs.Int("port", 8080, "listen port for server (also via PORT)")
-	debug = fs.Bool("debug", false, "log debug information (also via DEBUG)")
+	port  = fs.Int('p', "port", 8080, "listen port for server (also via PORT)")
+	debug = fs.Bool('d', "debug", false, "log debug information (also via DEBUG)")
 )
 ff.Parse(fs, os.Args[1:], ff.WithEnvVars())
 fmt.Printf("port %d, debug %v\n", *port, *debug)
@@ -82,7 +82,7 @@ port 1234, debug true
 
 ## Config files
 
-It's also possible to take runtime configuration from config files. The options
+It's possible to take runtime configuration from config files. The options
 [WithConfigFile][withconfigfile], [WithConfigFileFlag][withconfigfileflag], and
 [WithConfigFileParser][withconfigfileparser] control how config files are
 specified and parsed. This module includes support for JSON, YAML, TOML, and
@@ -93,11 +93,11 @@ specified and parsed. This module includes support for JSON, YAML, TOML, and
 [withconfigfileparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileParser
 
 ```go
-fs := flag.NewFlagSet("myservice", flag.ContinueOnError)
+fs := ff.NewFlags("myservice")
 var (
-	port  = fs.Int("port", 8080, "listen port for server (also via PORT)")
-	debug = fs.Bool("debug", false, "log debug information (also via DEBUG)")
-	_     = fs.String("config", "", "config file")
+	port  = fs.IntLong("port", 8080, "listen port for server")
+	debug = fs.BoolLong("debug", false, "log debug information")
+	_     = fs.StringLong("config", "", "config file")
 )
 ff.Parse(fs, os.Args[1:], ff.WithConfigFileFlag("config"), ff.WithConfigFileParser(ff.PlainParser))
 fmt.Printf("port %d, debug %v\n", *port, *debug)
@@ -113,15 +113,15 @@ port 1234, debug true
 ## Priority
 
 Command-line args have the highest priority, because they're explicitly given to
-each running instance of a program by the user -- we call command-line args the
+each running instance of a program by the user. Think of command-line args as the
 "user" configuration.
 
-Envioronment variables have the next-highest priority, because they reflect
-configuration set in the runtime context -- we call env vars the "session"
+Environment variables have the next-highest priority, because they reflect
+configuration set in the runtime context. Think of env vars as the "session"
 configuration.
 
 Config files have the lowest priority, because they represent config that's
-static to the host -- we call config files the "host" configuration.
+static to the host. Think of config files as the "host" configuration.
 
 # Commands
 
@@ -146,4 +146,4 @@ one-stop-shop for everything a command-line application may need. Features like
 tab completion, colorized output, etc. are orthogonal to command tree parsing,
 and can be easily provided by the consumer.
 
-See [the examples directory](examples/) for sample CLI applications.
+See [the examples directory](examples/) for some CLI tools built with commands.

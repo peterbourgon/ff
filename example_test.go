@@ -9,7 +9,7 @@ import (
 	"github.com/peterbourgon/ff/v4"
 )
 
-func ExampleParse() {
+func ExampleParse_args() {
 	fs := ff.NewFlags("myprogram")
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")

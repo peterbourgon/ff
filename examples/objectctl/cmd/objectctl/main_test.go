@@ -96,8 +96,7 @@ func TestExec(t *testing.T) {
 }
 
 const rootUsage = `
-COMMAND
-  objectctl
+objectctl
 
 USAGE
   objectctl [FLAGS] <SUBCOMMAND> ...
@@ -109,22 +108,21 @@ SUBCOMMANDS
 
 FLAGS
       --token STRING   secret token for object API
-  -v, --verbose        log verbose output (default: false)
+  -v, --verbose        log verbose output
 `
 
 const listUsage = `
-COMMAND
-  list -- list available objects
+list -- list available objects
 
 USAGE
   objectctl list [FLAGS]
 
 FLAGS
-  -a, --atime   include last access time of each object (default: false)
+  -a, --atime          include last access time of each object
 
 FLAGS (objectctl)
       --token STRING   secret token for object API
-  -v, --verbose        log verbose output (default: false)
+  -v, --verbose        log verbose output
 `
 
 const listOutput = `

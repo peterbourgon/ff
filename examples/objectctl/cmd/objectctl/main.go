@@ -13,6 +13,7 @@ import (
 	"github.com/peterbourgon/ff/v4/examples/objectctl/pkg/listcmd"
 	"github.com/peterbourgon/ff/v4/examples/objectctl/pkg/objectapi"
 	"github.com/peterbourgon/ff/v4/examples/objectctl/pkg/rootcmd"
+	"github.com/peterbourgon/ff/v4/ffhelp"
 )
 
 func main() {
@@ -42,7 +43,7 @@ func exec(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	)
 
 	if err := root.Command.Parse(args); err != nil {
-		fmt.Fprintf(stderr, "\n%s\n\n", ff.DefaultCommandUsage(root.Command))
+		fmt.Fprintf(stderr, "%s\n", ffhelp.CommandHelp(root.Command))
 		return fmt.Errorf("parse: %w", err)
 	}
 
@@ -54,7 +55,7 @@ func exec(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	root.Client = client
 
 	if err := root.Command.Run(ctx); err != nil {
-		fmt.Fprintf(stderr, "\n%s\n\n", ff.DefaultCommandUsage(root.Command))
+		fmt.Fprintf(stderr, "%s\n", ffhelp.CommandHelp(root.Command))
 		return fmt.Errorf("run: %w", err)
 	}
 
