@@ -56,9 +56,9 @@ env vars beginning with `MY_PROGRAM`, and, finally, if the user specifies a
 config file, from values in that file, as parsed by PlainParser.
 
 Unlike other flag packages, help/usage text is not automatically printed as a
-side effect of parse. Parse failures, including when the user requests help, are
-reported as parse errors. Callers are responsible for checking that error, and
-print help/usage text as appropriate.
+side effect of parse. Instead, when a user requests help via e.g. -h or --help,
+it's reported as a parse error. Callers are always responsible for checking
+parse errors, and printing help/usage text as appropriate.
 
 ```go
 if errors.Is(err, ff.ErrHelp) {
