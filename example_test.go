@@ -111,3 +111,25 @@ func ExampleParse_stdlib() {
 	// refresh=2s
 	// debug=true
 }
+
+func ExampleParse_help() {
+	fs := ff.NewFlags("myprogram")
+	var (
+		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
+		refresh = fs.DurationLong("refresh", 15*time.Second, "refresh interval")
+		debug   = fs.BoolLong("debug", false, "log debug information")
+	)
+
+	err := ff.Parse(fs, []string{"-h"})
+
+	fmt.Printf("err=%v\n", err)
+	fmt.Printf("listen=%v\n", *listen)
+	fmt.Printf("refresh=%v\n", *refresh)
+	fmt.Printf("debug=%v\n", *debug)
+
+	// Output:
+	// err=parse args: flag: help requested
+	// listen=localhost:8080
+	// refresh=15s
+	// debug=false
+}

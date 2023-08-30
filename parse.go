@@ -67,7 +67,7 @@ func parseFlags(fs Flags, args []string, options ...Option) error {
 	// First priority: the commandline, i.e. the user.
 	{
 		if err := fs.Parse(args); err != nil {
-			return fmt.Errorf("parse arguments: %w", err)
+			return fmt.Errorf("parse args: %w", err)
 		}
 
 		markProvided()
