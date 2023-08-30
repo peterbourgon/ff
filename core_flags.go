@@ -460,7 +460,7 @@ func (cfg CoreFlagConfig) getPlaceholder() string {
 
 	// Bool flags with default value false should have empty placeholders.
 	if bf, ok := cfg.Value.(IsBoolFlagger); ok && bf.IsBoolFlag() {
-		if b, err := strconv.ParseBool(fmt.Sprint(cfg.Value)); err == nil && !b {
+		if b, err := strconv.ParseBool(cfg.Value.String()); err == nil && !b {
 			return ""
 		}
 	}

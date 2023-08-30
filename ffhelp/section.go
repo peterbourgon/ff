@@ -63,7 +63,7 @@ func (s Section) WriteTo(w io.Writer) (n int64, _ error) {
 	return n, nil
 }
 
-// String returns a multi-line string representation ending with a newline.
+// String returns a multi-line string representing the section.
 func (s Section) String() string {
 	var buf bytes.Buffer
 	if _, err := s.WriteTo(&buf); err != nil {
@@ -72,7 +72,8 @@ func (s Section) String() string {
 	return buf.String()
 }
 
-// NewSection returns a section with the given title and lines.
+// NewSection returns a section with the given title and lines, using
+// [DefaultLinePrefix]
 func NewSection(title string, lines ...string) Section {
 	return Section{
 		Title:      title,
@@ -81,14 +82,15 @@ func NewSection(title string, lines ...string) Section {
 	}
 }
 
-// NewUntitledSection returns a section with no title and the given lines.
+// NewUntitledSection returns a section with no title and the given lines, with
+// no line prefix.
 func NewUntitledSection(lines ...string) Section {
 	return Section{
 		Lines: lines,
 	}
 }
 
-// NewFlagsSection produces a single FLAGS section representing every flag
+// NewFlagsSection returns a single FLAGS section representing every flag
 // available to fs. Each flag is rendered via [FlagSpec].
 func NewFlagsSection(fs ff.Flags) Section {
 	ss := newFlagSections(flagSectionsConfig{Flags: fs, SingleSection: true})
