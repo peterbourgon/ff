@@ -521,18 +521,18 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 	}
 
 	f := &coreFlag{
-		flagSet:      fs,
-		shortName:    cfg.ShortName,
-		longName:     cfg.LongName,
-		placeholder:  placeholder,
-		defaultValue: defaultValue,
-		usageText:    cfg.Usage,
-		flagValue:    cfg.Value,
-		isBoolFlag:   isBoolFlag,
+		flagSet:     fs,
+		shortName:   cfg.ShortName,
+		longName:    cfg.LongName,
+		placeholder: placeholder,
+		defaultval:  defaultValue,
+		usageval:    cfg.Usage,
+		flagValue:   cfg.Value,
+		isBoolFlag:  isBoolFlag,
 	}
 
 	for _, existing := range fs.flagSlice {
-		if isDuplicateCoreFlag(f, existing) {
+		if isDuplicate(f, existing) {
 			return nil, newFlagError(f, ErrDuplicateFlag)
 		}
 	}
@@ -799,15 +799,15 @@ func (fs *CoreFlags) FuncLong(long string, fn func(string) error, usage string) 
 //
 
 type coreFlag struct {
-	flagSet      *CoreFlags
-	shortName    rune
-	longName     string
-	placeholder  string
-	defaultValue string
-	usageText    string
-	flagValue    flag.Value
-	isBoolFlag   bool
-	isSet        bool
+	flagSet     *CoreFlags
+	shortName   rune
+	longName    string
+	placeholder string
+	defaultval  string
+	usageval    string
+	flagValue   flag.Value
+	isBoolFlag  bool
+	isSet       bool
 }
 
 var _ Flag = (*coreFlag)(nil)
@@ -829,11 +829,11 @@ func (f *coreFlag) GetPlaceholder() string {
 }
 
 func (f *coreFlag) GetDefault() string {
-	return f.defaultValue
+	return f.defaultval
 }
 
 func (f *coreFlag) GetUsage() string {
-	return f.usageText
+	return f.usageval
 }
 
 func (f *coreFlag) SetValue(s string) error {
@@ -859,7 +859,7 @@ func (f *coreFlag) Reset() error {
 		}
 	}
 
-	if err := f.flagValue.Set(f.defaultValue); err != nil {
+	if err := f.flagValue.Set(f.defaultval); err != nil {
 		return err
 	}
 	f.isSet = false
@@ -871,12 +871,13 @@ func (f *coreFlag) IsStdFlag() bool {
 	return f.flagSet.isStdAdapter
 }
 
-func isDuplicateCoreFlag(incoming, existing *coreFlag) bool {
+func isDuplicate(incoming, existing *coreFlag) bool {
 	var (
 		sameShortName = isValidShortName(incoming.shortName) && isValidShortName(existing.shortName) && incoming.shortName == existing.shortName
 		sameLongName  = isValidLongName(incoming.longName) && isValidLongName(existing.longName) && incoming.longName == existing.longName
 		shortIsLong   = isValidShortName(incoming.shortName) && isValidLongName(existing.longName) && len(existing.longName) == 1 && string(incoming.shortName) == existing.longName
 		longIsShort   = isValidLongName(incoming.longName) && isValidShortName(existing.shortName) && len(incoming.longName) == 1 && incoming.longName == string(existing.shortName)
+		isDuplicate   = sameShortName || sameLongName || shortIsLong || longIsShort
 	)
-	return sameShortName || sameLongName || shortIsLong || longIsShort
+	return isDuplicate
 }

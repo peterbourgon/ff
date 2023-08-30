@@ -1,11 +1,11 @@
-package internal_test
+package ffdata_test
 
 import (
 	"encoding/json"
 	"strings"
 	"testing"
 
-	"github.com/peterbourgon/ff/v4/internal"
+	"github.com/peterbourgon/ff/v4/internal/ffdata"
 )
 
 func TestTraverseMap(t *testing.T) {
@@ -122,7 +122,7 @@ func TestTraverseMap(t *testing.T) {
 				return nil
 			}
 
-			if err := internal.TraverseMap(test.M, test.Delim, observe); err != nil {
+			if err := ffdata.TraverseMap(test.M, test.Delim, observe); err != nil {
 				t.Fatal(err)
 			}
 

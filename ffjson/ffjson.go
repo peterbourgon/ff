@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/peterbourgon/ff/v4/internal"
+	"github.com/peterbourgon/ff/v4/internal/ffdata"
 )
 
 // Parse is a helper function that uses a default parser.
@@ -36,5 +36,5 @@ func (p Parser) Parse(r io.Reader, set func(name, value string) error) error {
 		return err
 	}
 
-	return internal.TraverseMap(m, p.Delimiter, set)
+	return ffdata.TraverseMap(m, p.Delimiter, set)
 }
