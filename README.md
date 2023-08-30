@@ -51,20 +51,22 @@ err := ff.Parse(fs, os.Args[1:],
 )
 ```
 
-In the above example, flags are set from the provided command-line arguments
-first; from env vars beginning with `MY_PROGRAM` next; and finally, if the user
-specifies a config file, from values in that file, as parsed by PlainParser.
+Here, flags are first set from the provided command-line arguments, then from
+env vars beginning with `MY_PROGRAM`, and, finally, if the user specifies a
+config file, from values in that file, as parsed by PlainParser.
 
-Unlike other flag packages, help text is not automatically printed to stdout or
-stderr as a side effect of parsing. The error signals when the user is
-requesting help, or parsing fails for any reason.
+Unlike other flag packages, help/usage text is not automatically printed as a
+side effect of parse. Parse failures, including when the user requests help, are
+reported as parse errors. Callers are responsible for checking that error, and
+print help/usage text as appropriate.
 
 ```go
 if errors.Is(err, ff.ErrHelp) {
-	fmt.Fprintf(os.Stderr, ffhelp.ForFlags(fs))
-	return nil
+	fmt.Fprint(os.Stderr, ffhelp.Flags(fs))
+	os.Exit(0)
 } else if err != nil {
-	return err
+	fmt.Fprintf(os.Stderr, "error: %v\n", )
+	os.Exit(1)
 }
 ```
 
