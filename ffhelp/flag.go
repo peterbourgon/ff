@@ -8,16 +8,14 @@ import (
 	"github.com/peterbourgon/ff/v4"
 )
 
-// Flag wraps [ff.Flag] to implement [fmt.Formatter]. It's relatively low-level,
-// most users should prefer higher-level helper functions.
+// Flag wraps [ff.Flag] to implement [fmt.Formatter]. It's relatively low-level.
+// Most consumers are probably better served by higher-level helpers.
 type Flag struct{ ff.Flag }
 
-// WrapFlag wraps the provided [ff.Flag] with [Flag], allowing it to be rendered
-// as a string via [Flag.Format].
+// WrapFlag lets you write ffhelp.WrapFlag(f) instead of ffhelp.Flag{Flag: f}.
 func WrapFlag(f ff.Flag) Flag { return Flag{Flag: f} }
 
-// FormatFlag wraps the provided [ff.Flag] with a [Flag], and formats the flag
-// according to the provided format string.
+// FormatFlag is a simple helper to format a flag in a single motion.
 func FormatFlag(f ff.Flag, format string) string { return fmt.Sprintf(format, Flag{Flag: f}) }
 
 // Format implements [fmt.Formatter] with support for the following verbs.
@@ -125,7 +123,7 @@ func (f Flag) Format(s fmt.State, verb rune) {
 // string and the default value (if non-empty).
 type FlagSpec struct {
 	Flag ff.Flag
-	Args string // "-f, --foo STR"
+	Args string // "-f, --foo STRING"
 	Help string // "value of foo parameter (default: bar)"
 }
 

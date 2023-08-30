@@ -34,7 +34,7 @@ func main() {
 	}
 }
 
-func exec(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+func exec(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (err error) {
 	var (
 		root = rootcmd.New(stdout, stderr)
 		_    = createcmd.New(root)
@@ -42,8 +42,13 @@ func exec(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 		_    = listcmd.New(root)
 	)
 
+	defer func() {
+		if err != nil {
+			fmt.Fprintf(stderr, "\n%s\n", ffhelp.Command(root.Command))
+		}
+	}()
+
 	if err := root.Command.Parse(args); err != nil {
-		fmt.Fprintf(stderr, "%s\n", ffhelp.CommandHelp(root.Command))
 		return fmt.Errorf("parse: %w", err)
 	}
 
@@ -55,7 +60,6 @@ func exec(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	root.Client = client
 
 	if err := root.Command.Run(ctx); err != nil {
-		fmt.Fprintf(stderr, "%s\n", ffhelp.CommandHelp(root.Command))
 		return fmt.Errorf("run: %w", err)
 	}
 

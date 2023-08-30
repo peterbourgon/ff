@@ -96,7 +96,7 @@ func TestExec(t *testing.T) {
 }
 
 const rootUsage = `
-objectctl
+objectctl -- control objects
 
 USAGE
   objectctl [FLAGS] <SUBCOMMAND> ...

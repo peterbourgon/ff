@@ -32,9 +32,10 @@ func New(stdout, stderr io.Writer) *RootConfig {
 		NoDefault: true,
 	})
 	cfg.Command = &ff.Command{
-		Name:  "objectctl",
-		Usage: "objectctl [FLAGS] <SUBCOMMAND> ...",
-		Flags: cfg.Flags,
+		Name:      "objectctl",
+		ShortHelp: "control objects",
+		Usage:     "objectctl [FLAGS] <SUBCOMMAND> ...",
+		Flags:     cfg.Flags,
 	}
 	return &cfg
 }

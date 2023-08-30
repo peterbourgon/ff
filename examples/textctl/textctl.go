@@ -66,16 +66,10 @@ func main() {
 	rootCmd.Subcommands = append(rootCmd.Subcommands, countCmd) // add the count command underneath the root command
 
 	err := rootCmd.ParseAndRun(context.Background(), os.Args[1:])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", ffhelp.CommandHelp(rootCmd))
-		var (
-			isHelp    = errors.Is(err, ff.ErrHelp)
-			isNoExec  = errors.Is(err, ff.ErrNoExec)
-			trueError = !isHelp && !isNoExec
-		)
-		if trueError {
-			fmt.Fprintf(os.Stderr, "error: %s\n", err)
-			os.Exit(1)
-		}
+	if errors.Is(err, ff.ErrHelp) || errors.Is(err, ff.ErrNoExec) {
+		fmt.Fprintf(os.Stderr, "\n%s\n", ffhelp.Command(rootCmd))
+	} else if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %s\n", err)
+		os.Exit(1)
 	}
 }

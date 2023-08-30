@@ -33,55 +33,6 @@ type Section struct {
 	LineColumns bool
 }
 
-// NewSection returns a section with the given title and lines.
-func NewSection(title string, lines ...string) *Section {
-	return &Section{
-		Title:      title,
-		Lines:      lines,
-		LinePrefix: DefaultLinePrefix,
-	}
-}
-
-// NewUntitledSection returns a section with only the given lines, and no
-// title.
-func NewUntitledSection(lines ...string) *Section {
-	return &Section{
-		Lines: lines,
-	}
-}
-
-// NewFlagsSection returns a section with the title "FLAGS", and one line for
-// every flag defined in the provided set of flags, via [FlagSpec].
-func NewFlagsSection(fs ff.Flags) *Section {
-	sections := makeFlagSections(flagSectionsConfig{
-		Flags:         fs,
-		SingleSection: true,
-	})
-	if len(sections) != 1 {
-		panic(fmt.Errorf("expected 1 section, got %d", len(sections)))
-	}
-	return sections[0]
-}
-
-// NewSubcommandsSection returns a section with the title "SUBCOMMANDS", and one
-// line for every subcommand in the slice. Lines consist of the subcommand name
-// and the ShortHelp for that subcommand, in a tab-delimited columnar format.
-func NewSubcommandsSection(subcommands []*ff.Command) *Section {
-	var lines []string
-	for _, sc := range subcommands {
-		lines = append(lines, fmt.Sprintf("%s\t%s\n", sc.Name, sc.ShortHelp))
-	}
-	if len(lines) <= 0 {
-		lines = append(lines, "(no subcommands)")
-	}
-	return &Section{
-		Title:       "SUBCOMMANDS",
-		Lines:       lines,
-		LinePrefix:  DefaultLinePrefix,
-		LineColumns: true,
-	}
-}
-
 // WriteTo implements [io.WriterTo], always ending with a newline.
 func (s Section) WriteTo(w io.Writer) (n int64, _ error) {
 	if s.Title != "" {
@@ -121,112 +72,56 @@ func (s Section) String() string {
 	return buf.String()
 }
 
-//
-//
-//
-
-// Sections is an ordered list of [Section] values, rendered together and each
-// separated by a single blank line.
-type Sections []*Section
-
-// NewFlagsSections returns a list of sections describing the provided flags.
-//
-// The first section is an untitled section containing [ff.Flags.GetName]. If
-// summary is non-empty, it will be included as a suffix, after two hyphens.
-//
-// If detail string(s) are provided, the next section will be another untitled
-// section, containing only those detail strings as the lines.
-//
-// The final section(s) are titled "FLAGS", or "FLAGS (name)" in the case of
-// parent flag sets. Every unique flag set observed by a call to [ff.Flags.Walk]
-// will correspond to a separate flags section in the returned value.
-func NewFlagsSections(fs ff.Flags, summary string, details ...string) Sections {
-	var sections Sections
-
-	name := fs.GetName()
-	if summary != "" {
-		name = fmt.Sprintf("%s -- %s", name, summary)
+// NewSection returns a section with the given title and lines.
+func NewSection(title string, lines ...string) Section {
+	return Section{
+		Title:      title,
+		Lines:      lines,
+		LinePrefix: DefaultLinePrefix,
 	}
-	sections = append(sections, NewUntitledSection(name))
-
-	if len(details) > 0 {
-		sections = append(sections, NewUntitledSection(details...))
-	}
-
-	sections = append(sections, makeFlagSections(flagSectionsConfig{
-		Flags:           fs,
-		SharedAlignment: true,
-	})...)
-
-	return sections
 }
 
-// NewCommandSections returns a slice of sections describing the given command.
-func NewCommandSections(cmd *ff.Command) Sections {
-	var sections Sections
-
-	if selected := cmd.GetSelected(); selected != nil {
-		cmd = selected
+// NewUntitledSection returns a section with no title and the given lines.
+func NewUntitledSection(lines ...string) Section {
+	return Section{
+		Lines: lines,
 	}
-
-	commandTitle := cmd.Name
-	if cmd.ShortHelp != "" {
-		commandTitle = fmt.Sprintf("%s -- %s", commandTitle, cmd.ShortHelp)
-	}
-	sections = append(sections, NewUntitledSection(commandTitle))
-
-	if cmd.Usage != "" {
-		sections = append(sections, NewSection("USAGE", cmd.Usage))
-	}
-
-	if cmd.LongHelp != "" {
-		sections = append(sections, &Section{Lines: []string{cmd.LongHelp}})
-	}
-
-	if len(cmd.Subcommands) > 0 {
-		sections = append(sections, NewSubcommandsSection(cmd.Subcommands))
-	}
-
-	sections = append(sections, makeFlagSections(flagSectionsConfig{
-		Flags:           cmd.Flags,
-		SharedAlignment: true,
-	})...)
-
-	return sections
 }
 
-// WriteTo implements [io.WriterTo].
-func (ss Sections) WriteTo(w io.Writer) (n int64, _ error) {
-	if len(ss) <= 0 {
-		return 0, nil
+// NewFlagsSection produces a single FLAGS section representing every flag
+// available to fs. Each flag is rendered via [FlagSpec].
+func NewFlagsSection(fs ff.Flags) Section {
+	ss := newFlagSections(flagSectionsConfig{Flags: fs, SingleSection: true})
+	if len(ss) != 1 {
+		panic(fmt.Errorf("expected 1 section, got %d", len(ss)))
 	}
-
-	for i, s := range ss {
-		if i > 0 {
-			nn, err := fmt.Fprintf(w, "\n")
-			if err != nil {
-				return n, err
-			}
-			n += int64(nn)
-		}
-
-		nn, err := s.WriteTo(w) // always ends in \n
-		if err != nil {
-			return n, err
-		}
-		n += int64(nn)
-	}
-
-	return n, nil
+	return ss[0]
 }
 
-// String implements [fmt.Stringer].
-func (ss Sections) String() string {
-	var buf bytes.Buffer
-	if _, err := ss.WriteTo(&buf); err != nil {
-		return fmt.Sprintf("%%!ERROR<%v>", err)
+// NewFlagsSections returns FLAG section(s) representing every flag available to
+// fs. Flags are grouped into sections according to their parent flag set. Each
+// flag is rendered via [FlagSpec].
+func NewFlagsSections(fs ff.Flags) []Section {
+	return newFlagSections(flagSectionsConfig{Flags: fs, SharedAlignment: true})
+}
+
+// NewSubcommandsSection returns a section with the title "SUBCOMMANDS", and one
+// line for every subcommand in the slice. Lines consist of the subcommand name
+// and the ShortHelp for that subcommand, in a tab-delimited columnar format.
+func NewSubcommandsSection(subcommands []*ff.Command) Section {
+	var lines []string
+	for _, sc := range subcommands {
+		lines = append(lines, fmt.Sprintf("%s\t%s\n", sc.Name, sc.ShortHelp))
 	}
-	return buf.String()
+	if len(lines) <= 0 {
+		lines = append(lines, "(no subcommands)")
+	}
+	return Section{
+		Title:       "SUBCOMMANDS",
+		Lines:       lines,
+		LinePrefix:  DefaultLinePrefix,
+		LineColumns: true,
+	}
 }
 
 //
@@ -235,13 +130,12 @@ func (ss Sections) String() string {
 
 type flagSectionsConfig struct {
 	Flags           ff.Flags
-	SingleSection   bool // treat all parent flags as belonging to the base flag set
-	AlwaysSubtitle  bool // append fs.GetName() to every title
+	SingleSection   bool // treat all flags as belonging to the base flag set
+	AlwaysSubtitle  bool // add the flag set name to every section title
 	SharedAlignment bool // use the same column spacing across all sections
 }
 
-// makeFlagSections produces FLAGS sections (only) for a flag set.
-func makeFlagSections(cfg flagSectionsConfig) Sections {
+func newFlagSections(cfg flagSectionsConfig) []Section {
 	var (
 		index = map[string][]ff.Flag{}
 		order = []string{}
@@ -292,7 +186,7 @@ func makeFlagSections(cfg flagSectionsConfig) Sections {
 
 	var (
 		lines    = splitLines(buffer.String())
-		sections = Sections{}
+		sections = []*Section{}
 	)
 	for i, name := range order {
 		flags := index[name]
@@ -354,7 +248,12 @@ func makeFlagSections(cfg flagSectionsConfig) Sections {
 		}
 	}
 
-	return sections
+	flat := make([]Section, len(sections))
+	for i := range sections {
+		flat[i] = *sections[i]
+	}
+
+	return flat
 }
 
 //

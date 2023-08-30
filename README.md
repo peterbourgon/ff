@@ -40,8 +40,8 @@ var (
 )
 ```
 
-Once you have a set of flags, you can parse them as follows; options can be
-provided to control parse behavior.
+Once you have a set of flags, you can parse them as follows, using options to
+control parse behavior.
 
 ```go
 err := ff.Parse(fs, os.Args[1:],
@@ -54,6 +54,19 @@ err := ff.Parse(fs, os.Args[1:],
 In the above example, flags are set from the provided command-line arguments
 first; from env vars beginning with `MY_PROGRAM` next; and finally, if the user
 specifies a config file, from values in that file, as parsed by PlainParser.
+
+Unlike other flag packages, help text is not automatically printed to stdout or
+stderr as a side effect of parsing. The error signals when the user is
+requesting help, or parsing fails for any reason.
+
+```go
+if errors.Is(err, ff.ErrHelp) {
+	fmt.Fprintf(os.Stderr, ffhelp.ForFlags(fs))
+	return nil
+} else if err != nil {
+	return err
+}
+```
 
 ## Environment variables
 

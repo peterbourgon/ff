@@ -46,7 +46,7 @@ func TestSection_StdFlags(t *testing.T) {
 
 	fs, _ := fftest.StdConstructor.Make(fftest.Vars{A: true})
 	want := strings.TrimSpace(stdFlagsSectionHelp)
-	have := strings.TrimSpace(ffhelp.FlagsHelp(fs))
+	have := strings.TrimSpace(ffhelp.Flags(fs).String())
 	if want != have {
 		t.Errorf("\n%s", fftest.DiffString(want, have))
 	}
@@ -76,7 +76,7 @@ func TestSections_Command(t *testing.T) {
 	t.Run("unparsed", func(t *testing.T) {
 		testcmd := makeTestCommand(t)
 		want := strings.TrimSpace(testCommandRootHelp)
-		have := strings.TrimSpace(ffhelp.NewCommandSections(testcmd).String())
+		have := strings.TrimSpace(ffhelp.Command(testcmd).String())
 		if want != have {
 			t.Errorf("\n%s", fftest.DiffString(want, have))
 		}
@@ -124,7 +124,7 @@ func TestSections_Command(t *testing.T) {
 			}
 
 			want := strings.TrimSpace(test.want)
-			have := strings.TrimSpace(ffhelp.CommandHelp(testcmd))
+			have := strings.TrimSpace(ffhelp.Command(testcmd).String())
 			if want != have {
 				t.Errorf("\n%s", fftest.DiffString(want, have))
 			}

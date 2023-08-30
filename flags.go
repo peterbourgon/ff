@@ -94,13 +94,20 @@ type Flag interface {
 	IsSet() bool
 }
 
-// Resetter may optionally be provided by implementations of [Flags].
+// Resetter may optionally be implemented by [Flags].
 type Resetter interface {
 	// Reset should revert the flag set to its initial state, including all
 	// flags defined in the flag set. If reset returns successfully, the flag
 	// set should be as if it were newly constructed: IsParsed should return
 	// false, GetArgs should return an empty slice, etc.
 	Reset() error
+}
+
+// Describer may optionally be implemented by [Flags].
+type Describer interface {
+	// GetDescription returns a string that can be used instead of the flag set
+	// name in help output, documentation, etc.
+	GetDescription() string
 }
 
 // IsBoolFlagger is used to identify flag values representing booleans.

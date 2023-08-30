@@ -18,31 +18,31 @@ func TestFlagsHelp(t *testing.T) {
 		fs.String('s', "str", "", "string flag")
 
 		want := strings.TrimSpace(testFlagsHelpBasic)
-		have := strings.TrimSpace(ffhelp.FlagsHelp(fs))
+		have := strings.TrimSpace(ffhelp.Flags(fs).String())
 		if want != have {
 			t.Errorf("\n%s", fftest.DiffString(want, have))
 		}
 	})
 
 	t.Run("summary", func(t *testing.T) {
-		fs := ff.NewFlags("fftest")
+		fs := ff.NewFlags("fftest").SetDescription("fftest -- do something interesting")
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
 		want := strings.TrimSpace(testFlagsHelpSummary)
-		have := strings.TrimSpace(ffhelp.FlagsHelpSummary(fs, "do something interesting"))
+		have := strings.TrimSpace(ffhelp.Flags(fs).String())
 		if want != have {
 			t.Errorf("\n%s", fftest.DiffString(want, have))
 		}
 	})
 
 	t.Run("details", func(t *testing.T) {
-		fs := ff.NewFlags("fftest")
+		fs := ff.NewFlags("fftest").SetDescription("fftest -- do something interesting")
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
 		want := strings.TrimSpace(testFlagsHelpDetails)
-		have := strings.TrimSpace(ffhelp.NewFlagsSections(fs, "do something interesting", strings.TrimSpace(loremIpsum)).String())
+		have := strings.TrimSpace(ffhelp.Flags(fs, strings.TrimSpace(loremIpsum)).String())
 		if want != have {
 			t.Errorf("\n%s", fftest.DiffString(want, have))
 		}
@@ -90,7 +90,7 @@ func TestFlagsHelp_OnlyLong(t *testing.T) {
 	fs.BoolLong("beta", false, "beta usage")
 
 	want := strings.TrimSpace(testFlagsHelpOnlyLong)
-	have := strings.TrimSpace(ffhelp.FlagsHelp(fs))
+	have := strings.TrimSpace(ffhelp.Flags(fs).String())
 	if want != have {
 		t.Errorf("\n%s", fftest.DiffString(want, have))
 	}
