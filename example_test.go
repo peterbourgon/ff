@@ -98,7 +98,7 @@ func ExampleParse_stdlib() {
 		debug   = fs.Bool("debug", false, "log debug information")
 	)
 
-	err := ff.Parse(fs, []string{"-debug", "-refresh=2s", "-listen", "localhost:9999"})
+	err := ff.Parse(fs, []string{"--debug", "-refresh=2s", "-listen", "localhost:9999"})
 
 	fmt.Printf("err=%v\n", err)
 	fmt.Printf("listen=%v\n", *listen)
