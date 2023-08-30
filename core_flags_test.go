@@ -266,7 +266,7 @@ func TestCoreFlags_NoPlaceholder(t *testing.T) {
 	}
 }
 
-func TestCoreFlags_getters(t *testing.T) {
+func TestCoreFlags_Get(t *testing.T) {
 	t.Parallel()
 
 	fs := ff.NewFlags(t.Name())

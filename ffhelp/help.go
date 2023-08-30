@@ -15,9 +15,9 @@ type Help []Section
 // provided, they're included as a single untitled section before any FLAGS
 // section(s).
 //
-// This function is intended to be a reasonable default for most users, and to
-// serve as an example. Callers who want different help output should implement
-// their own [Help] value constructors like this one.
+// This function is meant as reasonable default for most users, and as an
+// example. Callers who want different help output should implement their own
+// [Help] value constructors like this one.
 func Flags(fs ff.Flags, details ...string) Help {
 	var help Help
 
@@ -40,8 +40,8 @@ func Flags(fs ff.Flags, details ...string) Help {
 
 // Command returns [Help] for the given command.
 //
-// This function is intended to be a reasonable default for most users, and to
-// serve as an example. Callers who want different help output should implement
+// This function is meant as reasonable default for most users, and as an example.
+// Callers who want different help output should implement
 // their own [Help] value constructors like this one.
 func Command(cmd *ff.Command) Help {
 	var help Help

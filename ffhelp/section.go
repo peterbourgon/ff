@@ -98,16 +98,16 @@ func NewFlagsSection(fs ff.Flags) Section {
 	return ss[0]
 }
 
-// NewFlagsSections returns FLAG section(s) representing every flag available to
-// fs. Flags are grouped into sections according to their parent flag set. Each
-// flag is rendered via [FlagSpec].
+// NewFlagsSections returns FLAGS section(s) representing every flag available
+// to fs. Flags are grouped into sections according to their parent flag set.
+// Each flag is rendered via [FlagSpec].
 func NewFlagsSections(fs ff.Flags) []Section {
 	return newFlagSections(flagSectionsConfig{Flags: fs, SharedAlignment: true})
 }
 
-// NewSubcommandsSection returns a section with the title "SUBCOMMANDS", and one
-// line for every subcommand in the slice. Lines consist of the subcommand name
-// and the ShortHelp for that subcommand, in a tab-delimited columnar format.
+// NewSubcommandsSection returns a SUBCOMMANDS section containing one line for
+// every subcommand in the slice. Lines consist of the subcommand name and the
+// ShortHelp for that subcommand, in a columnar format.
 func NewSubcommandsSection(subcommands []*ff.Command) Section {
 	var lines []string
 	for _, sc := range subcommands {
@@ -255,10 +255,6 @@ func newFlagSections(cfg flagSectionsConfig) []Section {
 
 	return flat
 }
-
-//
-//
-//
 
 func newTabWriter(w io.Writer) *tabwriter.Writer {
 	return tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
