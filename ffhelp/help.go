@@ -40,9 +40,9 @@ func Flags(fs ff.Flags, details ...string) Help {
 
 // Command returns [Help] for the given command.
 //
-// This function is meant as reasonable default for most users, and as an example.
-// Callers who want different help output should implement
-// their own [Help] value constructors like this one.
+// This function is meant as reasonable default for most users, and as an
+// example. Callers who want different help output should implement their own
+// [Help] value constructors like this one.
 func Command(cmd *ff.Command) Help {
 	var help Help
 
