@@ -8,7 +8,7 @@ import (
 
 // Command is a declarative structure that combines a main function with a flag
 // set and zero or more subcommands. It's intended to model CLI applications
-// which can be be represented as a tree of such commands.
+// which can be represented as a tree of such commands.
 type Command struct {
 	// Name of the command, which is used when producing the help output for the
 	// command, as well as for subcommand matching.
@@ -62,7 +62,7 @@ type Command struct {
 	Flags Flags
 
 	// Subcommands which are available underneath (i.e. after) this command.
-	// Selecting a subcommand is done via a case-insensitive comparision of the
+	// Selecting a subcommand is done via a case-insensitive comparison of the
 	// first post-parse argument to this command, against the name of each
 	// subcommand.
 	//

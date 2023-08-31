@@ -73,7 +73,7 @@ func (s Section) String() string {
 }
 
 // NewSection returns a section with the given title and lines, using
-// [DefaultLinePrefix]
+// [DefaultLinePrefix].
 func NewSection(title string, lines ...string) Section {
 	return Section{
 		Title:      title,

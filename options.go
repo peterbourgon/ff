@@ -113,7 +113,7 @@ func WithEnvVarPrefix(prefix string) Option {
 //
 // For example, `FOO=a,b,c` might cause a flag named `foo` to receive a single
 // call to Set with the value `a,b,c`. If WithEnvVarSplit is provided as an
-// option, with a delimiter of `,`, then that flag would receive three seperate
+// option, with a delimiter of `,`, then that flag would receive three separate
 // calls to Set with the strings `a`, `b`, and `c`.
 //
 // By default, no splitting of environment variable values occurs.
