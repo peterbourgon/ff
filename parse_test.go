@@ -1,326 +1,354 @@
 package ff_test
 
 import (
-	"context"
 	"embed"
-	"flag"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff/v3"
-	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/peterbourgon/ff/v3/fftest"
+	"github.com/peterbourgon/ff/v4"
+	"github.com/peterbourgon/ff/v4/fftest"
 )
 
 //go:embed testdata/*.conf
 var testdataConfigFS embed.FS
 
-func TestParseBasics(t *testing.T) {
+func TestParse(t *testing.T) {
 	t.Parallel()
 
-	for _, testcase := range []struct {
-		name string
-		env  map[string]string
-		file string
-		args []string
-		opts []ff.Option
-		want fftest.Vars
-	}{
+	testcases := fftest.TestCases{
 		{
-			name: "empty",
-			args: []string{},
-			want: fftest.Vars{},
+			Name: "empty",
+			Want: fftest.Vars{},
 		},
 		{
-			name: "args only",
-			args: []string{"-s", "foo", "-i", "123", "-b", "-d", "24m"},
-			want: fftest.Vars{S: "foo", I: 123, B: true, D: 24 * time.Minute},
+			Name: "args",
+			Args: []string{"-s", "foo", "-i", "123", "-b", "-d", "24m"},
+			Want: fftest.Vars{S: "foo", I: 123, B: true, D: 24 * time.Minute},
 		},
-		{
-			name: "file only",
-			file: "testdata/1.conf",
-			want: fftest.Vars{S: "bar", I: 99, B: true, D: time.Hour},
-		},
-		{
-			name: "env only",
-			env:  map[string]string{"TEST_PARSE_S": "baz", "TEST_PARSE_F": "0.99", "TEST_PARSE_D": "100s"},
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
-			want: fftest.Vars{S: "baz", F: 0.99, D: 100 * time.Second},
-		},
-		{
-			name: "file args",
-			file: "testdata/2.conf",
-			args: []string{"-s", "foo", "-i", "1234"},
-			want: fftest.Vars{S: "foo", I: 1234, D: 3 * time.Second},
-		},
-		{
-			name: "env args",
-			env:  map[string]string{"TEST_PARSE_S": "should be overridden", "TEST_PARSE_B": "true"},
-			args: []string{"-s", "explicit wins", "-i", "7"},
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
-			want: fftest.Vars{S: "explicit wins", I: 7, B: true},
-		},
-		{
-			name: "file env",
-			env:  map[string]string{"TEST_PARSE_S": "env takes priority", "TEST_PARSE_B": "true"},
-			file: "testdata/3.conf",
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
-			want: fftest.Vars{S: "env takes priority", I: 99, B: true, D: 34 * time.Second},
-		},
-		{
-			name: "file env args",
-			file: "testdata/4.conf",
-			env:  map[string]string{"TEST_PARSE_S": "from env", "TEST_PARSE_I": "300", "TEST_PARSE_F": "0.15", "TEST_PARSE_B": "true"},
-			args: []string{"-s", "from arg", "-i", "100"},
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
-			want: fftest.Vars{S: "from arg", I: 100, F: 0.15, B: true, D: time.Minute},
-		},
-		{
-			name: "repeated args",
-			args: []string{"-s", "foo", "-s", "bar", "-d", "1m", "-d", "1h", "-x", "1", "-x", "2", "-x", "3"},
-			want: fftest.Vars{S: "bar", D: time.Hour, X: []string{"1", "2", "3"}},
-		},
-		{
-			name: "priority repeats",
-			env:  map[string]string{"TEST_PARSE_S": "s.env", "TEST_PARSE_X": "x.env.1"},
-			file: "testdata/5.conf",
-			args: []string{"-s", "s.arg.1", "-s", "s.arg.2", "-x", "x.arg.1", "-x", "x.arg.2"},
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
-			want: fftest.Vars{S: "s.arg.2", X: []string{"x.arg.1", "x.arg.2"}}, // highest prio wins and no others are called
-		},
-		{
-			name: "PlainParser solo bool",
-			file: "testdata/solo_bool.conf",
-			want: fftest.Vars{S: "x", B: true},
-		},
-		{
-			name: "PlainParser string with spaces",
-			file: "testdata/spaces.conf",
-			want: fftest.Vars{S: "i am the very model of a modern major general"},
-		},
-		{
-			name: "default comma behavior",
-			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
-			want: fftest.Vars{S: "one,two,three", X: []string{"one,two,three"}},
-		},
-		{
-			name: "WithEnvVarSplit",
-			env:  map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
-			want: fftest.Vars{S: "three", X: []string{"one", "two", "three"}},
-		},
-		{
-			name: "WithEnvVars",
-			env:  map[string]string{"TEST_PARSE_S": "foo", "S": "bar"},
-			opts: []ff.Option{ff.WithEnvVars()},
-			want: fftest.Vars{S: "bar"},
-		},
-		{
-			name: "WithIgnoreUndefined env",
-			env:  map[string]string{"TEST_PARSE_UNDEFINED": "one", "TEST_PARSE_S": "one"},
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithIgnoreUndefined(true)},
-			want: fftest.Vars{S: "one"},
-		},
-		{
-			name: "WithIgnoreUndefined file true",
-			file: "testdata/undefined.conf",
-			opts: []ff.Option{ff.WithIgnoreUndefined(true)},
-			want: fftest.Vars{S: "one"},
-		},
-		{
-			name: "WithIgnoreUndefined file false",
-			file: "testdata/undefined.conf",
-			opts: []ff.Option{ff.WithIgnoreUndefined(false)},
-			want: fftest.Vars{WantParseErrorString: "config file flag"},
-		},
-		{
-			name: "env var split comma whitespace",
-			env:  map[string]string{"TEST_PARSE_S": "one, two, three ", "TEST_PARSE_X": "one, two, three "},
-			opts: []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
-			want: fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
-		},
-		{
-			name: "WithEnvVars",
-			env:  map[string]string{"S": "xxx", "F": "9.87"},
-			opts: []ff.Option{ff.WithEnvVars()},
-			want: fftest.Vars{S: "xxx", F: 9.87},
-		},
-		{
-			name: "WithEnvVarNoPrefix", // make sure alias works
-			env:  map[string]string{"S": "xxx", "F": "9.87"},
-			opts: []ff.Option{ff.WithEnvVarNoPrefix()},
-			want: fftest.Vars{S: "xxx", F: 9.87},
-		},
-		{
-			name: "WithFilesystem testdata/1.conf",
-			opts: []ff.Option{ff.WithFilesystem(testdataConfigFS), ff.WithConfigFile("testdata/1.conf"), ff.WithConfigFileParser(ff.PlainParser)},
-			want: fftest.Vars{S: "bar", I: 99, B: true, D: 1 * time.Hour},
-		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			if testcase.file != "" {
-				testcase.opts = append(testcase.opts, ff.WithConfigFile(testcase.file), ff.WithConfigFileParser(ff.PlainParser))
-			}
 
-			if len(testcase.env) > 0 {
-				for k, v := range testcase.env {
-					defer os.Setenv(k, os.Getenv(k))
-					os.Setenv(k, v)
-				}
-			}
-
-			fs, vars := fftest.Pair()
-			vars.ParseError = ff.Parse(fs, testcase.args, testcase.opts...)
-			fftest.Compare(t, &testcase.want, vars)
-		})
+		{
+			Name:       "file only",
+			ConfigFile: "testdata/1.conf",
+			Want:       fftest.Vars{S: "bar", I: 99, B: true, D: time.Hour},
+		},
+		{
+			Name:        "env only",
+			Environment: map[string]string{"TEST_PARSE_S": "baz", "TEST_PARSE_F": "0.99", "TEST_PARSE_D": "100s"},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			Want:        fftest.Vars{S: "baz", F: 0.99, D: 100 * time.Second},
+		},
+		{
+			Name:       "file args",
+			ConfigFile: "testdata/2.conf",
+			Args:       []string{"-s", "foo", "-i", "1234"},
+			Want:       fftest.Vars{S: "foo", I: 1234, D: 3 * time.Second},
+		},
+		{
+			Name:        "env args",
+			Environment: map[string]string{"TEST_PARSE_S": "should be overridden", "TEST_PARSE_B": "true"},
+			Args:        []string{"-s", "explicit wins", "-i", "7"},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			Want:        fftest.Vars{S: "explicit wins", I: 7, B: true},
+		},
+		{
+			Name:        "file env",
+			ConfigFile:  "testdata/3.conf",
+			Environment: map[string]string{"TEST_PARSE_S": "env takes priority", "TEST_PARSE_B": "true"},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			Want:        fftest.Vars{S: "env takes priority", I: 99, B: true, D: 34 * time.Second},
+		},
+		{
+			Name:        "file env args",
+			ConfigFile:  "testdata/4.conf",
+			Environment: map[string]string{"TEST_PARSE_S": "from env", "TEST_PARSE_I": "300", "TEST_PARSE_F": "0.15", "TEST_PARSE_B": "true"},
+			Args:        []string{"-s", "from arg", "-i", "100"},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			Want:        fftest.Vars{S: "from arg", I: 100, F: 0.15, B: true, D: time.Minute},
+		},
+		{
+			Name: "repeated args",
+			Args: []string{"-s", "foo", "-s", "bar", "-d", "1m", "-d", "1h", "-x", "1", "-x", "2", "-x", "3"},
+			Want: fftest.Vars{S: "bar", D: time.Hour, X: []string{"1", "2", "3"}},
+		},
+		{
+			Name:       "file repeats",
+			ConfigFile: "testdata/5.conf",
+			Want:       fftest.Vars{S: "s.file.2", X: []string{"x.file.1", "x.file.2"}},
+		},
+		{
+			Name:        "priority repeats",
+			ConfigFile:  "testdata/5.conf",
+			Environment: map[string]string{"TEST_PARSE_S": "s.env", "TEST_PARSE_X": "x.env.1"},
+			Args:        []string{"-s", "s.arg.1", "-s", "s.arg.2", "-x", "x.arg.1", "-x", "x.arg.2"},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			Want:        fftest.Vars{S: "s.arg.2", X: []string{"x.arg.1", "x.arg.2"}}, // highest prio wins and no others are called
+		},
+		{
+			Name:        "WithEnvVars",
+			Environment: map[string]string{"S": "xxx", "F": "9.87"},
+			Options:     []ff.Option{ff.WithEnvVars()},
+			Want:        fftest.Vars{S: "xxx", F: 9.87},
+		},
+		{
+			Name:        "WithEnvVars prefix",
+			Environment: map[string]string{"TEST_PARSE_S": "foo", "S": "bar"},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			Want:        fftest.Vars{S: "foo"},
+		},
+		{
+			Name:        "WithEnvVars no prefix",
+			Environment: map[string]string{"TEST_PARSE_S": "foo", "S": "bar"},
+			Options:     []ff.Option{ff.WithEnvVars()},
+			Want:        fftest.Vars{S: "bar"},
+		},
+		{
+			Name:        "WithEnvVarSplit",
+			Environment: map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
+			Want:        fftest.Vars{S: "three", X: []string{"one", "two", "three"}},
+		},
+		{
+			Name:        "env default comma behavior",
+			Environment: map[string]string{"TEST_PARSE_S": "one,two,three", "TEST_PARSE_X": "one,two,three"},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			Want:        fftest.Vars{S: "one,two,three", X: []string{"one,two,three"}},
+		},
+		{
+			Name:        "env var split comma whitespace",
+			Environment: map[string]string{"TEST_PARSE_S": "one, two, three ", "TEST_PARSE_X": "one, two, three "},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
+			Want:        fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
+		},
 	}
+
+	testcases.Run(t)
 }
 
-func TestParseIssue16(t *testing.T) {
+func TestParse_CoreFlags(t *testing.T) {
 	t.Parallel()
 
-	for _, testcase := range []struct {
-		name string
-		data string
-		want string
-	}{
+	testcases := fftest.TestCases{
 		{
-			name: "hash in value",
-			data: "s bar#baz",
-			want: "bar#baz",
+			Name:         "long args",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{"--str=foo", "--int", "123", "--bflag", "-d", "13m"},
+			Want:         fftest.Vars{S: "foo", I: 123, B: true, D: 13 * time.Minute},
 		},
 		{
-			name: "EOL comment with space",
-			data: "s bar # baz",
-			want: "bar",
+			Name:         "-b only",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-b`},
+			Want:         fftest.Vars{B: true},
 		},
 		{
-			name: "EOL comment no space",
-			data: "s bar #baz",
-			want: "bar",
+			Name:         "--str abc",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`--str`, `abc`},
+			Want:         fftest.Vars{S: "abc"},
 		},
 		{
-			name: "only comment with space",
-			data: "# foo bar\n",
-			want: "",
+			Name:         "-s xxx",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-s`, `xxx`},
+			Want:         fftest.Vars{S: "xxx"},
 		},
 		{
-			name: "only comment no space",
-			data: "#foo bar\n",
-			want: "",
+			Name:         "-s=xxx",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-s=xxx`},
+			Want:         fftest.Vars{S: "=xxx"},
 		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			filename := fftest.TempFile(t, testcase.data)
-
-			fs, vars := fftest.Pair()
-			vars.ParseError = ff.Parse(fs, []string{},
-				ff.WithConfigFile(filename),
-				ff.WithConfigFileParser(ff.PlainParser),
-			)
-
-			want := fftest.Vars{S: testcase.want}
-			fftest.Compare(t, &want, vars)
-		})
+		{
+			Name:         "-str=xxx",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-str=xxx`},
+			Want:         fftest.Vars{S: `tr=xxx`},
+		},
+		{
+			Name:         "-s -b",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-s`, `-b`},
+			Want:         fftest.Vars{S: "-b"},
+		},
+		{
+			Name:         "-a -b -c",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-a`, `-b`, `-c`},
+			Want:         fftest.Vars{A: true, B: true, C: true},
+		},
+		{
+			Name:         "-ab -c",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-ab`, `-c`},
+			Want:         fftest.Vars{A: true, B: true, C: true},
+		},
+		{
+			Name:         "-ab -sfoo -bc",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-ab`, `-sfoo`, `-bc`},
+			Want:         fftest.Vars{A: true, B: true, C: true, S: "foo"},
+		},
+		{
+			Name:         "-absfoo -c",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-absfoo`, `-c`},
+			Want:         fftest.Vars{A: true, B: true, C: true, S: "foo"},
+		},
+		{
+			Name:         "-acs foo -b",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-acs`, `foo`, `-b`},
+			Want:         fftest.Vars{A: true, B: true, C: true, S: "foo"},
+		},
+		{
+			Name:         "-a true -b false -c true",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`-a`, `true`, `-b`, `false`, `-c`, `true`},
+			Want:         fftest.Vars{A: true, Args: []string{`true`, `-b`, `false`, `-c`, `true`}},
+		},
+		{
+			Name:         "--str foo -h",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`--str`, `foo`, `-h`},
+			Want:         fftest.Vars{S: "foo", WantParseErrorIs: ff.ErrHelp},
+		},
+		{
+			Name:         "--str foo --help -b",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`--str`, `foo`, `--help`, `-b`},
+			Want:         fftest.Vars{S: "foo", B: false, WantParseErrorIs: ff.ErrHelp},
+		},
+		{
+			Name:         "-s foo -f 1.23",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{"-s", "foo", "-f", "1.23"},
+			Want:         fftest.Vars{S: "foo", F: 1.23},
+		},
+		{
+			Name:         "-a true -b true",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{"-a", "true", "-b", "true"},
+			Want:         fftest.Vars{A: true, B: false, Args: []string{"true", "-b", "true"}},
+		},
+		{
+			Name:         "--aflag true --cflag true",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{"--aflag", "true", "--cflag", "true"},
+			Want:         fftest.Vars{A: true, B: false, C: true, Args: []string{}},
+		},
+		{
+			Name:         "-a --bflag=false",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Default:      fftest.Vars{A: true, B: true},
+			Args:         []string{"-a", "--bflag=false"},
+			Want:         fftest.Vars{A: true, B: false, C: false, Args: []string{}},
+		},
+		{
+			Name:         "-a false",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Default:      fftest.Vars{A: true, B: true},
+			Args:         []string{"-a", "false"},
+			Want:         fftest.Vars{A: true, B: true, C: false, Args: []string{"false"}},
+		},
 	}
+
+	testcases.Run(t)
 }
 
-func TestParseConfigFile(t *testing.T) {
+func TestParse_StdFlagSetAdapter(t *testing.T) {
 	t.Parallel()
 
-	for _, testcase := range []struct {
-		name         string
-		missing      bool
-		allowMissing bool
-		parseError   error
-	}{
+	testcases := fftest.TestCases{
 		{
-			name: "has config file",
+			Name:         "-singledash space values",
+			Constructors: []fftest.Constructor{fftest.StdConstructor},
+			Args:         []string{"-s", "foo", "-f", "1.23"},
+			Want:         fftest.Vars{S: "foo", F: 1.23},
 		},
 		{
-			name:       "config file missing",
-			missing:    true,
-			parseError: os.ErrNotExist,
+			Name:         "-singledash space values bool",
+			Constructors: []fftest.Constructor{fftest.StdConstructor},
+			Args:         []string{"-a", "true", "-b", "true"},
+			Want:         fftest.Vars{A: true, B: true},
 		},
 		{
-			name:         "config file missing + allow missing",
-			missing:      true,
-			allowMissing: true,
+			Name:         "--doubledash space values bool",
+			Constructors: []fftest.Constructor{fftest.StdConstructor},
+			Args:         []string{"--a", "true", "--c", "true"},
+			Want:         fftest.Vars{A: true, C: true},
 		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			filename := "dummy"
-			if !testcase.missing {
-				filename = fftest.TempFile(t, "")
-			}
-
-			options := []ff.Option{ff.WithConfigFile(filename), ff.WithConfigFileParser(ff.PlainParser)}
-			if testcase.allowMissing {
-				options = append(options, ff.WithAllowMissingConfigFile(true))
-			}
-
-			fs, vars := fftest.Pair()
-			vars.ParseError = ff.Parse(fs, []string{}, options...)
-
-			want := fftest.Vars{WantParseErrorIs: testcase.parseError}
-			fftest.Compare(t, &want, vars)
-		})
+		{
+			Name:         "bool default true set false",
+			Constructors: []fftest.Constructor{fftest.StdConstructor},
+			Default:      fftest.Vars{A: true, B: true},
+			Args:         []string{"-a", "-b=false"},
+			Want:         fftest.Vars{A: true, B: false, C: false},
+		},
+		{
+			Name:         "bool default true set false with spaces",
+			Constructors: []fftest.Constructor{fftest.StdConstructor},
+			Default:      fftest.Vars{A: true, B: true},
+			Args:         []string{"-a", "false"},
+			Want:         fftest.Vars{A: false, B: true, C: false},
+		},
 	}
+
+	testcases.Run(t)
 }
 
-func TestParseConfigFileVia(t *testing.T) {
+func TestParse_PlainParser(t *testing.T) {
 	t.Parallel()
 
-	var (
-		rootFS = flag.NewFlagSet("root", flag.ContinueOnError)
-		config = rootFS.String("config-file", "", "")
-		i      = rootFS.Int("i", 0, "")
-		s      = rootFS.String("s", "", "")
-		subFS  = flag.NewFlagSet("subcommand", flag.ContinueOnError)
-		d      = subFS.Duration("d", time.Second, "")
-		b      = subFS.Bool("b", false, "")
-	)
-
-	subCommand := &ffcli.Command{
-		Name:    "subcommand",
-		FlagSet: subFS,
-		Options: []ff.Option{
-			ff.WithConfigFileParser(ff.PlainParser),
-			ff.WithConfigFileVia(config),
-			ff.WithIgnoreUndefined(true),
+	testcases := fftest.TestCases{
+		{
+			Name:       "solo bool",
+			ConfigFile: "testdata/solo_bool.conf",
+			Want:       fftest.Vars{S: "x", B: true},
 		},
-		Exec: func(ctx context.Context, args []string) error { return nil },
-	}
-
-	root := &ffcli.Command{
-		Name:    "root",
-		FlagSet: rootFS,
-		Options: []ff.Option{
-			ff.WithConfigFileParser(ff.PlainParser),
-			ff.WithConfigFileFlag("config-file"),
-			ff.WithIgnoreUndefined(true),
+		{
+			Name:       "string with spaces",
+			ConfigFile: "testdata/spaces.conf",
+			Want:       fftest.Vars{S: "i am the very model of a modern major general"},
 		},
-		Exec:        func(ctx context.Context, args []string) error { return nil },
-		Subcommands: []*ffcli.Command{subCommand},
+		{
+			Name:       "comments",
+			ConfigFile: "testdata/comments.conf",
+			Want: fftest.Vars{X: []string{
+				"foo#bar",
+				"foo# bar",
+				"foo",
+				"foo",
+				`"foo#bar"#baz`,
+				`"foo#bar"`,
+				`"foo`,
+			}},
+		},
+		{
+			Name:       "newlines",
+			ConfigFile: "testdata/newlines.conf",
+			Want: fftest.Vars{X: []string{
+				`hello\nworld\n`,
+				`"hello\nworld\n"`,
+			}},
+		},
+		{
+			Name:       "WithConfigIgnoreUndefined not set",
+			ConfigFile: "testdata/undefined.conf",
+			Want:       fftest.Vars{WantParseErrorIs: ff.ErrUnknownFlag},
+		},
+		{
+			Name:       "WithConfigIgnoreUndefined is set",
+			ConfigFile: "testdata/undefined.conf",
+			Options:    []ff.Option{ff.WithConfigIgnoreUndefinedFlags()},
+			Want:       fftest.Vars{S: "one"},
+		},
+		{
+			Name:       "WithFilesystem",
+			ConfigFile: "testdata/1.conf",
+			Options:    []ff.Option{ff.WithFilesystem(testdataConfigFS)},
+			Want:       fftest.Vars{S: "bar", I: 99, B: true, D: 1 * time.Hour},
+		},
 	}
 
-	err := root.ParseAndRun(context.Background(), []string{"-config-file", "testdata/1.conf", "subcommand", "-b"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want, have := time.Hour, *d; want != have {
-		t.Errorf("d: want %v, have %v", want, have)
-	}
-	if want, have := true, *b; want != have {
-		t.Errorf("b: want %v, have %v", want, have)
-	}
-	if want, have := "bar", *s; want != have {
-		t.Errorf("s: want %q, have %q", want, have)
-	}
-	if want, have := 99, *i; want != have {
-		t.Errorf("i: want %d, have %d", want, have)
-	}
+	testcases.Run(t)
 }

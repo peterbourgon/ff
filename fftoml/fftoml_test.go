@@ -1,35 +1,27 @@
 package fftoml_test
 
 import (
-	"flag"
-	"fmt"
-	"reflect"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/ff/v3"
-	"github.com/peterbourgon/ff/v3/fftest"
-	"github.com/peterbourgon/ff/v3/fftoml"
+	"github.com/peterbourgon/ff/v4"
+	"github.com/peterbourgon/ff/v4/fftest"
+	"github.com/peterbourgon/ff/v4/fftoml"
 )
 
 func TestParser(t *testing.T) {
 	t.Parallel()
 
-	for _, testcase := range []struct {
-		name string
-		file string
-		want fftest.Vars
-	}{
+	testcases := fftest.TestCases{
 		{
-			name: "empty input",
-			file: "testdata/empty.toml",
-			want: fftest.Vars{},
+			Name:       "empty input",
+			ConfigFile: "testdata/empty.toml",
+			Want:       fftest.Vars{},
 		},
 		{
-			name: "basic KV pairs",
-			file: "testdata/basic.toml",
-			want: fftest.Vars{
+			Name:       "basic KV pairs",
+			ConfigFile: "testdata/basic.toml",
+			Want: fftest.Vars{
 				S: "s",
 				I: 10,
 				F: 3.14e10,
@@ -39,67 +31,25 @@ func TestParser(t *testing.T) {
 			},
 		},
 		{
-			name: "bad TOML file",
-			file: "testdata/bad.toml",
-			want: fftest.Vars{WantParseErrorString: "keys cannot contain { character"},
+			Name:       "bad TOML file",
+			ConfigFile: "testdata/bad.toml",
+			Want:       fftest.Vars{WantParseErrorString: "invalid character at start of key"},
 		},
-	} {
-		t.Run(testcase.name, func(t *testing.T) {
-			fs, vars := fftest.Pair()
-			vars.ParseError = ff.Parse(fs, []string{},
-				ff.WithConfigFile(testcase.file),
-				ff.WithConfigFileParser(fftoml.Parser),
-			)
-			fftest.Compare(t, &testcase.want, vars)
-		})
+		{
+			Name:         "nested with '.'",
+			ConfigFile:   "testdata/table.toml",
+			Default:      fftest.Vars{I: 999},
+			Constructors: []fftest.Constructor{fftest.NewNestedConstructor(".")},
+			Want:         fftest.Vars{S: "a string", I: 999, F: 1.23, X: []string{"one", "two", "three"}},
+		},
+		{
+			Name:         "nested with '-'",
+			ConfigFile:   "testdata/table.toml",
+			Constructors: []fftest.Constructor{fftest.NewNestedConstructor("-")},
+			Options:      []ff.Option{ff.WithConfigFileParser(fftoml.Parser{Delimiter: "-"}.Parse)},
+			Want:         fftest.Vars{S: "a string", F: 1.23, X: []string{"one", "two", "three"}},
+		},
 	}
-}
 
-func TestParser_WithTables(t *testing.T) {
-	t.Parallel()
-
-	for _, delim := range []string{
-		".",
-		"-",
-	} {
-		t.Run(fmt.Sprintf("delim=%q", delim), func(t *testing.T) {
-			var (
-				skey = strings.Join([]string{"string", "key"}, delim)
-				fkey = strings.Join([]string{"float", "nested", "key"}, delim)
-				xkey = strings.Join([]string{"strings", "nested", "key"}, delim)
-
-				sval string
-				fval float64
-				xval fftest.StringSlice
-			)
-
-			fs := flag.NewFlagSet("fftest", flag.ContinueOnError)
-			{
-				fs.StringVar(&sval, skey, "xxx", "string")
-				fs.Float64Var(&fval, fkey, 999, "float64")
-				fs.Var(&xval, xkey, "strings")
-			}
-
-			parseConfig := fftoml.New(fftoml.WithTableDelimiter(delim))
-
-			if err := ff.Parse(fs, []string{},
-				ff.WithConfigFile("testdata/table.toml"),
-				ff.WithConfigFileParser(parseConfig.Parse),
-			); err != nil {
-				t.Fatal(err)
-			}
-
-			if want, have := "a string", sval; want != have {
-				t.Errorf("string key: want %q, have %q", want, have)
-			}
-
-			if want, have := 1.23, fval; want != have {
-				t.Errorf("float nested key: want %v, have %v", want, have)
-			}
-
-			if want, have := (fftest.StringSlice{"one", "two", "three"}), xval; !reflect.DeepEqual(want, have) {
-				t.Errorf("strings nested key: want %v, have %v", want, have)
-			}
-		})
-	}
+	testcases.Run(t, ff.WithConfigFileParser(fftoml.Parse))
 }

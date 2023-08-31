@@ -1,131 +1,166 @@
-# ff [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/v3) [![Latest Release](https://img.shields.io/github/v/release/peterbourgon/ff?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) ![Build Status](https://github.com/peterbourgon/ff/actions/workflows/test.yml/badge.svg?branch=main)
+# ff [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/peterbourgon/ff/v4) [![Latest Release](https://img.shields.io/github/v/release/peterbourgon/ff?style=flat-square)](https://github.com/peterbourgon/ff/releases/latest) ![Build Status](https://github.com/peterbourgon/ff/actions/workflows/test.yaml/badge.svg?branch=main)
 
-ff stands for flags-first, and provides an opinionated way to populate a
-[flag.FlagSet](https://golang.org/pkg/flag#FlagSet) with configuration data from
-the environment. By default, it parses only from the command line, but you can
-enable parsing from environment variables (lower priority) and/or a
-configuration file (lowest priority).
+ff is a flags-first approach to configuration.
 
-Building a commandline application in the style of `kubectl` or `docker`?
-Consider [package ffcli](https://pkg.go.dev/github.com/peterbourgon/ff/v3/ffcli),
-a natural companion to, and extension of, package ff.
+The basic rationale is that that `myprogram -h` should reliably describe the
+complete configuration "surface area" of a program. Therefore, every config
+parameter should be defined as a flag. This module provides a simple and robust
+way to define those flags, and to parse them from command-line arguments,
+environment variables, and/or a config file.
+
+Building a command-line application in the style of `kubectl` or `docker`?
+[Command](#command) provides a declarative approach that's simpler to write, and
+easier to maintain, than many common alternatives.
 
 ## Usage
 
-Define a flag.FlagSet in your func main.
+This module provides a getopts(3)-inspired flag set, used as follows.
 
 ```go
-import (
-	"flag"
-	"os"
-	"time"
-
-	"github.com/peterbourgon/ff/v3"
+fs := ff.NewFlags("myprogram")
+var (
+	listenAddr = fs.StringLong("listen", "localhost:8080", "listen address")
+	refresh    = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
+	debug      = fs.Bool('d', "debug", false, "log debug information")
+	_          = fs.StringLong("config", "", "config file (optional)")
 )
-
-func main() {
-	fs := flag.NewFlagSet("my-program", flag.ContinueOnError)
-	var (
-		listenAddr = fs.String("listen-addr", "localhost:8080", "listen address")
-		refresh    = fs.Duration("refresh", 15*time.Second, "refresh interval")
-		debug      = fs.Bool("debug", false, "log debug information")
-		_          = fs.String("config", "", "config file (optional)")
-	)
 ```
 
-Then, call ff.Parse instead of fs.Parse.
-[Options](https://pkg.go.dev/github.com/peterbourgon/ff/v3#Option)
-are available to control parse behavior.
+It's also possible to adapt a standard library flag set. In this case, be sure
+to use the ContinueOnError error handling strategy. Other options either panic
+or terminate the program on parse errors. Rude!
 
 ```go
-	err := ff.Parse(fs, os.Args[1:],
-		ff.WithEnvVarPrefix("MY_PROGRAM"),
-		ff.WithConfigFileFlag("config"),
-		ff.WithConfigFileParser(ff.PlainParser),
-	)
+fs := flag.NewFlagSet("myprogram", flag.ContinueOnError)
+var (
+	listenAddr = fs.String("listen", "localhost:8080", "listen address")
+	refresh    = fs.Duration("refresh", 15*time.Second, "refresh interval")
+	debug      = fs.Bool("debug", "log debug information")
+	_          = fs.String("config", "", "config file (optional)")
+)
 ```
 
-This example will parse flags from the commandline args, just like regular
-package flag, with the highest priority. (The flag's default value will be used
-only if the flag remains unset after parsing all provided sources of
-configuration.)
+Once you have a set of flags, you can parse them as follows, using options to
+control parse behavior.
 
-Additionally, the example will look in the environment for variables with a
-`MY_PROGRAM` prefix. Flag names are capitalized, and separator characters are
-converted to underscores. In this case, for example, `MY_PROGRAM_LISTEN_ADDR`
-would match to `listen-addr`.
-
-Finally, if a `-config` file is specified, the example will try to parse it
-using the PlainParser, which expects files in this format.
-
-
-```
-listen-addr localhost:8080
-refresh 30s
-debug true
+```go
+err := ff.Parse(fs, os.Args[1:],
+	ff.WithEnvVarPrefix("MY_PROGRAM"),
+	ff.WithConfigFileFlag("config"),
+	ff.WithConfigFileParser(ff.PlainParser),
+)
 ```
 
-You could also use the JSONParser, which expects a JSON object.
+Here, flags are first set from the provided command-line arguments, then from
+env vars beginning with `MY_PROGRAM`, and, finally, if the user specifies a
+config file, from values in that file, as parsed by PlainParser.
 
-```json
-{
-	"listen-addr": "localhost:8080",
-	"refresh": "30s",
-	"debug": true
+Unlike other flag packages, help/usage text is not automatically printed as a
+side effect of parse. Instead, when a user requests help via e.g. -h or --help,
+it's reported as a parse error. Callers are always responsible for checking
+parse errors, and printing help/usage text as appropriate.
+
+```go
+if errors.Is(err, ff.ErrHelp) {
+	fmt.Fprint(os.Stderr, ffhelp.Flags(fs))
+	os.Exit(0)
+} else if err != nil {
+	fmt.Fprintf(os.Stderr, "error: %v\n", )
+	os.Exit(1)
 }
 ```
 
-Or, you could write your own config file parser.
+## Environment variables
+
+It's possible to take runtime configuration from the environment. The options
+[WithEnvVars][withenvvars] and [WithEnvVarPrefix][withenvvarprefix] enable this
+feature, and determine how flag names are mapped to environment variable names.
+
+[withenvvars]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVars
+[withenvvarprefix]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVarPrefix
 
 ```go
-// ConfigFileParser interprets the config file represented by the reader
-// and calls the set function for each parsed flag pair.
-type ConfigFileParser func(r io.Reader, set func(name, value string) error) error
-```
-
-## Flags and env vars
-
-One common use case is to allow configuration from both flags and env vars.
-
-```go
-package main
-
-import (
-	"flag"
-	"fmt"
-	"os"
-
-	"github.com/peterbourgon/ff/v3"
+fs := ff.NewFlags("myservice")
+var (
+	port  = fs.Int('p', "port", 8080, "listen port for server (also via PORT)")
+	debug = fs.Bool('d', "debug", false, "log debug information (also via DEBUG)")
 )
-
-func main() {
-	fs := flag.NewFlagSet("myservice", flag.ContinueOnError)
-	var (
-		port  = fs.Int("port", 8080, "listen port for server (also via PORT)")
-		debug = fs.Bool("debug", false, "log debug information (also via DEBUG)")
-	)
-	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVars()); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("port %d, debug %v\n", *port, *debug)
-}
+ff.Parse(fs, os.Args[1:], ff.WithEnvVars())
+fmt.Printf("port %d, debug %v\n", *port, *debug)
 ```
 
-```
+```shell
 $ env PORT=9090 myservice
 port 9090, debug false
-$ env PORT=9090 DEBUG=1 myservice -port=1234
+$ env PORT=9090 DEBUG=1 myservice --port=1234
 port 1234, debug true
 ```
 
-## Error handling
+## Config files
 
-In general, you should call flag.NewFlagSet with the flag.ContinueOnError error 
-handling strategy, which, somewhat confusingly, is the only way that ff.Parse can
-return errors. (The other strategies terminate the program on error. Rude!) This 
-is [the only way to detect certain types of parse failures][90], in addition to 
-being good practice in general.
+It's possible to take runtime configuration from config files. The options
+[WithConfigFile][withconfigfile], [WithConfigFileFlag][withconfigfileflag], and
+[WithConfigFileParser][withconfigfileparser] control how config files are
+specified and parsed. This module includes support for JSON, YAML, TOML, and
+.env config files, as well as the simple [PlainParser][plainparser] format.
 
-[90]: https://github.com/peterbourgon/ff/issues/90
+[withconfigfile]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFile
+[withconfigfileflag]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileFlag
+[withconfigfileparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileParser
+[plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#PlainParser
+
+```go
+fs := ff.NewFlags("myservice")
+var (
+	port  = fs.IntLong("port", 8080, "listen port for server")
+	debug = fs.BoolLong("debug", false, "log debug information")
+	_     = fs.StringLong("config", "", "config file")
+)
+ff.Parse(fs, os.Args[1:], ff.WithConfigFileFlag("config"), ff.WithConfigFileParser(ff.PlainParser))
+fmt.Printf("port %d, debug %v\n", *port, *debug)
+```
+
+```shell
+$ printf "port 9090\n" >1.conf ; myservice --config=1.conf
+port 9090, debug false
+$ printf "port 9090\ndebug\n" >2.conf ; myservice --config=2.conf --port=1234
+port 1234, debug true
+```
+
+## Priority
+
+Command-line args have the highest priority, because they're explicitly given to
+each running instance of a program by the user. Think of command-line args as the
+"user" configuration.
+
+Environment variables have the next-highest priority, because they reflect
+configuration set in the runtime context. Think of env vars as the "session"
+configuration.
+
+Config files have the lowest priority, because they represent config that's
+static to the host. Think of config files as the "host" configuration.
+
+# Commands
+
+[Command][command] is a declarative and lightweight alternative to common CLI
+frameworks like [spf13/cobra][cobra], [urfave/cli][urfave], or
+[alecthomas/kingpin][kingpin].
+
+[command]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Command
+[cobra]: https://github.com/spf13/cobra
+[urfave]: https://github.com/urfave/cli
+[kingpin]: https://github.com/alecthomas/kingpin
+
+Those frameworks have relatively large APIs, in order to support a large number
+of "table stakes" features. In contrast, the command API is quite small, with
+the immediate goal of being intuitive and productive, and the long-term goal of
+producing CLI applications that are substantially easier to understand and
+maintain.
+
+Commands are concerned only with the core mechanics of defining a command tree,
+parsing flags, and selecting a command to run. They're not intended to be a
+one-stop-shop for everything a command-line application may need. Features like
+tab completion, colorized output, etc. are orthogonal to command tree parsing,
+and can be easily provided by the consumer.
+
+See [the examples directory](examples/) for some CLI tools built with commands.

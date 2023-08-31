@@ -1,2 +1,2 @@
-// Package fftest provides unit test helpers.
+// Package fftest provides tools for testing flag sets.
 package fftest

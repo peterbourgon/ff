@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+
+function test_workflow { cat .github/workflows/test.yaml ; }
+function run_commands  { yq '.jobs.test.steps[] | select(.name == "Run *") | .run' ; }
+
+test_workflow | run_commands | while read COMMAND
+do
+	echo ${COMMAND}
+	TEMPFILE=$(mktemp)
+	eval ${COMMAND} >${TEMPFILE} \
+	 && { rm ${TEMPFILE}; } \
+	 || { cat ${TEMPFILE}; rm ${TEMPFILE}; exit 1; }
+done

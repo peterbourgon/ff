@@ -1,13 +1,11 @@
 foo:
-  s: a string
+  bar:
+    s: a string
+nested:
   b: true
-bar:
-  nested:
-    i: 123
-    f: 1.23
-baz:
-  nested:
-    x:
-      - one
-      - two
-      - three
+  f: 1.23
+x:
+  value:
+    - one
+    - two
+    - three
