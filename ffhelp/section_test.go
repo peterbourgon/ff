@@ -53,7 +53,8 @@ func TestSection_StdFlags(t *testing.T) {
 }
 
 var stdFlagsSectionHelp = `
-fftest
+NAME
+  fftest
 
 FLAGS
   -a BOOL       bool a (default: true)
@@ -133,7 +134,8 @@ func TestSections_Command(t *testing.T) {
 }
 
 var testCommandRootHelp = `
-testcmd
+COMMAND
+  testcmd
 
 USAGE
   testcmd [FLAGS] <SUBCOMMAND> ...
@@ -156,7 +158,8 @@ FLAGS
 `
 
 var testCommandFooHelp = `
-foo -- the foo subcommand
+COMMAND
+  foo -- the foo subcommand
 
 USAGE
   foo [FLAGS] <SUBCOMMAND> ...
@@ -174,7 +177,8 @@ FLAGS (root)
 `
 
 var testCommandBarHelp = strings.ReplaceAll(`
-bar -- the bar subcommand
+COMMAND
+  bar -- the bar subcommand
 
 USAGE
   bar [FLAGS] ...
@@ -244,3 +248,5 @@ tortor. Quisque elit nibh, rhoncus in posuere et, bibendum non turpis.
 Maecenas eget dui malesuada, pretium tellus quis, bibendum felis. Duis erat
 enim, faucibus id auctor ac, ornare sed metus.
 `
+
+var loremIpsumSlice = strings.Split(strings.TrimSpace(loremIpsum), "\n")

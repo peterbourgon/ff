@@ -24,25 +24,13 @@ func TestFlagsHelp(t *testing.T) {
 		}
 	})
 
-	t.Run("summary", func(t *testing.T) {
+	t.Run("usage", func(t *testing.T) {
 		fs := ff.NewFlags("fftest")
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
-		want := strings.TrimSpace(testFlagsHelpSummary)
-		have := strings.TrimSpace(ffhelp.Flags(fs).String())
-		if want != have {
-			t.Errorf("\n%s", fftest.DiffString(want, have))
-		}
-	})
-
-	t.Run("details", func(t *testing.T) {
-		fs := ff.NewFlags("fftest")
-		fs.Duration('d', "dur", 0, "duration flag")
-		fs.String('s', "str", "", "string flag")
-
-		want := strings.TrimSpace(testFlagsHelpDetails)
-		have := strings.TrimSpace(ffhelp.Flags(fs, strings.TrimSpace(loremIpsum)).String())
+		want := strings.TrimSpace(testFlagsHelpUsage)
+		have := strings.TrimSpace(ffhelp.Flags(fs, loremIpsumSlice...).String())
 		if want != have {
 			t.Errorf("\n%s", fftest.DiffString(want, have))
 		}
@@ -50,32 +38,27 @@ func TestFlagsHelp(t *testing.T) {
 }
 
 var testFlagsHelpBasic = `
-fftest
+NAME
+  fftest
 
 FLAGS
   -d, --dur DURATION   duration flag (default: 0s)
   -s, --str STRING     string flag
 `
 
-var testFlagsHelpSummary = `
-fftest
+var testFlagsHelpUsage = `
+NAME
+  fftest
 
-FLAGS
-  -d, --dur DURATION   duration flag (default: 0s)
-  -s, --str STRING     string flag
-`
-
-var testFlagsHelpDetails = `
-fftest
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam diam eros,
-vestibulum at pulvinar vulputate, vehicula id lacus. Class aptent taciti
-sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
-Mauris venenatis felis orci, ac consectetur mi molestie ac. Integer pharetra
-pharetra odio. Maecenas metus eros, viverra eget efficitur ut, feugiat in
-tortor. Quisque elit nibh, rhoncus in posuere et, bibendum non turpis.
-Maecenas eget dui malesuada, pretium tellus quis, bibendum felis. Duis erat
-enim, faucibus id auctor ac, ornare sed metus.
+USAGE
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam diam eros,
+  vestibulum at pulvinar vulputate, vehicula id lacus. Class aptent taciti
+  sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
+  Mauris venenatis felis orci, ac consectetur mi molestie ac. Integer pharetra
+  pharetra odio. Maecenas metus eros, viverra eget efficitur ut, feugiat in
+  tortor. Quisque elit nibh, rhoncus in posuere et, bibendum non turpis.
+  Maecenas eget dui malesuada, pretium tellus quis, bibendum felis. Duis erat
+  enim, faucibus id auctor ac, ornare sed metus.
 
 FLAGS
   -d, --dur DURATION   duration flag (default: 0s)
@@ -97,7 +80,8 @@ func TestFlagsHelp_OnlyLong(t *testing.T) {
 }
 
 const testFlagsHelpOnlyLong = `
-fftest
+NAME
+  fftest
 
 FLAGS
   --alpha   alpha usage (default: false)

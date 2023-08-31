@@ -11,18 +11,18 @@ import (
 // Help represents help output for a flag set, command, etc.
 type Help []Section
 
-// Flags returns a default [Help] value representing fs. If details are
-// provided, they're included as a single untitled section before any FLAGS
-// section(s).
+// Flags returns a default [Help] value representing fs. If usage strings are
+// provided, they're used as lines in a USAGE section, included before any FLAGS
+// sections.
 //
 // This function is meant as reasonable default for most users, and as an
 // example. Callers who want different help output should implement their own
 // [Help] value constructors like this one.
-func Flags(fs ff.Flags, details ...string) Help {
+func Flags(fs ff.Flags, usage ...string) Help {
 	var help Help
-	help = append(help, NewUntitledSection(fs.GetName()))
-	if len(details) > 0 {
-		help = append(help, NewUntitledSection(details...))
+	help = append(help, NewSection("NAME", fs.GetName()))
+	if len(usage) > 0 {
+		help = append(help, NewSection("USAGE", usage...))
 	}
 	help = append(help, NewFlagsSections(fs)...)
 	return help
@@ -44,7 +44,7 @@ func Command(cmd *ff.Command) Help {
 	if cmd.ShortHelp != "" {
 		commandTitle = fmt.Sprintf("%s -- %s", commandTitle, cmd.ShortHelp)
 	}
-	help = append(help, NewUntitledSection(commandTitle))
+	help = append(help, NewSection("COMMAND", commandTitle))
 
 	if cmd.Usage != "" {
 		help = append(help, NewSection("USAGE", cmd.Usage))
