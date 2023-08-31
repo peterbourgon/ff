@@ -20,25 +20,15 @@ type Help []Section
 // [Help] value constructors like this one.
 func Flags(fs ff.Flags, details ...string) Help {
 	var help Help
-
-	top := fs.GetName()
-	if d, ok := fs.(ff.Describer); ok {
-		if desc := d.GetDescription(); desc != "" {
-			top = desc
-		}
-	}
-	help = append(help, NewUntitledSection(top))
-
+	help = append(help, NewUntitledSection(fs.GetName()))
 	if len(details) > 0 {
 		help = append(help, NewUntitledSection(details...))
 	}
-
 	help = append(help, NewFlagsSections(fs)...)
-
 	return help
 }
 
-// Command returns [Help] for the given command.
+// Command returns a standard [Help] for the given command.
 //
 // This function is meant as reasonable default for most users, and as an
 // example. Callers who want different help output should implement their own

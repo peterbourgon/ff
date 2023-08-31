@@ -23,14 +23,14 @@ func main() {
 		Flags: rootFlags,
 	}
 
-	repeatFlags := ff.NewFlags("repeat").SetParent(rootFlags) // SetParent allows this flag set to parse any parent flag
+	repeatFlags := ff.NewFlags("repeat").SetParent(rootFlags) // SetParent allows repeatFlags access to rootFlags
 	n := repeatFlags.IntShort('n', 3, "how many times to repeat")
 	repeatCmd := &ff.Command{
 		Name:      "repeat",
 		Usage:     "textctl repeat [-n TIMES] <ARG>",
 		ShortHelp: "repeatedly print the argument to stdout",
 		Flags:     repeatFlags,
-		Exec: func(_ context.Context, args []string) error { // defining Exec inline allows it to access the e.g. verbose flag
+		Exec: func(_ context.Context, args []string) error { // defining Exec inline allows it to access the e.g. verbose flag, above
 			if n := len(args); n != 1 {
 				return fmt.Errorf("repeat requires exactly 1 argument, but you provided %d", n)
 			}
@@ -68,6 +68,7 @@ func main() {
 	err := rootCmd.ParseAndRun(context.Background(), os.Args[1:])
 	if errors.Is(err, ff.ErrHelp) || errors.Is(err, ff.ErrNoExec) {
 		fmt.Fprintf(os.Stderr, "\n%s\n", ffhelp.Command(rootCmd))
+		os.Exit(0)
 	} else if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %s\n", err)
 		os.Exit(1)

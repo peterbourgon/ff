@@ -23,12 +23,10 @@ type CoreFlags struct {
 	postParseArgs []string
 	isStdAdapter  bool // stdlib package flag behavior: treat -foo the same as --foo
 	parent        *CoreFlags
-	description   string
 }
 
 var _ Flags = (*CoreFlags)(nil)
 var _ Resetter = (*CoreFlags)(nil)
-var _ Describer = (*CoreFlags)(nil)
 
 // NewFlags returns a new core flag set with the given name.
 func NewFlags(name string) *CoreFlags {
@@ -66,16 +64,6 @@ func NewStdFlags(stdfs *flag.FlagSet) *CoreFlags {
 	return corefs
 }
 
-// SetDescription assigns a description to the flag set. Descriptions may be
-// used in help output, documentation, etc. as a more descriptive replacement
-// for the flag set name.
-//
-// This method returns its receiver to allow for builder-style initialization.
-func (fs *CoreFlags) SetDescription(description string) *CoreFlags {
-	fs.description = description
-	return fs
-}
-
 // SetParent assigns a parent flag set to this one. In this case, all of the
 // flags in all parent flag sets are available, recursively, to the child. For
 // example, Parse will match against any parent flag, WalkFlags will traverse
@@ -90,12 +78,6 @@ func (fs *CoreFlags) SetParent(parent *CoreFlags) *CoreFlags {
 // GetName returns the name of the flag set provided during construction.
 func (fs *CoreFlags) GetName() string {
 	return fs.setName
-}
-
-// GetDescription implements [Describer] and returns the description provided to
-// [CoreFlags.SetDescription], if any.
-func (fs *CoreFlags) GetDescription() string {
-	return fs.description
 }
 
 // Parse the provided args against the flag set, assigning flag values as

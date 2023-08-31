@@ -118,39 +118,39 @@ func (f Flag) Format(s fmt.State, verb rune) {
 //
 
 // FlagSpec represents a single-line help text for an [ff.Flag]. That line
-// consists of two parts: args, which is a fixed-width formatted description of
-// the flag names and placeholder; and help, which is a combination of the usage
-// string and the default value (if non-empty).
+// consists of two parts: the spec, which is a fixed-width formatted description
+// of the flag names and placeholder; and the usage, which is a combination of
+// the usage string and the default value (if non-empty).
 type FlagSpec struct {
-	Flag ff.Flag
-	Args string // "-f, --foo STRING"
-	Help string // "value of foo parameter (default: bar)"
+	Flag  ff.Flag
+	Spec  string // "-f, --foo STRING"
+	Usage string // "value of foo parameter (default: bar)"
 }
 
 // MakeFlagSpec produces a [FlagSpec] from an [ff.Flag].
 func MakeFlagSpec(f ff.Flag) FlagSpec {
 	ff := Flag{f}
 
-	args := fmt.Sprintf("%#+v", ff)
+	spec := fmt.Sprintf("%#+v", ff)
 	if sf, ok := f.(interface{ IsStdFlag() bool }); ok && sf.IsStdFlag() {
-		args = strings.Replace(args, "--", "-", 1)
-		args = strings.TrimSpace(args)
+		spec = strings.Replace(spec, "--", "-", 1)
+		spec = strings.TrimSpace(spec)
 	}
 
-	help := fmt.Sprintf("%u", ff)
-	if d := f.GetDefault(); d != "" {
-		help = fmt.Sprintf("%s (default: %s)", help, d)
+	usage := fmt.Sprintf("%u", ff)
+	if def := f.GetDefault(); def != "" {
+		usage = fmt.Sprintf("%s (default: %s)", usage, def)
 	}
 
 	return FlagSpec{
-		Flag: f,
-		Args: args,
-		Help: help,
+		Flag:  f,
+		Spec:  spec,
+		Usage: usage,
 	}
 }
 
-// String returns a tab-delimited and newline-terminated string containing args
-// and help in that order. It's intended to be written to a [tabwriter.Writer].
+// String returns a tab-delimited and newline-terminated string containing the
+// spec and the usage. It's intended to be written to a [tabwriter.Writer].
 func (fs FlagSpec) String() string {
-	return fmt.Sprintf("%s\t%s\n", fs.Args, fs.Help)
+	return fmt.Sprintf("%s\t%s\n", fs.Spec, fs.Usage)
 }

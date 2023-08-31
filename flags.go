@@ -103,13 +103,6 @@ type Resetter interface {
 	Reset() error
 }
 
-// Describer may optionally be implemented by [Flags].
-type Describer interface {
-	// GetDescription returns a string that can be used instead of the flag set
-	// name in help output, documentation, etc.
-	GetDescription() string
-}
-
 // IsBoolFlagger is used to identify flag values representing booleans.
 type IsBoolFlagger interface{ IsBoolFlag() bool }
 

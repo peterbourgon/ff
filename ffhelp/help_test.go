@@ -25,7 +25,7 @@ func TestFlagsHelp(t *testing.T) {
 	})
 
 	t.Run("summary", func(t *testing.T) {
-		fs := ff.NewFlags("fftest").SetDescription("fftest -- do something interesting")
+		fs := ff.NewFlags("fftest")
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
@@ -37,7 +37,7 @@ func TestFlagsHelp(t *testing.T) {
 	})
 
 	t.Run("details", func(t *testing.T) {
-		fs := ff.NewFlags("fftest").SetDescription("fftest -- do something interesting")
+		fs := ff.NewFlags("fftest")
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
@@ -58,7 +58,7 @@ FLAGS
 `
 
 var testFlagsHelpSummary = `
-fftest -- do something interesting
+fftest
 
 FLAGS
   -d, --dur DURATION   duration flag (default: 0s)
@@ -66,7 +66,7 @@ FLAGS
 `
 
 var testFlagsHelpDetails = `
-fftest -- do something interesting
+fftest
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam diam eros,
 vestibulum at pulvinar vulputate, vehicula id lacus. Class aptent taciti

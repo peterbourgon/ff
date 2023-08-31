@@ -1,2 +1,2 @@
-// Package ffdata provides data-related helpers for ff sub-packages.
+// Package ffdata provides data-related helpers for ff packages.
 package ffdata
