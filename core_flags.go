@@ -352,8 +352,9 @@ type CoreFlagConfig struct {
 	ShortName rune
 
 	// LongName is the long form name of the flag, which can be provided as a
-	// commandline argument with a double-dash -- prefix. An empty string is
-	// considered an invalid long name and is ignored.
+	// commandline argument with a double-dash -- prefix. Long names are trimmed
+	// of whitespace via [strings.TrimSpace] prior to evaluation. Empty long
+	// names are ignored.
 	//
 	// At least one of ShortName and/or LongName is required.
 	LongName string
@@ -366,7 +367,7 @@ type CoreFlagConfig struct {
 	//
 	// The placeholder is determined by the following logic.
 	//
-	//  - If EmptyPlaceholder is true, use the empty string
+	//  - If NoPlaceholder is true, use the empty string
 	//  - If Placeholder is non-empty, use that string
 	//  - If Usage contains a `backtick-quoted` substring, use that substring
 	//  - If Value is a boolean with default value false, use the empty string
@@ -485,6 +486,8 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 	if cfg.Value == nil {
 		return nil, fmt.Errorf("value is required")
 	}
+
+	cfg.LongName = strings.TrimSpace(cfg.LongName)
 
 	var (
 		hasShort     = isValidShortName(cfg.ShortName)
@@ -646,6 +649,32 @@ func (fs *CoreFlags) StringSetShort(short rune, usage string) *[]string {
 // See [StringSetVar] for more details.
 func (fs *CoreFlags) StringSetLong(long string, usage string) *[]string {
 	return fs.StringSet(0, long, usage)
+}
+
+// StringEnumVar defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *CoreFlags) StringEnumVar(pointer *string, short rune, long string, usage string, valid ...string) Flag {
+	return fs.Value(short, long, ffval.NewEnum(pointer, valid...), usage)
+}
+
+// StringEnum defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *CoreFlags) StringEnum(short rune, long string, usage string, valid ...string) *string {
+	var value string
+	fs.StringEnumVar(&value, short, long, usage, valid...)
+	return &value
+}
+
+// StringEnumShort defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *CoreFlags) StringEnumShort(short rune, usage string, valid ...string) *string {
+	return fs.StringEnum(short, "", usage, valid...)
+}
+
+// StringEnumLong defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *CoreFlags) StringEnumLong(long string, usage string, valid ...string) *string {
+	return fs.StringEnum(0, long, usage, valid...)
 }
 
 // Float64Var defines a new flag in the flag set, and panics on any error.

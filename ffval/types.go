@@ -13,7 +13,7 @@ import (
 // parser, which will be used if a parser is not explicitly provided by the
 // user. This permits the zero value of corresponding generic types to be
 // useful, which in turn allows this package to provide common and useful types
-// like [Bool], [String], [StringSet], etc.
+// like [Bool], [Duration], [StringSet], etc.
 type ValueType interface {
 	bool | int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64 | string | complex64 | complex128 | time.Duration | ffbyte | ffrune
 }
@@ -96,28 +96,6 @@ type Rune = Value[ffrune]
 // Duration is a flag value representing a [time.Duration].
 // Values are parsed by [time.ParseDuration].
 type Duration = Value[time.Duration]
-
-//
-//
-//
-
-// BoolList is a [List] of bools. Duplicates are permitted.
-type BoolList = List[bool]
-
-// BoolSet is a [UniqueList] of bools. Duplicates are silently dropped.
-type BoolSet = UniqueList[bool]
-
-// IntList is a [List] of ints. Duplicates are permitted.
-type IntList = List[int]
-
-// IntSet is a [UniqueList] of ints. Duplicates are silently dropped.
-type IntSet = UniqueList[int]
-
-// StringList a [List] of strings. Duplicates are permitted.
-type StringList = List[string]
-
-// StringSet is a [UniqueList] of strings. Duplicates are silently dropped.
-type StringSet = UniqueList[string]
 
 //
 //

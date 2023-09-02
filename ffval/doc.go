@@ -8,7 +8,6 @@
 // [Bool], [String], [Duration], etc.
 //
 // [List] and [UniqueList] represent a sequence of values of type T, where each
-// call to Set (potentially) adds the value to the end of the list. The package
-// defines a small set of lists for common underlying types, like [IntList],
-// [StringSet], etc.
+// call to set adds a value to the end of the list. [Enum] represents one of a
+// specific set of values of type T.
 package ffval
