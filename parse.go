@@ -11,13 +11,16 @@ import (
 	"strings"
 )
 
+// FlagSetAny must be one of { [Flags] | [*flag.FlagSet] }
+type FlagSetAny = any
+
 // Parse the flag set with the provided args. [Option] values can be used to
 // influence parse behavior. For example, options exist to read flags from
 // environment variables, config files, etc.
 //
 // The fs parameter must be of type [Flags] or [*flag.FlagSet]. Any other type
 // will result in an error.
-func Parse(fs any, args []string, options ...Option) error {
+func Parse(fs FlagSetAny, args []string, options ...Option) error {
 	switch reified := fs.(type) {
 	case Flags:
 		return parseFlags(reified, args, options...)
