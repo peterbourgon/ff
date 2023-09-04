@@ -2,11 +2,11 @@
 
 ff is a flags-first approach to configuration.
 
-The basic rationale is that that `myprogram -h` should reliably describe the
-complete configuration "surface area" of a program. Therefore, every config
-parameter should be defined as a flag. This module provides a simple and robust
-way to define those flags, and to parse them from command-line arguments,
-environment variables, and/or a config file.
+The basic idea is that `myprogram -h` should always show the complete
+configuration "surface area" of a program. Therefore, every config parameter
+should be defined as a flag. This module provides a simple and robust way to
+define those flags, and to parse them from command-line arguments, environment
+variables, and/or a config file.
 
 Building a command-line application in the style of `kubectl` or `docker`?
 [Command](#command) provides a declarative approach that's simpler to write, and
@@ -14,7 +14,12 @@ easier to maintain, than many common alternatives.
 
 ## Usage
 
-This module provides a getopts(3)-inspired flag set, used as follows.
+This module defines a [Flags][flags] interface to represent a flag set, and
+provides a [getopts(3)-inspired implementation][coreflags] that can be used as
+follows.
+
+[flags]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Flags
+[coreflags]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#CoreFlags
 
 ```go
 fs := ff.NewFlags("myprogram")
@@ -26,9 +31,9 @@ var (
 )
 ```
 
-It's also possible to adapt a standard library flag set. In this case, be sure
-to use the ContinueOnError error handling strategy. Other options either panic
-or terminate the program on parse errors. Rude!
+It's also possible to use a standard library flag.FlagSet. Be sure to pass the
+ContinueOnError error handling strategy, as other options either panic or
+terminate the program on parse errors -- rude!
 
 ```go
 fs := flag.NewFlagSet("myprogram", flag.ContinueOnError)
@@ -40,8 +45,11 @@ var (
 )
 ```
 
-Once you have a set of flags, you can parse them as follows, using options to
-control parse behavior.
+Once you have a set of flags, call [Parse][parse] to parse them.
+[Options][options] can be provided to control parsing behavior.
+
+[parse]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVars
+[options]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Option
 
 ```go
 err := ff.Parse(fs, os.Args[1:],
@@ -53,12 +61,18 @@ err := ff.Parse(fs, os.Args[1:],
 
 Here, flags are first set from the provided command-line arguments, then from
 env vars beginning with `MY_PROGRAM`, and, finally, if the user specifies a
-config file, from values in that file, as parsed by PlainParser.
+config file, from values in that file, as parsed by [PlainParser][plainparser].
+
+[plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#PlainParser
 
 Unlike other flag packages, help/usage text is not automatically printed as a
-side effect of parse. Instead, when a user requests help via e.g. -h or --help,
-it's reported as a parse error. Callers are always responsible for checking
-parse errors, and printing help/usage text as appropriate.
+side effect of parsing. When a user requests help via e.g. -h or --help, it's
+reported as a parse error. Callers are responsible for checking parse errors,
+and printing help/usage text when appropriate. [package ffhelp][ffhelp] has
+helpers for producing help/usage text in a standard format, but you can always
+write your own.
+
+[ffhelp]: https://pkg.go.dev/github.com/peterbourgon/ff/v4/ffhelp
 
 ```go
 if errors.Is(err, ff.ErrHelp) {
