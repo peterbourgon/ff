@@ -101,7 +101,7 @@ func (cmd *Command) Parse(args []string, options ...Option) error {
 	}
 
 	// Parse this command's flag set from the provided args.
-	if err := parseFlags(cmd.Flags, args, options...); err != nil {
+	if err := parse(cmd.Flags, args, options...); err != nil {
 		cmd.selected = cmd // allow GetSelected to work even with errors
 		return fmt.Errorf("%s: %w", cmd.Name, err)
 	}

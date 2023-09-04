@@ -11,24 +11,27 @@ import (
 	"strings"
 )
 
+// FlagSetAny must be either a [Flags] interface, or a concrete [*flag.FlagSet].
+// Any other value will produce a runtime error.
+//
+// The intent is to make the signature of functions like [Parse] more intuitive.
+type FlagSetAny any
+
 // Parse the flag set with the provided args. [Option] values can be used to
 // influence parse behavior. For example, options exist to read flags from
 // environment variables, config files, etc.
-//
-// The fs parameter must be of type [Flags] or [*flag.FlagSet]. Any other type
-// will result in an error.
-func Parse(fs any, args []string, options ...Option) error {
+func Parse(fs FlagSetAny, args []string, options ...Option) error {
 	switch reified := fs.(type) {
 	case Flags:
-		return parseFlags(reified, args, options...)
+		return parse(reified, args, options...)
 	case *flag.FlagSet:
-		return parseFlags(NewStdFlags(reified), args, options...)
+		return parse(NewStdFlags(reified), args, options...)
 	default:
 		return fmt.Errorf("unsupported flag set %T", fs)
 	}
 }
 
-func parseFlags(fs Flags, args []string, options ...Option) error {
+func parse(fs Flags, args []string, options ...Option) error {
 	// The parse context manages options.
 	var pc ParseContext
 	for _, option := range options {
