@@ -149,3 +149,75 @@ func (v Value[T]) IsBoolFlag() bool {
 		return false
 	}
 }
+
+//
+//
+//
+
+type reflectValue struct {
+	set func(string) error
+	get func() string
+
+	isBoolFlag bool
+	typeName   string
+}
+
+var _ flag.Value = (*reflectValue)(nil)
+
+func NewValueReflect(typ reflect.Type, dst reflect.Value, def string) (flag.Value, error) {
+	if !dst.CanSet() {
+		return nil, fmt.Errorf("unassignable destination %s", dst.Type().Name())
+	}
+
+	parseFunc, ok := defaultParseFuncs[typ]
+	if !ok {
+		return nil, fmt.Errorf("unsupported type %s", typ)
+	}
+
+	set := func(s string) error {
+		parseFuncVal := reflect.ValueOf(parseFunc)
+		parseFuncIn := []reflect.Value{reflect.ValueOf(s)}
+		parseFuncOut := parseFuncVal.Call(parseFuncIn)
+		if len(parseFuncOut) != 2 {
+			panic(fmt.Errorf("calling parseFunc: expected 2 values, got %d", len(parseFuncOut)))
+		}
+		if err, ok := parseFuncOut[1].Interface().(error); ok && err != nil {
+			return err
+		}
+		dst.Set(parseFuncOut[0])
+		return nil
+	}
+
+	get := func() string {
+		sprintFuncVal := reflect.ValueOf(fmt.Sprint)
+		sprintFuncIn := []reflect.Value{dst}
+		sprintFuncOut := sprintFuncVal.Call(sprintFuncIn)
+		if len(sprintFuncOut) != 1 {
+			panic(fmt.Errorf("calling fmt.Sprint: expected 2 values, got %d", len(sprintFuncOut)))
+		}
+		var s string
+		reflect.ValueOf(&s).Elem().Set(sprintFuncOut[0])
+		return s
+	}
+
+	if def != "" {
+		if err := set(def); err != nil {
+			return nil, err
+		}
+	}
+
+	isBoolFlag := typ.ConvertibleTo(reflect.TypeOf(*new(bool)))
+	typeName := typ.Name()
+
+	return &reflectValue{
+		set:        set,
+		get:        get,
+		isBoolFlag: isBoolFlag,
+		typeName:   typeName,
+	}, nil
+}
+
+func (v *reflectValue) Set(s string) error  { return v.set(s) }
+func (v *reflectValue) String() string      { return v.get() }
+func (v *reflectValue) IsBoolFlag() bool    { return v.isBoolFlag }
+func (v *reflectValue) GetTypeName() string { return v.typeName }

@@ -215,16 +215,6 @@ func TestValue_types(t *testing.T) {
 			bad:   []string{"", " ", "i", "1e309i"},
 		},
 		{
-			value: new(ffval.Byte),
-			good:  []string{"0", " ", "00", "0x0", "0x00", "1", "0xc", "0x3", "0xf", "0Xff", "0xFF", "0b0100", "0o5", "0b0100_0001"},
-			bad:   []string{"", "-1", "FG", "xF", "259", "0b1111_1111_1111"},
-		},
-		{
-			value: new(ffval.Rune),
-			good:  []string{"1", " ", "(", "😀"},
-			bad:   []string{"", "00", "👨‍👨‍👧‍👦"},
-		},
-		{
 			value: new(ffval.Duration),
 			good:  []string{"12ns", "34ms", "5h6m", "127h"},
 			bad:   []string{"", " ", "123", "3.21"},

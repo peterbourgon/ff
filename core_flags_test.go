@@ -3,6 +3,8 @@ package ff_test
 import (
 	"errors"
 	"flag"
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -286,4 +288,144 @@ func TestCoreFlags_Get(t *testing.T) {
 	if want, have := "X", f.GetPlaceholder(); want != have {
 		t.Errorf("GetPlaceholder: want %q, have %q", want, have)
 	}
+}
+
+func TestCoreFlags_AddStruct(t *testing.T) {
+	t.Parallel()
+
+	type flagStruct struct {
+		Alpha   string  `ff:" short=a , long=alpha   , default=alpha-default   ,     , usage=alpha string  ,           "`
+		Beta    int     `ff:"         , long=beta    ,                         ,     , usage=beta int      ,           "`
+		Delta   bool    `ff:" short=d ,              ,                         ,     , usage=delta bool    , nodefault "`
+		Epsilon bool    `ff:" short=e , long=epsilon ,                         ,     , usage=epsilon bool  , nodefault "`
+		Gamma   string  `ff:" s    =g , l   =gamma   ,                         ,     , u    =gamma string  ,           "`
+		Iota    float64 `ff:"         , long=iota    , default=0.43            , p=I , usage=iota float    ,           "`
+	}
+
+	var flags flagStruct
+
+	fs := ff.NewFlags(t.Name())
+	if err := fs.AddStruct(&flags); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("\n%s\n", ffhelp.Flags(fs))
+
+	type testcase struct {
+		name string
+		args []string
+		want flagStruct
+	}
+
+	for _, testcase := range []testcase{
+		{
+			name: "one",
+			args: []string{"--alpha=x"},
+			want: flagStruct{Alpha: "x", Iota: 0.43},
+		},
+		{
+			name: "two",
+			args: []string{"-e", "--iota=1.23"},
+			want: flagStruct{Alpha: "alpha-default", Epsilon: true, Iota: 1.23},
+		},
+		{
+			name: "three",
+			args: []string{"-gabc", "-d"},
+			want: flagStruct{Alpha: "alpha-default", Delta: true, Gamma: "abc", Iota: 0.43},
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			if err := fs.Reset(); err != nil {
+				t.Fatalf("Reset: %v", err)
+			}
+			if err := ff.Parse(fs, testcase.args); err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if want, have := testcase.want, flags; !reflect.DeepEqual(want, have) {
+				t.Errorf("\nwant %+#v\nhave %#+v", want, have)
+			}
+		})
+	}
+
+	{
+		if err := fs.Reset(); err != nil {
+			t.Fatalf("Reset: %v", err)
+		}
+		if err := ff.Parse(fs, []string{}); err != nil {
+			t.Fatalf("Parse: %v", err)
+		}
+		if want, have := "alpha-default", flags.Alpha; want != have {
+			t.Errorf("alpha: want %q, have %q", want, have)
+		}
+		if want, have := 0, flags.Beta; want != have {
+			t.Errorf("beta: want %v, have %v", want, have)
+		}
+		if want, have := false, flags.Delta; want != have {
+			t.Errorf("delta: want %v, have %v", want, have)
+		}
+	}
+
+	{
+		if err := fs.Reset(); err != nil {
+			t.Fatalf("Reset: %v", err)
+		}
+		if err := ff.Parse(fs, []string{"-afoo", "--beta", "7", "-d"}); err != nil {
+			t.Fatalf("Parse: %v", err)
+		}
+		if want, have := "foo", flags.Alpha; want != have {
+			t.Errorf("alpha: want %q, have %q", want, have)
+		}
+		if want, have := 7, flags.Beta; want != have {
+			t.Errorf("beta: want %v, have %v", want, have)
+		}
+		if want, have := true, flags.Delta; want != have {
+			t.Errorf("delta: want %v, have %v", want, have)
+		}
+	}
+
+	t.Run("implements", func(t *testing.T) {
+		var flags struct {
+			Foo ffval.UniqueList[string] `ff:"longname=foo , usage=foo strings"`
+			Bar ffval.Value[int]         `ff:"longname=bar , usage=bar int"`
+		}
+
+		fs := ff.NewFlags(t.Name())
+		if err := fs.AddStruct(&flags); err != nil { // should allow
+			t.Fatalf("AddStruct: %v", err)
+		}
+
+		if err := ff.Parse(fs, []string{"--foo=a", "--foo", "b"}); err != nil {
+			t.Fatalf("Parse: %v", err)
+		}
+
+		if want, have := []string{"a", "b"}, flags.Foo.Get(); !reflect.DeepEqual(want, have) {
+			t.Errorf("foo: want %#+v, have %#+v", want, have)
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		for i, st := range []any{
+			&struct {
+				A int `ff:"x"`
+			}{},
+			&struct {
+				B int `ff:"short = a, longname=, usage=some usage"`
+			}{},
+			&struct {
+				C int `ff:"short = ,"`
+			}{},
+			&struct {
+				D *testing.T `ff:"long=alpha"`
+			}{},
+		} {
+			t.Run(fmt.Sprint(i), func(t *testing.T) {
+				fs := ff.NewFlags(t.Name())
+				err := fs.AddStruct(st)
+				t.Logf("error: %v", err)
+				if err == nil {
+					t.Errorf("want error, have none")
+				}
+			})
+		}
+	})
 }

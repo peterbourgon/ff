@@ -59,12 +59,12 @@ type Flag interface {
 
 	// GetShortName should return the short name for this flag, if one is
 	// defined. A short name is always a single character (rune) which is
-	// typically parsed with a single leading - hyphen.
+	// typically parsed with a single leading hyphen, e.g. -f.
 	GetShortName() (rune, bool)
 
 	// GetLongName should return the long name for this flag, if one is defined.
 	// A long name is always a non-empty string which is typically parsed with
-	// two leading -- hyphens.
+	// two leading hyphens, e.g. --foo.
 	GetLongName() (string, bool)
 
 	// GetPlaceholder should return a string that can be used as a placeholder
@@ -87,7 +87,7 @@ type Flag interface {
 	SetValue(string) error
 
 	// GetValue should return the current value of the flag as a string. If no
-	// value has been set, it should return the default value.
+	// value has been set, it should return the default value as a string.
 	GetValue() string
 
 	// IsSet should return true if SetValue has been called successfully.

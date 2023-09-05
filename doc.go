@@ -1,15 +1,14 @@
 // Package ff provides a flags-first approach to runtime configuration.
 //
-// [Parse] is the central function. It mirrors [flag.FlagSet.Parse] and
-// populates a set of [Flags] from commandline arguments, environment variables,
-// and/or a config file. [Option] values control parse behavior.
+// The main function is [Parse], which mirrors [flag.FlagSet.Parse], populating
+// a set of [Flags] from commandline arguments, environment variables, and/or a
+// config file. [Option] values control parsing behavior.
 //
-// [CoreFlags] is a standard, getopts(3)-inspired implementation of the [Flags]
-// interface. Consumers can create a CoreFlags via [NewFlags], or adapt an
-// existing [flag.FlagSet] to a CoreFlags via [NewStdFlags], or provide their
-// own implementation altogether.
+// [NewFlags] provides a standard set of Flags, inspired by getopts(3). You can
+// also parse a [flags.FlagSet] directly, or provide your own implementation of
+// the Flags interface altogether.
 //
-// [Command] is provided as a way to build hierarchical CLI tools, like docker
-// or kubectl, in a simple and declarative style. It's intended to be easier to
-// understand and maintain than more common alternatives.
+// [Command] is also provided as a tool for building CLI applications, like
+// docker or kubectl, in a simple and declarative style. It's intended to be
+// easier to understand and maintain than more common alternatives.
 package ff
