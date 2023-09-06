@@ -4,6 +4,28 @@ import (
 	"strings"
 )
 
+// Unindent trims s of leading and trailing whitespace, and then trims each line
+// of every given prefix. If no prefixes are provided, each line is trimmed of
+// all leading tab characters. This allows multi-line strings to be written
+// in-line with other code, while remaining comparable.
+func Unindent(s string, prefixes ...string) string {
+	s = strings.TrimSpace(s)
+
+	lines := strings.Split(s, "\n")
+	for i := range lines {
+		switch len(prefixes) {
+		case 0:
+			lines[i] = strings.TrimLeft(lines[i], "\t")
+		default:
+			for _, prefix := range prefixes {
+				lines[i] = strings.TrimPrefix(lines[i], prefix)
+			}
+		}
+	}
+
+	return strings.Join(lines, "\n")
+}
+
 // DiffString produces a git-like diff of two multi-line strings.
 func DiffString(a, b string) string {
 	var (

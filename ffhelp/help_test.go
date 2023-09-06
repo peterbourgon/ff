@@ -1,7 +1,6 @@
 package ffhelp_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/peterbourgon/ff/v4"
@@ -17,8 +16,15 @@ func TestFlagsHelp(t *testing.T) {
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
-		want := strings.TrimSpace(testFlagsHelpBasic)
-		have := strings.TrimSpace(ffhelp.Flags(fs).String())
+		want := fftest.Unindent(`
+			NAME
+			  fftest
+
+			FLAGS
+			  -d, --dur DURATION   duration flag (default: 0s)
+			  -s, --str STRING     string flag
+		`)
+		have := fftest.Unindent(ffhelp.Flags(fs).String())
 		if want != have {
 			t.Errorf("\n%s", fftest.DiffString(want, have))
 		}
@@ -29,41 +35,30 @@ func TestFlagsHelp(t *testing.T) {
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
-		want := strings.TrimSpace(testFlagsHelpUsage)
-		have := strings.TrimSpace(ffhelp.Flags(fs, loremIpsumSlice...).String())
+		want := fftest.Unindent(`
+			NAME
+			  fftest
+
+			USAGE
+			  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam diam eros,
+			  vestibulum at pulvinar vulputate, vehicula id lacus. Class aptent taciti
+			  sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
+			  Mauris venenatis felis orci, ac consectetur mi molestie ac. Integer pharetra
+			  pharetra odio. Maecenas metus eros, viverra eget efficitur ut, feugiat in
+			  tortor. Quisque elit nibh, rhoncus in posuere et, bibendum non turpis.
+			  Maecenas eget dui malesuada, pretium tellus quis, bibendum felis. Duis erat
+			  enim, faucibus id auctor ac, ornare sed metus.
+
+			FLAGS
+			  -d, --dur DURATION   duration flag (default: 0s)
+			  -s, --str STRING     string flag
+		`)
+		have := fftest.Unindent(ffhelp.Flags(fs, loremIpsumSlice...).String())
 		if want != have {
 			t.Errorf("\n%s", fftest.DiffString(want, have))
 		}
 	})
 }
-
-var testFlagsHelpBasic = `
-NAME
-  fftest
-
-FLAGS
-  -d, --dur DURATION   duration flag (default: 0s)
-  -s, --str STRING     string flag
-`
-
-var testFlagsHelpUsage = `
-NAME
-  fftest
-
-USAGE
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam diam eros,
-  vestibulum at pulvinar vulputate, vehicula id lacus. Class aptent taciti
-  sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
-  Mauris venenatis felis orci, ac consectetur mi molestie ac. Integer pharetra
-  pharetra odio. Maecenas metus eros, viverra eget efficitur ut, feugiat in
-  tortor. Quisque elit nibh, rhoncus in posuere et, bibendum non turpis.
-  Maecenas eget dui malesuada, pretium tellus quis, bibendum felis. Duis erat
-  enim, faucibus id auctor ac, ornare sed metus.
-
-FLAGS
-  -d, --dur DURATION   duration flag (default: 0s)
-  -s, --str STRING     string flag
-`
 
 func TestFlagsHelp_OnlyLong(t *testing.T) {
 	t.Parallel()
@@ -72,18 +67,16 @@ func TestFlagsHelp_OnlyLong(t *testing.T) {
 	fs.BoolLong("alpha", false, "alpha usage")
 	fs.BoolLong("beta", false, "beta usage")
 
-	want := strings.TrimSpace(testFlagsHelpOnlyLong)
-	have := strings.TrimSpace(ffhelp.Flags(fs).String())
+	want := fftest.Unindent(`
+		NAME
+		  fftest
+
+		FLAGS
+		  --alpha   alpha usage (default: false)
+		  --beta    beta usage (default: false)
+	`)
+	have := fftest.Unindent(ffhelp.Flags(fs).String())
 	if want != have {
 		t.Errorf("\n%s", fftest.DiffString(want, have))
 	}
 }
-
-const testFlagsHelpOnlyLong = `
-NAME
-  fftest
-
-FLAGS
-  --alpha   alpha usage (default: false)
-  --beta    beta usage (default: false)
-`

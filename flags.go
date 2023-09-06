@@ -10,8 +10,8 @@ import (
 // command (or sub-command) executed by an end user.
 //
 // Any valid Flags can be provided to [Parse], or used as the Flags field in a
-// [Command]. This allows custom flag set implementations to take advantage of
-// the primary features of this module.
+// [Command]. This allows users to provide their own implementations, which can
+// still take advantage of the primary features of this module.
 //
 // Implementations are not expected to be safe for concurrent use by multiple
 // goroutines.
@@ -47,8 +47,8 @@ type Flags interface {
 	GetArgs() []string
 }
 
-// Flag describes a single runtime configuration parameter, defined within a set
-// of flags, and with a value that's parsed from a string.
+// Flag describes a single runtime configuration parameter, defined in a set of
+// [Flags], and with a value that can be parsed from a string.
 //
 // Implementations are not expected to be safe for concurrent use by multiple
 // goroutines.
@@ -103,11 +103,7 @@ type Resetter interface {
 	Reset() error
 }
 
-// IsBoolFlagger is used to identify flag values representing booleans.
-type IsBoolFlagger interface{ IsBoolFlag() bool }
-
 var (
-	_ flag.Value    = (*ffval.Value[any])(nil)
-	_ Resetter      = (*ffval.Value[any])(nil)
-	_ IsBoolFlagger = (*ffval.Value[any])(nil)
+	_ flag.Value = (*ffval.Value[any])(nil)
+	_ Resetter   = (*ffval.Value[any])(nil)
 )

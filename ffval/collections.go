@@ -291,7 +291,7 @@ func (v *UniqueList[T]) IsSet() bool {
 // Enum is a generic [flag.Value] that represents one of a fixed set of possible
 // values of any comparable type T. An enum must have at least one valid value,
 // or it is itself invalid. For this reason, the zero value of an enum is not
-// useful, and most methods will panic.
+// useful, and calling most methods on a zero-value enum will panic.
 type Enum[T comparable] struct {
 	// ParseFunc parses a string to the type T. If no ParseFunc is provided, and
 	// T is a supported [ValueType], then a default ParseFunc will be assigned
@@ -325,8 +325,8 @@ var ErrInvalidValue = errors.New("invalid value")
 var _ flag.Value = (*Enum[any])(nil)
 
 // NewEnum returns an enum of [ValueType] T, updating the given pointer ptr when
-// set, and accepting only the provided valid values. At least one valid value
-// is required, or else the function will panic.
+// set, and which will accept only the provided valid values. At least one valid
+// value is required, or else the function will panic.
 func NewEnum[T ValueType](ptr *T, valid ...T) *Enum[T] {
 	v := &Enum[T]{
 		Pointer: ptr,
@@ -337,12 +337,12 @@ func NewEnum[T ValueType](ptr *T, valid ...T) *Enum[T] {
 }
 
 // NewEnumParser returns an enum of any comparable type T that can be parsed
-// from a string, accepting only the provided valid values. At least one valid
-// value is required, or else the function will panic.
+// from a string, and which will accept only the provided valid values. At least
+// one valid value is required, or else the function will panic.
 //
 // This constructor is intended as a convenience function for tests; consumers
-// who want to provide a parser are probably better served by constructing a
-// list directly, so that they can also provide other fields in a single motion.
+// who want to provide a parser are probably better served by constructing an
+// enum directly, so that they can also provide other fields in a single motion.
 func NewEnumParser[T comparable](parseFunc func(string) (T, error), valid ...T) *Enum[T] {
 	v := &Enum[T]{
 		ParseFunc: parseFunc,

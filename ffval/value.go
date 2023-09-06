@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // Value is a generic [flag.Value] that can be set from a string.
@@ -158,16 +159,28 @@ type reflectValue struct {
 	set func(string) error
 	get func() string
 
-	isBoolFlag bool
-	typeName   string
+	isBoolFlag  bool
+	placeholder string
 }
 
 var _ flag.Value = (*reflectValue)(nil)
 
-// NewValueReflect TODO
-func NewValueReflect(typ reflect.Type, dst reflect.Value, def string) (flag.Value, error) {
+// NewValueReflect produces a simple [flag.Value] which updates ptr when set.
+// ptr must be a pointer to a supported [ValueType]. If def is non-empty, the
+// flag will be set to that default string before being returned. Otherwise, the
+// default value of the flag will be the zero value of the type.
+//
+// This is a fairly low-level function, which exists only to support parsing
+// struct tags. Most consumers should not need to use it.
+func NewValueReflect(ptr any, def string) (flag.Value, error) {
+	if reflect.TypeOf(ptr).Kind() != reflect.Pointer {
+		return nil, fmt.Errorf("%T is not a pointer", ptr)
+	}
+
+	dst := reflect.ValueOf(ptr).Elem()
+	typ := dst.Type()
 	if !dst.CanSet() {
-		return nil, fmt.Errorf("unassignable destination %s", dst.Type().Name())
+		return nil, fmt.Errorf("unassignable value %T (%s)", ptr, typ)
 	}
 
 	parseFunc, ok := defaultParseFuncs[typ]
@@ -208,17 +221,17 @@ func NewValueReflect(typ reflect.Type, dst reflect.Value, def string) (flag.Valu
 	}
 
 	isBoolFlag := typ.ConvertibleTo(reflect.TypeOf(*new(bool)))
-	typeName := typ.Name()
+	placeholder := strings.ToUpper(typ.Name())
 
 	return &reflectValue{
-		set:        set,
-		get:        get,
-		isBoolFlag: isBoolFlag,
-		typeName:   typeName,
+		set:         set,
+		get:         get,
+		isBoolFlag:  isBoolFlag,
+		placeholder: placeholder,
 	}, nil
 }
 
-func (v *reflectValue) Set(s string) error  { return v.set(s) }
-func (v *reflectValue) String() string      { return v.get() }
-func (v *reflectValue) IsBoolFlag() bool    { return v.isBoolFlag }
-func (v *reflectValue) GetTypeName() string { return v.typeName }
+func (v *reflectValue) Set(s string) error     { return v.set(s) }
+func (v *reflectValue) String() string         { return v.get() }
+func (v *reflectValue) IsBoolFlag() bool       { return v.isBoolFlag }
+func (v *reflectValue) GetPlaceholder() string { return v.placeholder }

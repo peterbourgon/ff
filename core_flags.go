@@ -15,8 +15,6 @@ import (
 
 // CoreFlags is the default implementation of a [Flags]. It's broadly similar to
 // a [flag.FlagSet], but with additional capabilities inspired by getopt(3).
-//
-// CoreFlags is not safe for concurrent use by multiple goroutines.
 type CoreFlags struct {
 	setName       string
 	flagSlice     []*coreFlag
@@ -62,6 +60,20 @@ func NewStdFlags(stdfs *flag.FlagSet) *CoreFlags {
 	})
 	corefs.isStdAdapter = true
 	return corefs
+}
+
+// NewStructFlags returns a core flag set with the given name, and with flags
+// taken from the provided val, which must be a pointer to a struct. See
+// [CoreFlags.AddStruct] for more information on how struct tags are parsed. Any
+// error results in a panic.
+//
+// TODO: example
+func NewStructFlags(name string, val any) *CoreFlags {
+	fs := NewFlags(name)
+	if err := fs.AddStruct(val); err != nil {
+		panic(err)
+	}
+	return fs
 }
 
 // SetParent assigns a parent flag set to this one. In this case, all of the
@@ -399,11 +411,10 @@ type CoreFlagConfig struct {
 }
 
 func (cfg CoreFlagConfig) isBoolFlag() bool {
-	bf, ok := cfg.Value.(IsBoolFlagger)
-	if !ok {
-		return false
+	if bf, ok := cfg.Value.(interface{ IsBoolFlag() bool }); ok {
+		return bf.IsBoolFlag()
 	}
-	return bf.IsBoolFlag()
+	return false
 }
 
 func (cfg CoreFlagConfig) getPlaceholder() string {
@@ -430,22 +441,25 @@ func (cfg CoreFlagConfig) getPlaceholder() string {
 	}
 
 	// Bool flags with default value false should have empty placeholders.
-	if bf, ok := cfg.Value.(IsBoolFlagger); ok && bf.IsBoolFlag() {
+	if bf, ok := cfg.Value.(interface{ IsBoolFlag() bool }); ok && bf.IsBoolFlag() {
 		if b, err := strconv.ParseBool(cfg.Value.String()); err == nil && !b {
 			return ""
+		}
+	}
+
+	// If the flag value provides its own non-empty Placeholder, use that.
+	// This has lower priority than the bool flag check, above.
+	if ph, ok := cfg.Value.(interface{ GetPlaceholder() string }); ok {
+		if p := ph.GetPlaceholder(); p != "" {
+			return p
 		}
 	}
 
 	// Otherwise, use a transformation of the flag value type name.
 	var typeName string
 	{
-		if t, ok := cfg.Value.(interface{ GetTypeName() string }); ok {
-			typeName = t.GetTypeName()
-		} else {
-			typeName = fmt.Sprintf("%T", cfg.Value)
-		}
-		typeName = strings.ToUpper(typeName)
-		typeName = typeNameDefaultRegexp.ReplaceAllString(typeName, "$1")
+		typeName = strings.ToUpper(fmt.Sprintf("%T", cfg.Value))
+		typeName = genericTypeNameRegexp.ReplaceAllString(typeName, "$1")
 		typeName = strings.TrimSuffix(typeName, "VALUE")
 		if lastDot := strings.LastIndex(typeName, "."); lastDot > 0 {
 			typeName = typeName[lastDot+1:]
@@ -454,7 +468,7 @@ func (cfg CoreFlagConfig) getPlaceholder() string {
 	return typeName
 }
 
-var typeNameDefaultRegexp = regexp.MustCompile(`[A-Z0-9\_\.\*]+\[(.+)\]`)
+var genericTypeNameRegexp = regexp.MustCompile(`[A-Z0-9\_\.\*]+\[(.+)\]`)
 
 // AddFlag adds a flag to the flag set, as specified by the provided config. An
 // error is returned if the config is invalid, or if a flag is already defined
@@ -482,9 +496,12 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 	if !hasShort && !hasLong {
 		return nil, fmt.Errorf("short name and/or long name is required")
 	}
+	if hasShort && hasLong && string(cfg.ShortName) == cfg.LongName {
+		return nil, fmt.Errorf("-%s, --%s: short name identical to long name", string(cfg.ShortName), cfg.LongName)
+	}
 	if isBoolFlag && !hasLong {
 		if b, err := strconv.ParseBool(trueDefault); err == nil && b {
-			return nil, fmt.Errorf("%s: default true boolean flag requires a long name", string(cfg.ShortName))
+			return nil, fmt.Errorf("-%s: default true boolean flag requires a long name", string(cfg.ShortName))
 		}
 	}
 
@@ -503,7 +520,7 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 
 	for _, existing := range fs.flagSlice {
 		if isDuplicate(f, existing) {
-			return nil, newFlagError(f, ErrDuplicateFlag)
+			return nil, newFlagError(f, fmt.Errorf("%w (%s)", ErrDuplicateFlag, getNameString(existing)))
 		}
 	}
 
@@ -512,22 +529,50 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 	return f, nil
 }
 
-// AddStruct TODO
+// AddStruct adds flags to the flag set which are taken from the given val,
+// which must be a pointer to a struct. Each exported field in that struct with
+// a valid `ff:` struct tag corresponds to a unique flag in the flag set. Those
+// fields must be a supported ffval.ValueType, or implement flag.Value.
+//
+// An example struct follows.
+//
+//	type myFlags struct {
+//	    Foo string `ff:"short=f, long=foo, usage=foo string param, default='hello, world'`
+//	    Bar int    `ff:"short=b, long=bar, usage=bar int param,    default=123`
+//	    Baz bool   `ff:"         long=baz, usage='baz bool param', nodefault`
+//	}
+//
+// The `ff:` struct tag is parsed as one or more comma-separated items. An item
+// is either a key, or a key=value pair. 'Single quoted' values are unquoted
+// before use. Supported keys, and their corresponding [CoreFlagConfig] field,
+// are as follows.
+//
+//   - s, short, shortname: ShortName
+//   - l, long, longname: LongName
+//   - u, usage: Usage
+//   - d, def, default: (assigned to the flag value)
+//   - p, placeholder: Placeholder
+//   - noplaceholder: NoPlaceholder
+//   - nodefault: NoDefault
+//
+// Any unknown key, or invalid value, results in an error.
 func (fs *CoreFlags) AddStruct(val any) error {
-	reflectValue := reflect.ValueOf(val)
-	if reflectValue.Kind() != reflect.Pointer {
-		return fmt.Errorf("struct (%T) must be pointer", val)
+	outerVal := reflect.ValueOf(val)
+	if outerVal.Kind() != reflect.Pointer {
+		return fmt.Errorf("value (%T) must be a pointer", val)
 	}
 
-	var (
-		elemVal = reflectValue.Elem()
-		elemTyp = elemVal.Type()
-	)
-	for i := 0; i < elemVal.NumField(); i++ {
+	innerVal := outerVal.Elem()
+	innerTyp := innerVal.Type()
+	if innerVal.Kind() != reflect.Struct {
+		return fmt.Errorf("value (%T) must be a struct", innerTyp)
+	}
+
+	for i := 0; i < innerVal.NumField(); i++ {
 		// Evaluate this struct field.
 		var (
-			fieldVal  = elemVal.Field(i)
-			fieldTyp  = elemTyp.Field(i)
+			fieldVal  = innerVal.Field(i)
+			fieldTyp  = innerTyp.Field(i)
 			fieldName = fieldTyp.Name
 		)
 
@@ -537,28 +582,48 @@ func (fs *CoreFlags) AddStruct(val any) error {
 			continue
 		}
 
-		// Only care if the `ff:` tag contains some data.
-		ffdata := strings.Split(fftag, ",")
-		if len(ffdata) <= 0 {
-			continue
+		// Only care if the `ff:` tag has one or more comma-separated items.
+		var items []string
+		{
+			var quoted bool
+			items = strings.FieldsFunc(fftag, func(r rune) bool {
+				if r == '\'' {
+					quoted = !quoted
+				}
+				return !quoted && r == ','
+			})
+			if len(items) <= 0 {
+				continue
+			}
 		}
 
-		// The field is claiming to be a flag. Build up a config for it.
-		var cfg CoreFlagConfig
-
-		// Parse the `ff:` tag data.
-		var valueDefault string
-		for _, item := range ffdata {
-			// Allow for space padding in the `ff:` tag string.
+		// Parse the items into a flag config.
+		var (
+			cfg CoreFlagConfig
+			def string
+		)
+		for _, item := range items {
+			// Allow the tag string to include padding spaces.
 			item = strings.TrimSpace(item)
 			if item == "" {
 				continue
 			}
 
-			// ff:"key1=val1, key2, key3=val3, ..."
-			key, val, err := parseTagKeyVal(item)
-			if err != nil {
-				return fmt.Errorf("%s: %q: %w", fieldName, item, err) // invalid pairs are terminal
+			key, val, _ := strings.Cut(item, "=")
+			{
+				key = strings.ToLower(key)
+				key = strings.TrimSpace(key)
+				if key == "" {
+					return fmt.Errorf("%s: %q: no key", fieldName, item)
+				}
+			}
+			{
+				val = strings.TrimSpace(val)
+				if strings.HasPrefix(val, `'`) && strings.HasSuffix(val, `'`) { // treat 'single-quoted values' same as "double-quoted values"
+					val = val[1 : len(val)-1]
+				} else if v, err := strconv.Unquote(val); err == nil {
+					val = v
+				}
 			}
 
 			// Parse supported keys.
@@ -587,7 +652,7 @@ func (fs *CoreFlags) AddStruct(val any) error {
 				case "", "-":
 					cfg.NoDefault = true
 				default:
-					valueDefault = val
+					def = val
 				}
 
 			case "nodefault":
@@ -610,31 +675,24 @@ func (fs *CoreFlags) AddStruct(val any) error {
 		}
 
 		// Produce a flag.Value representing the field.
-		if err := func() error {
-			// If the field implements flag.Value, we can use it directly.
+		{
 			var (
-				fieldValAddr     = fieldVal.Addr()
-				fieldValAddrTyp  = fieldValAddr.Type()
-				flagValueElemTyp = reflect.TypeOf((*flag.Value)(nil)).Elem()
+				fieldValAddr      = fieldVal.Addr()
+				fieldValAddrTyp   = fieldValAddr.Type()
+				fieldValAddrIface = fieldValAddr.Interface()
+				flagValueElemTyp  = reflect.TypeOf((*flag.Value)(nil)).Elem()
 			)
 			if fieldValAddrTyp.Implements(flagValueElemTyp) {
-				cfg.Value = fieldValAddr.Interface().(flag.Value)
-				return nil
+				// The field implements flag.Value, we can use it directly.
+				cfg.Value = fieldValAddrIface.(flag.Value)
+			} else {
+				// Try to construct a new flag value.
+				v, err := ffval.NewValueReflect(fieldValAddrIface, def)
+				if err != nil {
+					return fmt.Errorf("%s: %w", fieldName, err)
+				}
+				cfg.Value = v
 			}
-
-			// Otherwise, try to construct a value.
-			typ := fieldVal.Type()
-			dst := fieldVal
-			val, err := ffval.NewValueReflect(typ, dst, valueDefault)
-			if err != nil {
-				return fmt.Errorf("%s: %w", fieldName, err)
-			}
-
-			// Good.
-			cfg.Value = val
-			return nil
-		}(); err != nil {
-			return err
 		}
 
 		// Try to add a flag from the parsed config.
@@ -644,26 +702,6 @@ func (fs *CoreFlags) AddStruct(val any) error {
 	}
 
 	return nil
-}
-
-func parseTagKeyVal(s string) (string, string, error) {
-	key, val, _ := strings.Cut(s, "=")
-
-	key = strings.ToLower(key)
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return "", "", fmt.Errorf("no key") // keys can't be empty
-	}
-
-	val = strings.TrimSpace(val)
-	if strings.HasPrefix(val, `'`) && strings.HasSuffix(val, `'`) { // treat 'single-quoted values' same as "double-quoted values"
-		val = val[1 : len(val)-1]
-	} else if v, err := strconv.Unquote(val); err == nil {
-		val = v
-	}
-	// vals can be empty
-
-	return key, val, nil
 }
 
 // Value defines a new flag in the flag set, and panics on any error.
@@ -962,6 +1000,7 @@ type coreFlag struct {
 }
 
 var _ Flag = (*coreFlag)(nil)
+var _ Resetter = (*coreFlag)(nil)
 
 func (f *coreFlag) GetFlags() Flags {
 	return f.flagSet
