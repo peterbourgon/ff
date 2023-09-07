@@ -547,16 +547,15 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 // key: value. Keys, values, and items themselves are trimmed of leading and
 // trailing whitespace before use. 'Single quoted' values are unquoted.
 //
-// The following is a list of valid keys, and the [CoreFlagConfig] field they
-// correspond to. Any unknown key, or invalid value, results in an error.
+// The following is a list of valid keys.
 //
-//   - s, short, shortname: ShortName
-//   - l, long, longname: LongName
-//   - u, usage: Usage
-//   - d, def, default: (assigned to the flag value)
-//   - p, placeholder: Placeholder
-//   - noplaceholder: NoPlaceholder (key only)
-//   - nodefault: NoDefault (key only)
+//   - s, short, shortname -- value should be a valid short name
+//   - l, long, longname -- value should be a valid long name
+//   - u, usage -- value should be a valid usage string
+//   - d, def, default -- value should be assignable to the flag
+//   - p, placeholder -- value should be a valid placeholder
+//   - noplaceholder -- (no value)
+//   - nodefault -- (no value)
 //
 // See the example for more detail.
 func (fs *CoreFlags) AddStruct(val any) error {
