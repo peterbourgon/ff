@@ -396,7 +396,7 @@ func (v *Enum[T]) initialize() {
 }
 
 // Set parses the given string, and sets the enum to the successfully parsed
-// value, if it is valid. Otherwise, set returns ErrInvalidValue.
+// value. If the value isn't valid, set fails withg ErrInvalidValue.
 func (v *Enum[T]) Set(s string) error {
 	v.initialize()
 

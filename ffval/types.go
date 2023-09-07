@@ -83,6 +83,12 @@ type Complex128 = Value[complex128]
 // Values are parsed by [time.ParseDuration].
 type Duration = Value[time.Duration]
 
+// StringList is a flag value representing a sequence of strings.
+type StringList = List[string]
+
+// StringSet is a flag value representing a unique set of strings.
+type StringSet = UniqueList[string]
+
 //
 //
 //

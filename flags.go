@@ -10,11 +10,10 @@ import (
 // command (or sub-command) executed by an end user.
 //
 // Any valid Flags can be provided to [Parse], or used as the Flags field in a
-// [Command]. This allows users to provide their own implementations, which can
-// still take advantage of the primary features of this module.
+// [Command]. This allows consumers to use their own flag set implementation(s)
+// while still taking advantage of the primary features of the module.
 //
-// Implementations are not expected to be safe for concurrent use by multiple
-// goroutines.
+// Implementations are not expected to be safe for concurrent use.
 type Flags interface {
 	// GetName should return the name of the flag set.
 	GetName() string
@@ -50,8 +49,7 @@ type Flags interface {
 // Flag describes a single runtime configuration parameter, defined in a set of
 // [Flags], and with a value that can be parsed from a string.
 //
-// Implementations are not expected to be safe for concurrent use by multiple
-// goroutines.
+// Implementations are not expected to be safe for concurrent use.
 type Flag interface {
 	// GetFlags should return the set of flags in which this flag is defined.
 	// It's primarily used for help output.

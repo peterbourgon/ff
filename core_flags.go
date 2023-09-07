@@ -488,18 +488,26 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 	cfg.LongName = strings.TrimSpace(cfg.LongName)
 
 	var (
-		hasShort    = isValidShortName(cfg.ShortName)
-		hasLong     = isValidLongName(cfg.LongName)
+		hasShort    = cfg.ShortName != 0
+		hasLong     = cfg.LongName != ""
+		validShort  = isValidShortName(cfg.ShortName)
+		validLong   = isValidLongName(cfg.LongName)
 		isBoolFlag  = cfg.isBoolFlag()
 		trueDefault = cfg.Value.String()
 	)
-	if !hasShort && !hasLong {
-		return nil, fmt.Errorf("short name and/or long name is required")
+	if hasShort && !validShort {
+		return nil, fmt.Errorf("-%s: invalid short name", string(cfg.ShortName))
 	}
-	if hasShort && hasLong && string(cfg.ShortName) == cfg.LongName {
+	if hasLong && !validLong {
+		return nil, fmt.Errorf("--%s: invalid long name", cfg.LongName)
+	}
+	if !validShort && !validLong {
+		return nil, fmt.Errorf("at least one valid name is required")
+	}
+	if validShort && validLong && string(cfg.ShortName) == cfg.LongName {
 		return nil, fmt.Errorf("-%s, --%s: short name identical to long name", string(cfg.ShortName), cfg.LongName)
 	}
-	if isBoolFlag && !hasLong {
+	if isBoolFlag && !validLong {
 		if b, err := strconv.ParseBool(trueDefault); err == nil && b {
 			return nil, fmt.Errorf("-%s: default true boolean flag requires a long name", string(cfg.ShortName))
 		}
@@ -534,28 +542,23 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 // a valid `ff:` struct tag corresponds to a unique flag in the flag set. Those
 // fields must be a supported ffval.ValueType, or implement flag.Value.
 //
-// An example struct follows.
+// The `ff:` struct tag is parsed as a sequence of comma- or pipe-separated
+// items. An item is either a key, or a key value pair expressed as key=value or
+// key: value. Keys, values, and items themselves are trimmed of leading and
+// trailing whitespace before use. 'Single quoted' values are unquoted.
 //
-//	type myFlags struct {
-//	    Foo string `ff:"short=f, long=foo, usage=foo string param, default='hello, world'`
-//	    Bar int    `ff:"short=b, long=bar, usage=bar int param,    default=123`
-//	    Baz bool   `ff:"         long=baz, usage='baz bool param', nodefault`
-//	}
-//
-// The `ff:` struct tag is parsed as one or more comma-separated items. An item
-// is either a key, or a key=value pair. 'Single quoted' values are unquoted
-// before use. Supported keys, and their corresponding [CoreFlagConfig] field,
-// are as follows.
+// The following is a list of valid keys, and the [CoreFlagConfig] field they
+// correspond to. Any unknown key, or invalid value, results in an error.
 //
 //   - s, short, shortname: ShortName
 //   - l, long, longname: LongName
 //   - u, usage: Usage
 //   - d, def, default: (assigned to the flag value)
 //   - p, placeholder: Placeholder
-//   - noplaceholder: NoPlaceholder
-//   - nodefault: NoDefault
+//   - noplaceholder: NoPlaceholder (key only)
+//   - nodefault: NoDefault (key only)
 //
-// Any unknown key, or invalid value, results in an error.
+// See the example for more detail.
 func (fs *CoreFlags) AddStruct(val any) error {
 	outerVal := reflect.ValueOf(val)
 	if outerVal.Kind() != reflect.Pointer {
@@ -609,7 +612,12 @@ func (fs *CoreFlags) AddStruct(val any) error {
 				continue
 			}
 
-			key, val, _ := strings.Cut(item, "=")
+			var key, val string
+			if sep := strings.IndexAny(item, "=:"); sep < 0 {
+				key = item
+			} else {
+				key, val = item[:sep], item[sep+1:]
+			}
 			{
 				key = strings.ToLower(key)
 				key = strings.TrimSpace(key)

@@ -465,15 +465,50 @@ func TestCoreFlags_struct(t *testing.T) {
 			&struct {
 				E bool `ff:"s=e,l=e"` // identical short and long names
 			}{},
+			&struct {
+				F string `ff:"long:' usage='value,u=this is a weird one"` // exercises long name validity
+			}{},
+			&struct {
+				G string `ff:"long:'  '"` // value should be trimmed of spaces and therefore invalid
+			}{},
 		} {
 			t.Run(fmt.Sprint(i+1), func(t *testing.T) {
 				fs := ff.NewFlags(t.Name())
 				if err := fs.AddStruct(st); err == nil {
-					t.Errorf("want error, have none")
+					t.Errorf("want error, have none\n%s", ffhelp.Flags(fs))
 				} else {
 					t.Logf("have expected error (%v)", err)
 				}
 			})
 		}
 	})
+}
+
+func ExampleCoreFlags_AddStruct() {
+	var flags struct {
+		Alpha   string          `ff:" shortname=a , longname=alpha  , default=abc ,     , usage=alpha string   ,           "`
+		Beta    int             `ff:"             , long=beta       ,             , p=β , usage: beta int      ,           "`
+		Delta   bool            `ff:" short: d    ,                 ,             ,     , usage = delta bool   , nodefault "`
+		Epsilon bool            `ff:" s=e         , l=epsilon       ,             ,     , u: 'epsilon: bool'   , nodefault "`
+		Gamma   string          `ff:" s:g         , l:gamma         ,             ,     , u='comma, ok'        ,           "`
+		Iota    float64         `ff:"             , long=iota       , d=0.43      ,     , usage: 🦊            ,           "`
+		Kappa   ffval.StringSet `ff:" short=k     , long=kappa      ,                     u:kappa (repeatable) ,           "`
+	}
+
+	fs := ff.NewFlags("mycommand")
+	fs.AddStruct(&flags)
+	fmt.Print(ffhelp.Flags(fs))
+
+	// Output:
+	// NAME
+	//   mycommand
+	//
+	// FLAGS
+	//   -a, --alpha STRING   alpha string (default: abc)
+	//       --beta β         beta int (default: 0)
+	//   -d                   delta bool
+	//   -e, --epsilon        epsilon: bool
+	//   -g, --gamma STRING   comma, ok
+	//       --iota FLOAT64   🦊 (default: 0.43)
+	//   -k, --kappa STRING   kappa (repeatable)
 }
