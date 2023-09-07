@@ -163,7 +163,7 @@ USAGE
 SUBCOMMANDS
   bar   the bar subcommand
 
-FLAGS
+FLAGS (foo)
   -a, --alpha INT            alpha integer (default: 10)
   -b, --beta                 beta boolean (default: false)
 
@@ -179,7 +179,7 @@ COMMAND
 USAGE
   bar [FLAGS] ...
 
-FLAGS
+FLAGS (bar)
   -d, --delta δ              delta #δ# duration (default: 3s)
   -e, --epsilon FLOAT64      epsilon float (default: 3.21)
 

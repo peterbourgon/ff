@@ -729,11 +729,13 @@ func (fs *CoreFlags) ValueLong(long string, value flag.Value, usage string) Flag
 }
 
 // BoolVar defines a new flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false.
 func (fs *CoreFlags) BoolVar(pointer *bool, short rune, long string, def bool, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Bool defines a new flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false.
 func (fs *CoreFlags) Bool(short rune, long string, def bool, usage string) *bool {
 	var value bool
 	fs.BoolVar(&value, short, long, def, usage)
@@ -741,11 +743,13 @@ func (fs *CoreFlags) Bool(short rune, long string, def bool, usage string) *bool
 }
 
 // BoolShort defines a new flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false.
 func (fs *CoreFlags) BoolShort(short rune, def bool, usage string) *bool {
 	return fs.Bool(short, "", def, usage)
 }
 
 // BoolLong defines a new flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false.
 func (fs *CoreFlags) BoolLong(long string, def bool, usage string) *bool {
 	return fs.Bool(0, long, def, usage)
 }
@@ -781,7 +785,7 @@ func (fs *CoreFlags) StringListVar(pointer *[]string, short rune, long string, u
 }
 
 // StringList defines a new flag in the flag set, and panics on any error.
-// See [StringListVar] for more details.
+// See [CoreFlags.StringListVar] for more details.
 func (fs *CoreFlags) StringList(short rune, long string, usage string) *[]string {
 	var value []string
 	fs.StringListVar(&value, short, long, usage)
@@ -789,13 +793,13 @@ func (fs *CoreFlags) StringList(short rune, long string, usage string) *[]string
 }
 
 // StringListShort defines a new flag in the flag set, and panics on any error.
-// See [StringListVar] for more details.
+// See [CoreFlags.StringListVar] for more details.
 func (fs *CoreFlags) StringListShort(short rune, usage string) *[]string {
 	return fs.StringList(short, "", usage)
 }
 
 // StringListLong defines a new flag in the flag set, and panics on any error.
-// See [StringListVar] for more details.
+// See [CoreFlags.StringListVar] for more details.
 func (fs *CoreFlags) StringListLong(long string, usage string) *[]string {
 	return fs.StringList(0, long, usage)
 }
@@ -809,7 +813,7 @@ func (fs *CoreFlags) StringSetVar(pointer *[]string, short rune, long string, us
 }
 
 // StringSet defines a new flag in the flag set, and panics on any error.
-// See [StringSetVar] for more details.
+// See [CoreFlags.StringSetVar] for more details.
 func (fs *CoreFlags) StringSet(short rune, long string, usage string) *[]string {
 	var value []string
 	fs.StringSetVar(&value, short, long, usage)
@@ -817,13 +821,13 @@ func (fs *CoreFlags) StringSet(short rune, long string, usage string) *[]string 
 }
 
 // StringSetShort defines a new flag in the flag set, and panics on any error.
-// See [StringSetVar] for more details.
+// See [CoreFlags.StringSetVar] for more details.
 func (fs *CoreFlags) StringSetShort(short rune, usage string) *[]string {
 	return fs.StringSet(short, "", usage)
 }
 
 // StringSetLong defines a new flag in the flag set, and panics on any error.
-// See [StringSetVar] for more details.
+// See [CoreFlags.StringSetVar] for more details.
 func (fs *CoreFlags) StringSetLong(long string, usage string) *[]string {
 	return fs.StringSet(0, long, usage)
 }

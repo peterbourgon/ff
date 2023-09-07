@@ -119,7 +119,7 @@ COMMAND
 USAGE
   objectctl list [FLAGS]
 
-FLAGS
+FLAGS (list)
   -a, --atime          include last access time of each object
 
 FLAGS (objectctl)
