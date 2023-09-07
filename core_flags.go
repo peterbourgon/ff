@@ -535,17 +535,18 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 	return f, nil
 }
 
-// AddStruct adds flags to the flag set which are taken from the given val,
-// which must be a pointer to a struct. Each exported field in that struct with
-// a valid `ff:` struct tag corresponds to a unique flag in the flag set. Those
-// fields must be a supported ffval.ValueType, or implement flag.Value.
+// AddStruct adds flags to the flag set from the given val, which must be a
+// pointer to a struct. Each exported field in that struct with a valid `ff:`
+// struct tag corresponds to a unique flag in the flag set. Those fields must be
+// a supported [ffval.ValueType] or implement [flag.Value].
 //
 // The `ff:` struct tag is parsed as a sequence of comma- or pipe-separated
-// items. An item is either a key, or a key value pair expressed as key=value or
-// key: value. Keys, values, and items themselves are trimmed of leading and
-// trailing whitespace before use. 'Single quoted' values are unquoted.
+// items. An item is either a key, or a key/value pair. Key/value pairs are
+// expressed as either key=value (with =), or key: value (with :). Keys, values,
+// and items themselves are trimmed of whitespace before use. Values may be
+// 'single quoted' and will be unquoted before use.
 //
-// The following is a list of valid keys.
+// The following is a list of valid keys and their expected values.
 //
 //   - s, short, shortname -- value should be a valid short name
 //   - l, long, longname -- value should be a valid long name
@@ -590,7 +591,7 @@ func (fs *CoreFlags) AddStruct(val any) error {
 				if r == '\'' {
 					quoted = !quoted
 				}
-				return !quoted && r == ','
+				return !quoted && (r == ',' || r == '|')
 			})
 			if len(items) <= 0 {
 				continue
