@@ -1,4 +1,4 @@
-// Package ffenv provides an .env config file paser.
+// Package ffenv provides an .env config file parser.
 package ffenv
 
 import (
