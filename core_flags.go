@@ -66,8 +66,6 @@ func NewStdFlags(stdfs *flag.FlagSet) *CoreFlags {
 // taken from the provided val, which must be a pointer to a struct. See
 // [CoreFlags.AddStruct] for more information on how struct tags are parsed. Any
 // error results in a panic.
-//
-// TODO: example
 func NewStructFlags(name string, val any) *CoreFlags {
 	fs := NewFlags(name)
 	if err := fs.AddStruct(val); err != nil {
