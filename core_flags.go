@@ -14,7 +14,7 @@ import (
 )
 
 // CoreFlags is the default implementation of a [Flags]. It's broadly similar to
-// a [flag.FlagSet], but with additional capabilities inspired by getopt(3).
+// a flag.FlagSet, but with additional capabilities inspired by getopt(3).
 type CoreFlags struct {
 	setName       string
 	flagSlice     []*coreFlag
@@ -40,7 +40,7 @@ func NewFlags(name string) *CoreFlags {
 }
 
 // NewStdFlags returns a core flag set which acts as an adapter for the provided
-// [flag.FlagSet], allowing it to implement the [Flags] interface.
+// flag.FlagSet, allowing it to implement the [Flags] interface.
 //
 // The returned core flag set has slightly different behavior than normal. It's
 // a fixed "snapshot" of the provided stdfs, which means it doesn't allow new
