@@ -3,6 +3,8 @@ package ff_test
 import (
 	"errors"
 	"flag"
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -286,4 +288,227 @@ func TestCoreFlags_Get(t *testing.T) {
 	if want, have := "X", f.GetPlaceholder(); want != have {
 		t.Errorf("GetPlaceholder: want %q, have %q", want, have)
 	}
+}
+
+func TestCoreFlags_invalid(t *testing.T) {
+	t.Parallel()
+
+	t.Run("same short and long name", func(t *testing.T) {
+		defer func() {
+			if x := recover(); x == nil {
+				t.Errorf("want panic, have none")
+			} else {
+				t.Logf("have expected panic (%v)", x)
+			}
+		}()
+		fs := ff.NewFlags(t.Name())
+		fs.Bool('b', "b", false, "this should panic")
+	})
+
+	t.Run("duplicate short name", func(t *testing.T) {
+		defer func() {
+			if x := recover(); x == nil {
+				t.Errorf("want panic, have none")
+			} else {
+				t.Logf("have expected panic (%v)", x)
+			}
+		}()
+		fs := ff.NewFlags(t.Name())
+		_ = fs.Bool('a', "alpha", false, "this should be OK")
+		_ = fs.Bool('a', "apple", false, "this should panic")
+	})
+
+	t.Run("duplicate long name", func(t *testing.T) {
+		defer func() {
+			if x := recover(); x == nil {
+				t.Errorf("want panic, have none")
+			} else {
+				t.Logf("have expected panic (%v)", x)
+			}
+		}()
+		fs := ff.NewFlags(t.Name())
+		_ = fs.Bool('a', "alpha", false, "this should be OK")
+		_ = fs.Bool('b', "alpha", false, "this should panic")
+	})
+}
+
+func TestCoreFlags_struct(t *testing.T) {
+	t.Parallel()
+
+	type myFlags struct {
+		Alpha   string  `ff:" short=a , long=alpha   , default=alpha-default   ,     , usage=alpha string      ,           "`
+		Beta    int     `ff:"         , long=beta    ,                         , p=β , usage=beta int          ,           "`
+		Delta   bool    `ff:" short=d ,              ,                         ,     , usage=delta bool        , nodefault "`
+		Epsilon bool    `ff:" short=e , long=epsilon ,                         ,     , usage=epsilon bool      , nodefault "`
+		Gamma   string  `ff:" s    =g , l   =gamma   ,                         ,     , u='usage, with a comma' ,           "`
+		Iota    float64 `ff:"         , long=iota    ,       d=0.43            ,     , usage=iota float        ,           "`
+	}
+
+	var flags myFlags
+	fs := ff.NewStructFlags(t.Name(), &flags)
+
+	if want, have := fftest.Unindent(`
+		NAME
+		  TestCoreFlags_struct
+
+		FLAGS
+		  -a, --alpha STRING   alpha string (default: alpha-default)
+		      --beta β         beta int (default: 0)
+		  -d                   delta bool
+		  -e, --epsilon        epsilon bool
+		  -g, --gamma STRING   usage, with a comma
+		      --iota FLOAT64   iota float (default: 0.43)
+	`), fftest.Unindent(ffhelp.Flags(fs).String()); want != have {
+		t.Errorf("\n%s", fftest.DiffString(want, have))
+	}
+
+	for _, testcase := range []struct {
+		args []string
+		want myFlags
+	}{
+		{
+			args: []string{"--alpha=x"},
+			want: myFlags{Alpha: "x", Iota: 0.43},
+		},
+		{
+			args: []string{"-e", "--iota=1.23"},
+			want: myFlags{Alpha: "alpha-default", Epsilon: true, Iota: 1.23},
+		},
+		{
+			args: []string{"-gabc", "-d"},
+			want: myFlags{Alpha: "alpha-default", Delta: true, Gamma: "abc", Iota: 0.43},
+		},
+	} {
+		t.Run(strings.Join(testcase.args, " "), func(t *testing.T) {
+			if err := fs.Reset(); err != nil {
+				t.Fatalf("Reset: %v", err)
+			}
+			if err := ff.Parse(fs, testcase.args); err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if want, have := testcase.want, flags; !reflect.DeepEqual(want, have) {
+				t.Errorf("\nwant %+#v\nhave %#+v", want, have)
+			}
+		})
+	}
+
+	{
+		if err := fs.Reset(); err != nil {
+			t.Fatalf("Reset: %v", err)
+		}
+		if err := ff.Parse(fs, []string{}); err != nil {
+			t.Fatalf("Parse: %v", err)
+		}
+		if want, have := "alpha-default", flags.Alpha; want != have {
+			t.Errorf("alpha: want %q, have %q", want, have)
+		}
+		if want, have := 0, flags.Beta; want != have {
+			t.Errorf("beta: want %v, have %v", want, have)
+		}
+		if want, have := false, flags.Delta; want != have {
+			t.Errorf("delta: want %v, have %v", want, have)
+		}
+	}
+
+	{
+		if err := fs.Reset(); err != nil {
+			t.Fatalf("Reset: %v", err)
+		}
+		if err := ff.Parse(fs, []string{"-afoo", "--beta", "7", "-d"}); err != nil {
+			t.Fatalf("Parse: %v", err)
+		}
+		if want, have := "foo", flags.Alpha; want != have {
+			t.Errorf("alpha: want %q, have %q", want, have)
+		}
+		if want, have := 7, flags.Beta; want != have {
+			t.Errorf("beta: want %v, have %v", want, have)
+		}
+		if want, have := true, flags.Delta; want != have {
+			t.Errorf("delta: want %v, have %v", want, have)
+		}
+	}
+
+	t.Run("implements", func(t *testing.T) {
+		var flags struct {
+			Foo ffval.UniqueList[string] `ff:"longname=foo , usage=foo strings"`
+			Bar ffval.Value[int]         `ff:"longname=bar , usage=bar int"`
+		}
+
+		fs := ff.NewFlags(t.Name())
+		if err := fs.AddStruct(&flags); err != nil { // should allow
+			t.Fatalf("AddStruct: %v", err)
+		}
+
+		if err := ff.Parse(fs, []string{"--foo=a", "--foo", "b"}); err != nil {
+			t.Fatalf("Parse: %v", err)
+		}
+
+		if want, have := []string{"a", "b"}, flags.Foo.Get(); !reflect.DeepEqual(want, have) {
+			t.Errorf("foo: want %#+v, have %#+v", want, have)
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		for i, st := range []any{
+			&struct {
+				A int `ff:"x"` // invalid tag data key
+			}{},
+			&struct {
+				B int `ff:"short = a, longname=, usage=some usage"` // invalid long name
+			}{},
+			&struct {
+				C int `ff:"short = ,"` // invalid short name
+			}{},
+			&struct {
+				D *testing.T `ff:"long=alpha"` // invalid field type
+			}{},
+			&struct {
+				E bool `ff:"s=e,l=e"` // identical short and long names
+			}{},
+			&struct {
+				F string `ff:"long:' usage='value,u=this is a weird one"` // exercises long name validity
+			}{},
+			&struct {
+				G string `ff:"long:'  '"` // value should be trimmed of spaces and therefore invalid
+			}{},
+		} {
+			t.Run(fmt.Sprint(i+1), func(t *testing.T) {
+				fs := ff.NewFlags(t.Name())
+				if err := fs.AddStruct(st); err == nil {
+					t.Errorf("want error, have none\n%s", ffhelp.Flags(fs))
+				} else {
+					t.Logf("have expected error (%v)", err)
+				}
+			})
+		}
+	})
+}
+
+func ExampleCoreFlags_AddStruct() {
+	var flags struct {
+		Alpha   string          `ff:" shortname=a , longname=alpha  , default=abc ,     ,             usage=alpha string   "`
+		Beta    int             `ff:"             , long=beta       ,             , p=β ,             usage: beta int      "`
+		Delta   bool            `ff:" short: d    ,                 ,             ,     , nodefault , usage: 'delta|bool'  "`
+		Epsilon bool            `ff:" s=e         , l=epsilon       ,             ,     , nodefault , u: 'epsilon: bool'   "`
+		Gamma   string          `ff:" s:g         | l:gamma         |             |     |             u='comma, ok'        "`
+		Iota    float64         `ff:"             | long=iota       | d=0.43      |     |             usage: 🦊            "`
+		Kappa   ffval.StringSet `ff:" short=k     | long=kappa      ,             |     ,             u:kappa (repeatable) "`
+	}
+
+	fs := ff.NewFlags("mycommand")
+	fs.AddStruct(&flags)
+	fmt.Print(ffhelp.Flags(fs))
+
+	// Output:
+	// NAME
+	//   mycommand
+	//
+	// FLAGS
+	//   -a, --alpha STRING   alpha string (default: abc)
+	//       --beta β         beta int (default: 0)
+	//   -d                   delta|bool
+	//   -e, --epsilon        epsilon: bool
+	//   -g, --gamma STRING   comma, ok
+	//       --iota FLOAT64   🦊 (default: 0.43)
+	//   -k, --kappa STRING   kappa (repeatable)
 }

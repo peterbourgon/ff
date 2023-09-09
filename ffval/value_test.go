@@ -215,16 +215,6 @@ func TestValue_types(t *testing.T) {
 			bad:   []string{"", " ", "i", "1e309i"},
 		},
 		{
-			value: new(ffval.Byte),
-			good:  []string{"0", " ", "00", "0x0", "0x00", "1", "0xc", "0x3", "0xf", "0Xff", "0xFF", "0b0100", "0o5", "0b0100_0001"},
-			bad:   []string{"", "-1", "FG", "xF", "259", "0b1111_1111_1111"},
-		},
-		{
-			value: new(ffval.Rune),
-			good:  []string{"1", " ", "(", "😀"},
-			bad:   []string{"", "00", "👨‍👨‍👧‍👦"},
-		},
-		{
 			value: new(ffval.Duration),
 			good:  []string{"12ns", "34ms", "5h6m", "127h"},
 			bad:   []string{"", " ", "123", "3.21"},
@@ -252,6 +242,98 @@ func TestValue_types(t *testing.T) {
 		var b ffval.Bool
 		if want, have := true, b.IsBoolFlag(); want != have {
 			t.Errorf("%T: IsBoolFlag: want %v, have %v", b, want, have)
+		}
+	})
+}
+
+func TestValueReflect(t *testing.T) {
+	t.Parallel()
+
+	t.Run("string", func(t *testing.T) {
+		var x string
+
+		f, err := ffval.NewValueReflect(&x, "abc")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if want, have := "abc", f.String(); want != have {
+			t.Errorf("String: want %q, have %q", want, have)
+		}
+
+		if want, have := "abc", x; want != have {
+			t.Errorf("x: want %q, have %q", want, have)
+		}
+
+		if err := f.Set("def"); err != nil {
+			t.Errorf("Set(def): %v", err)
+		}
+
+		if want, have := "def", f.String(); want != have {
+			t.Errorf("String: want %q, have %q", want, have)
+		}
+
+		if want, have := "def", x; want != have {
+			t.Errorf("x: want %q, have %q", want, have)
+		}
+	})
+
+	t.Run("float64", func(t *testing.T) {
+		var x float64
+
+		f, err := ffval.NewValueReflect(&x, "1.23")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if want, have := "1.23", f.String(); want != have {
+			t.Errorf("String: want %q, have %q", want, have)
+		}
+
+		if want, have := 1.23, x; want != have {
+			t.Errorf("x: want %v, have %v", want, have)
+		}
+
+		if err := f.Set("4.56"); err != nil {
+			t.Errorf("Set(def): %v", err)
+		}
+
+		if want, have := "4.56", f.String(); want != have {
+			t.Errorf("String: want %q, have %q", want, have)
+		}
+
+		if want, have := 4.56, x; want != have {
+			t.Errorf("x: want %v, have %v", want, have)
+		}
+	})
+
+	t.Run("float64 invalid init", func(t *testing.T) {
+		var x float64
+
+		_, err := ffval.NewValueReflect(&x, "abc")
+		if err == nil {
+			t.Fatalf("expected error, got none")
+		}
+	})
+
+	t.Run("float64 invalid set", func(t *testing.T) {
+		var x float64
+
+		f, err := ffval.NewValueReflect(&x, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if want, have := "0", f.String(); want != have {
+			t.Errorf("String: want %q, have %q", want, have)
+		}
+
+		if want, have := 0.0, x; want != have {
+			t.Errorf("x: want %v, have %v", want, have)
+		}
+
+		if err := f.Set("x"); err == nil {
+			t.Errorf("Set(x): want error, have none")
 		}
 	})
 }

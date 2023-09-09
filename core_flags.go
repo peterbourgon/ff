@@ -3,6 +3,7 @@ package ff
 import (
 	"flag"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,9 +14,7 @@ import (
 )
 
 // CoreFlags is the default implementation of a [Flags]. It's broadly similar to
-// a [flag.FlagSet], but with additional capabilities inspired by getopt(3).
-//
-// CoreFlags is not safe for concurrent use by multiple goroutines.
+// a flag.FlagSet, but with additional capabilities inspired by getopt(3).
 type CoreFlags struct {
 	setName       string
 	flagSlice     []*coreFlag
@@ -41,14 +40,13 @@ func NewFlags(name string) *CoreFlags {
 }
 
 // NewStdFlags returns a core flag set which acts as an adapter for the provided
-// [flag.FlagSet], allowing it to implement the [Flags] interface.
+// flag.FlagSet, allowing it to implement the [Flags] interface.
 //
 // The returned core flag set has slightly different behavior than normal. It's
 // a fixed "snapshot" of the provided stdfs, which means it doesn't allow new
 // flags to be defined, and won't reflect changes made to the stdfs in the
-// future. Also, to approximate standard parsing behavior, it treats every flag
-// name as a long name, and treats "-" and "--" equivalently when parsing
-// arguments.
+// future. It treats every flag name as a long name, and treats "-" and
+// "--" equivalently when parsing arguments.
 func NewStdFlags(stdfs *flag.FlagSet) *CoreFlags {
 	corefs := NewFlags(stdfs.Name())
 	stdfs.VisitAll(func(f *flag.Flag) {
@@ -62,6 +60,18 @@ func NewStdFlags(stdfs *flag.FlagSet) *CoreFlags {
 	})
 	corefs.isStdAdapter = true
 	return corefs
+}
+
+// NewStructFlags returns a core flag set with the given name, and with flags
+// taken from the provided val, which must be a pointer to a struct. See
+// [CoreFlags.AddStruct] for more information on how struct tags are parsed. Any
+// error results in a panic.
+func NewStructFlags(name string, val any) *CoreFlags {
+	fs := NewFlags(name)
+	if err := fs.AddStruct(val); err != nil {
+		panic(err)
+	}
+	return fs
 }
 
 // SetParent assigns a parent flag set to this one. In this case, all of the
@@ -309,7 +319,7 @@ func (fs *CoreFlags) GetFlag(name string) (Flag, bool) {
 		short = rune(0)
 		long  = name
 	)
-	if len(name) == 1 {
+	if utf8.RuneCountInString(name) == 1 {
 		short, _ = utf8.DecodeRuneInString(name)
 	}
 
@@ -352,37 +362,16 @@ type CoreFlagConfig struct {
 	ShortName rune
 
 	// LongName is the long form name of the flag, which can be provided as a
-	// commandline argument with a double-dash -- prefix. An empty string is
-	// considered an invalid long name and is ignored.
+	// commandline argument with a double-dash -- prefix. Long names are trimmed
+	// of whitespace via [strings.TrimSpace] prior to evaluation. Empty long
+	// names are ignored.
 	//
 	// At least one of ShortName and/or LongName is required.
 	LongName string
 
-	// Placeholder is typically used to represent an example value in the help
-	// text for the flag. For example, a placeholder of `BAR` might result in
-	// help text like
-	//
-	//      -f, --foo BAR   set the foo parameter
-	//
-	// The placeholder is determined by the following logic.
-	//
-	//  - If EmptyPlaceholder is true, use the empty string
-	//  - If Placeholder is non-empty, use that string
-	//  - If Usage contains a `backtick-quoted` substring, use that substring
-	//  - If Value is a boolean with default value false, use the empty string
-	//  - Otherwise, use a simple transformation of the concrete Value type name
-	//
-	// Optional.
-	Placeholder string
-
-	// NoPlaceholder forces the placeholder of the flag to the empty string.
-	// This can be useful if you want to elide the placeholder from help text.
-	NoPlaceholder bool
-
 	// Usage is a short help message for the flag, typically printed after the
-	// flag name(s) on a single line in the help output. For example, a foo flag
-	// might have the usage string "set the foo parameter", which might be
-	// rendered as follows.
+	// flag name(s) on a single line in the help text. For example, a usage
+	// string "set the foo parameter" might produce help text as follows.
 	//
 	//      -f, --foo BAR   set the foo parameter
 	//
@@ -393,28 +382,37 @@ type CoreFlagConfig struct {
 	// Recommended.
 	Usage string
 
-	// Value is used to parse and store the actual flag value. The MakeFlagValue
-	// helper can be used to construct values for common primitive types.
-	//
-	// As a special case, if the value has an IsBoolFlag() bool method returning
-	// true, then it will be treated as a boolean flag. Boolean flags are parsed
-	// slightly differently than normal flags: they can be provided without an
-	// explicit value, in which case the value is assumed to be true.
+	// Value is used to parse and store the underlying value for the flag.
+	// Package ffval provides helpers and definitions for common value types.
 	//
 	// Required.
 	Value flag.Value
 
-	// NoDefault forces the default value of the flag to the empty string. This
-	// can be useful if you want to elide the default value from help text.
+	// Placeholder represents an example value in the help text for the flag,
+	// typically printed after the flag name(s). For example, a placeholder of
+	// "BAR" might produce help text as follows.
+	//
+	//      -f, --foo BAR   set the foo parameter
+	//
+	// Optional.
+	Placeholder string
+
+	// NoPlaceholder will force GetPlaceholder to return the empty string. This
+	// can be useful for flags that don't need placeholders in their help text,
+	// for example boolean flags.
+	NoPlaceholder bool
+
+	// NoDefault will force GetDefault to return the empty string. This can be
+	// useful for flags whose default values don't need to be communicated in
+	// help text.
 	NoDefault bool
 }
 
 func (cfg CoreFlagConfig) isBoolFlag() bool {
-	bf, ok := cfg.Value.(IsBoolFlagger)
-	if !ok {
-		return false
+	if bf, ok := cfg.Value.(interface{ IsBoolFlag() bool }); ok {
+		return bf.IsBoolFlag()
 	}
-	return bf.IsBoolFlag()
+	return false
 }
 
 func (cfg CoreFlagConfig) getPlaceholder() string {
@@ -441,35 +439,34 @@ func (cfg CoreFlagConfig) getPlaceholder() string {
 	}
 
 	// Bool flags with default value false should have empty placeholders.
-	if bf, ok := cfg.Value.(IsBoolFlagger); ok && bf.IsBoolFlag() {
+	if bf, ok := cfg.Value.(interface{ IsBoolFlag() bool }); ok && bf.IsBoolFlag() {
 		if b, err := strconv.ParseBool(cfg.Value.String()); err == nil && !b {
 			return ""
 		}
 	}
 
+	// If the flag value provides its own non-empty Placeholder, use that.
+	// This has lower priority than the bool flag check, above.
+	if ph, ok := cfg.Value.(interface{ GetPlaceholder() string }); ok {
+		if p := ph.GetPlaceholder(); p != "" {
+			return p
+		}
+	}
+
 	// Otherwise, use a transformation of the flag value type name.
 	var typeName string
-	typeName = fmt.Sprintf("%T", cfg.Value)
-	typeName = strings.ToUpper(typeName)
-	typeName = typeNameDefaultRegexp.ReplaceAllString(typeName, "$1")
-	typeName = strings.TrimSuffix(typeName, "VALUE")
-	if lastDot := strings.LastIndex(typeName, "."); lastDot > 0 {
-		typeName = typeName[lastDot+1:]
+	{
+		typeName = strings.ToUpper(fmt.Sprintf("%T", cfg.Value))
+		typeName = genericTypeNameRegexp.ReplaceAllString(typeName, "$1")
+		typeName = strings.TrimSuffix(typeName, "VALUE")
+		if lastDot := strings.LastIndex(typeName, "."); lastDot > 0 {
+			typeName = typeName[lastDot+1:]
+		}
 	}
 	return typeName
 }
 
-var typeNameDefaultRegexp = regexp.MustCompile(`[A-Z0-9\_\.\*]+\[(.+)\]`)
-
-func (cfg CoreFlagConfig) getDefaultValue() string {
-	// If the config explicitly declares an empty default, use the empty string.
-	if cfg.NoDefault {
-		return ""
-	}
-
-	// Otherwise, use Value.String.
-	return cfg.Value.String()
-}
+var genericTypeNameRegexp = regexp.MustCompile(`[A-Z0-9\_\.\*]+\[(.+)\]`)
 
 // AddFlag adds a flag to the flag set, as specified by the provided config. An
 // error is returned if the config is invalid, or if a flag is already defined
@@ -486,19 +483,31 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 		return nil, fmt.Errorf("value is required")
 	}
 
+	cfg.LongName = strings.TrimSpace(cfg.LongName)
+
 	var (
-		hasShort     = isValidShortName(cfg.ShortName)
-		hasLong      = isValidLongName(cfg.LongName)
-		isBoolFlag   = cfg.isBoolFlag()
-		placeholder  = cfg.getPlaceholder()
-		defaultValue = cfg.getDefaultValue()
+		hasShort    = cfg.ShortName != 0
+		hasLong     = cfg.LongName != ""
+		validShort  = isValidShortName(cfg.ShortName)
+		validLong   = isValidLongName(cfg.LongName)
+		isBoolFlag  = cfg.isBoolFlag()
+		trueDefault = cfg.Value.String()
 	)
-	if !hasShort && !hasLong {
-		return nil, fmt.Errorf("short name and/or long name is required")
+	if hasShort && !validShort {
+		return nil, fmt.Errorf("-%s: invalid short name", string(cfg.ShortName))
 	}
-	if isBoolFlag && !hasLong {
-		if b, err := strconv.ParseBool(defaultValue); err == nil && b {
-			return nil, fmt.Errorf("%s: default true boolean flag requires a long name", string(cfg.ShortName))
+	if hasLong && !validLong {
+		return nil, fmt.Errorf("--%s: invalid long name", cfg.LongName)
+	}
+	if !validShort && !validLong {
+		return nil, fmt.Errorf("at least one valid name is required")
+	}
+	if validShort && validLong && string(cfg.ShortName) == cfg.LongName {
+		return nil, fmt.Errorf("-%s, --%s: short name identical to long name", string(cfg.ShortName), cfg.LongName)
+	}
+	if isBoolFlag && !validLong {
+		if b, err := strconv.ParseBool(trueDefault); err == nil && b {
+			return nil, fmt.Errorf("-%s: default true boolean flag requires a long name", string(cfg.ShortName))
 		}
 	}
 
@@ -506,22 +515,199 @@ func (fs *CoreFlags) AddFlag(cfg CoreFlagConfig) (Flag, error) {
 		flagSet:     fs,
 		shortName:   cfg.ShortName,
 		longName:    cfg.LongName,
-		placeholder: placeholder,
-		defaultval:  defaultValue,
-		usageval:    cfg.Usage,
+		usage:       cfg.Usage,
 		flagValue:   cfg.Value,
+		trueDefault: trueDefault,
 		isBoolFlag:  isBoolFlag,
+		isSet:       false,
+		placeholder: cfg.getPlaceholder(),
+		noDefault:   cfg.NoDefault,
 	}
 
 	for _, existing := range fs.flagSlice {
 		if isDuplicate(f, existing) {
-			return nil, newFlagError(f, ErrDuplicateFlag)
+			return nil, newFlagError(f, fmt.Errorf("%w (%s)", ErrDuplicateFlag, getNameString(existing)))
 		}
 	}
 
 	fs.flagSlice = append(fs.flagSlice, f)
 
 	return f, nil
+}
+
+// AddStruct adds flags to the flag set from the given val, which must be a
+// pointer to a struct. Each exported field in that struct with a valid `ff:`
+// struct tag corresponds to a unique flag in the flag set. Those fields must be
+// a supported [ffval.ValueType] or implement [flag.Value].
+//
+// The `ff:` struct tag is parsed as a sequence of comma- or pipe-separated
+// items. An item is either a key, or a key/value pair. Key/value pairs are
+// expressed as either key=value (with =), or key: value (with :). Keys, values,
+// and items themselves are trimmed of whitespace before use. Values may be
+// 'single quoted' and will be unquoted before use.
+//
+// The following is a list of valid keys and their expected values.
+//
+//   - s, short, shortname -- value should be a valid short name
+//   - l, long, longname -- value should be a valid long name
+//   - u, usage -- value should be a valid usage string
+//   - d, def, default -- value should be assignable to the flag
+//   - p, placeholder -- value should be a valid placeholder
+//   - noplaceholder -- (no value)
+//   - nodefault -- (no value)
+//
+// See the example for more detail.
+func (fs *CoreFlags) AddStruct(val any) error {
+	outerVal := reflect.ValueOf(val)
+	if outerVal.Kind() != reflect.Pointer {
+		return fmt.Errorf("value (%T) must be a pointer", val)
+	}
+
+	innerVal := outerVal.Elem()
+	innerTyp := innerVal.Type()
+	if innerVal.Kind() != reflect.Struct {
+		return fmt.Errorf("value (%T) must be a struct", innerTyp)
+	}
+
+	for i := 0; i < innerVal.NumField(); i++ {
+		// Evaluate this struct field.
+		var (
+			fieldVal  = innerVal.Field(i)
+			fieldTyp  = innerTyp.Field(i)
+			fieldName = fieldTyp.Name
+		)
+
+		// Only care if it has `ff:` tag.
+		fftag, ok := fieldTyp.Tag.Lookup("ff")
+		if !ok {
+			continue
+		}
+
+		// Only care if the `ff:` tag has one or more comma-separated items.
+		var items []string
+		{
+			var quoted bool
+			items = strings.FieldsFunc(fftag, func(r rune) bool {
+				if r == '\'' {
+					quoted = !quoted
+				}
+				return !quoted && (r == ',' || r == '|')
+			})
+			if len(items) <= 0 {
+				continue
+			}
+		}
+
+		// Parse the items into a flag config.
+		var (
+			cfg CoreFlagConfig
+			def string
+		)
+		for _, item := range items {
+			// Allow the tag string to include padding spaces.
+			item = strings.TrimSpace(item)
+			if item == "" {
+				continue
+			}
+
+			var key, val string
+			if sep := strings.IndexAny(item, "=:"); sep < 0 {
+				key = item
+			} else {
+				key, val = item[:sep], item[sep+1:]
+			}
+			{
+				key = strings.ToLower(key)
+				key = strings.TrimSpace(key)
+				if key == "" {
+					return fmt.Errorf("%s: %q: no key", fieldName, item)
+				}
+			}
+			{
+				val = strings.TrimSpace(val)
+				if strings.HasPrefix(val, `'`) && strings.HasSuffix(val, `'`) { // treat 'single-quoted values' same as "double-quoted values"
+					val = val[1 : len(val)-1]
+				} else if v, err := strconv.Unquote(val); err == nil {
+					val = v
+				}
+			}
+
+			// Parse supported keys.
+			switch key {
+			case "s", "short", "shortname":
+				if n := utf8.RuneCountInString(val); n != 1 {
+					return fmt.Errorf("%s: %q: invalid short name", fieldName, item)
+				}
+				short, _ := utf8.DecodeRuneInString(val)
+				cfg.ShortName = short
+
+			case "l", "long", "longname":
+				if val == "" {
+					return fmt.Errorf("%s: %q: invalid (empty) long name", fieldName, item)
+				}
+				cfg.LongName = val
+
+			case "u", "usage":
+				if val == "" {
+					return fmt.Errorf("%s: %q: invalid (empty) usage", fieldName, item)
+				}
+				cfg.Usage = val
+
+			case "d", "def", "default":
+				switch val {
+				case "", "-":
+					cfg.NoDefault = true
+				default:
+					def = val
+				}
+
+			case "nodefault":
+				cfg.NoDefault = true
+
+			case "p", "placeholder":
+				switch val {
+				case "", "-":
+					cfg.NoPlaceholder = true
+				default:
+					cfg.Placeholder = val
+				}
+
+			case "noplaceholder":
+				cfg.NoPlaceholder = true
+
+			default:
+				return fmt.Errorf("%s: %q: unknown key", fieldName, key)
+			}
+		}
+
+		// Produce a flag.Value representing the field.
+		{
+			var (
+				fieldValAddr      = fieldVal.Addr()
+				fieldValAddrTyp   = fieldValAddr.Type()
+				fieldValAddrIface = fieldValAddr.Interface()
+				flagValueElemTyp  = reflect.TypeOf((*flag.Value)(nil)).Elem()
+			)
+			if fieldValAddrTyp.Implements(flagValueElemTyp) {
+				// The field implements flag.Value, we can use it directly.
+				cfg.Value = fieldValAddrIface.(flag.Value)
+			} else {
+				// Try to construct a new flag value.
+				v, err := ffval.NewValueReflect(fieldValAddrIface, def)
+				if err != nil {
+					return fmt.Errorf("%s: %w", fieldName, err)
+				}
+				cfg.Value = v
+			}
+		}
+
+		// Try to add a flag from the parsed config.
+		if _, err := fs.AddFlag(cfg); err != nil {
+			return fmt.Errorf("%s: %w", fieldName, err)
+		}
+	}
+
+	return nil
 }
 
 // Value defines a new flag in the flag set, and panics on any error.
@@ -549,11 +735,13 @@ func (fs *CoreFlags) ValueLong(long string, value flag.Value, usage string) Flag
 }
 
 // BoolVar defines a new flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false.
 func (fs *CoreFlags) BoolVar(pointer *bool, short rune, long string, def bool, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Bool defines a new flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false.
 func (fs *CoreFlags) Bool(short rune, long string, def bool, usage string) *bool {
 	var value bool
 	fs.BoolVar(&value, short, long, def, usage)
@@ -561,11 +749,13 @@ func (fs *CoreFlags) Bool(short rune, long string, def bool, usage string) *bool
 }
 
 // BoolShort defines a new flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false.
 func (fs *CoreFlags) BoolShort(short rune, def bool, usage string) *bool {
 	return fs.Bool(short, "", def, usage)
 }
 
 // BoolLong defines a new flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false.
 func (fs *CoreFlags) BoolLong(long string, def bool, usage string) *bool {
 	return fs.Bool(0, long, def, usage)
 }
@@ -601,7 +791,7 @@ func (fs *CoreFlags) StringListVar(pointer *[]string, short rune, long string, u
 }
 
 // StringList defines a new flag in the flag set, and panics on any error.
-// See [StringListVar] for more details.
+// See [CoreFlags.StringListVar] for more details.
 func (fs *CoreFlags) StringList(short rune, long string, usage string) *[]string {
 	var value []string
 	fs.StringListVar(&value, short, long, usage)
@@ -609,13 +799,13 @@ func (fs *CoreFlags) StringList(short rune, long string, usage string) *[]string
 }
 
 // StringListShort defines a new flag in the flag set, and panics on any error.
-// See [StringListVar] for more details.
+// See [CoreFlags.StringListVar] for more details.
 func (fs *CoreFlags) StringListShort(short rune, usage string) *[]string {
 	return fs.StringList(short, "", usage)
 }
 
 // StringListLong defines a new flag in the flag set, and panics on any error.
-// See [StringListVar] for more details.
+// See [CoreFlags.StringListVar] for more details.
 func (fs *CoreFlags) StringListLong(long string, usage string) *[]string {
 	return fs.StringList(0, long, usage)
 }
@@ -629,7 +819,7 @@ func (fs *CoreFlags) StringSetVar(pointer *[]string, short rune, long string, us
 }
 
 // StringSet defines a new flag in the flag set, and panics on any error.
-// See [StringSetVar] for more details.
+// See [CoreFlags.StringSetVar] for more details.
 func (fs *CoreFlags) StringSet(short rune, long string, usage string) *[]string {
 	var value []string
 	fs.StringSetVar(&value, short, long, usage)
@@ -637,15 +827,41 @@ func (fs *CoreFlags) StringSet(short rune, long string, usage string) *[]string 
 }
 
 // StringSetShort defines a new flag in the flag set, and panics on any error.
-// See [StringSetVar] for more details.
+// See [CoreFlags.StringSetVar] for more details.
 func (fs *CoreFlags) StringSetShort(short rune, usage string) *[]string {
 	return fs.StringSet(short, "", usage)
 }
 
 // StringSetLong defines a new flag in the flag set, and panics on any error.
-// See [StringSetVar] for more details.
+// See [CoreFlags.StringSetVar] for more details.
 func (fs *CoreFlags) StringSetLong(long string, usage string) *[]string {
 	return fs.StringSet(0, long, usage)
+}
+
+// StringEnumVar defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *CoreFlags) StringEnumVar(pointer *string, short rune, long string, usage string, valid ...string) Flag {
+	return fs.Value(short, long, ffval.NewEnum(pointer, valid...), usage)
+}
+
+// StringEnum defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *CoreFlags) StringEnum(short rune, long string, usage string, valid ...string) *string {
+	var value string
+	fs.StringEnumVar(&value, short, long, usage, valid...)
+	return &value
+}
+
+// StringEnumShort defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *CoreFlags) StringEnumShort(short rune, usage string, valid ...string) *string {
+	return fs.StringEnum(short, "", usage, valid...)
+}
+
+// StringEnumLong defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *CoreFlags) StringEnumLong(long string, usage string, valid ...string) *string {
+	return fs.StringEnum(0, long, usage, valid...)
 }
 
 // Float64Var defines a new flag in the flag set, and panics on any error.
@@ -784,15 +1000,17 @@ type coreFlag struct {
 	flagSet     *CoreFlags
 	shortName   rune
 	longName    string
-	placeholder string
-	defaultval  string
-	usageval    string
+	usage       string
 	flagValue   flag.Value
+	trueDefault string // actual default, for e.g. Reset
 	isBoolFlag  bool
 	isSet       bool
+	placeholder string
+	noDefault   bool // in help text
 }
 
 var _ Flag = (*coreFlag)(nil)
+var _ Resetter = (*coreFlag)(nil)
 
 func (f *coreFlag) GetFlags() Flags {
 	return f.flagSet
@@ -806,16 +1024,8 @@ func (f *coreFlag) GetLongName() (string, bool) {
 	return f.longName, isValidLongName(f.longName)
 }
 
-func (f *coreFlag) GetPlaceholder() string {
-	return f.placeholder
-}
-
-func (f *coreFlag) GetDefault() string {
-	return f.defaultval
-}
-
 func (f *coreFlag) GetUsage() string {
-	return f.usageval
+	return f.usage
 }
 
 func (f *coreFlag) SetValue(s string) error {
@@ -839,14 +1049,25 @@ func (f *coreFlag) Reset() error {
 		if err := r.Reset(); err != nil {
 			return err
 		}
+	} else {
+		if err := f.flagValue.Set(f.trueDefault); err != nil {
+			return err
+		}
 	}
 
-	if err := f.flagValue.Set(f.defaultval); err != nil {
-		return err
-	}
 	f.isSet = false
-
 	return nil
+}
+
+func (f *coreFlag) GetPlaceholder() string {
+	return f.placeholder
+}
+
+func (f *coreFlag) GetDefault() string {
+	if f.noDefault {
+		return ""
+	}
+	return f.trueDefault
 }
 
 func (f *coreFlag) IsStdFlag() bool {

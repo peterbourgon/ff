@@ -17,25 +17,23 @@ func TestSection_Flags(t *testing.T) {
 
 	t.Run("default", func(t *testing.T) {
 		fs, _ := fftest.CoreConstructor.Make(fftest.Vars{A: true})
-		want := strings.TrimSpace(coreFlagsDefaultFlagsSection)
-		have := strings.TrimSpace(ffhelp.NewFlagsSection(fs).String())
+		want := fftest.Unindent(`
+			FLAGS
+			  -s, --str STRING     string
+			  -i, --int INT        int (default: 0)
+			  -f, --flt FLOAT64    float64 (default: 0)
+			  -a, --aflag BOOL     bool a (default: true)
+			  -b, --bflag          bool b (default: false)
+			  -c, --cflag          bool c (default: false)
+			  -d, --dur DURATION   time.Duration (default: 0s)
+			  -x, --xxx STR        collection of strings (repeatable)
+			`)
+		have := fftest.Unindent(ffhelp.NewFlagsSection(fs).String())
 		if want != have {
 			t.Errorf("\n%s", fftest.DiffString(want, have))
 		}
 	})
 }
-
-var coreFlagsDefaultFlagsSection = strings.TrimSpace(`
-FLAGS
-  -s, --str STRING     string
-  -i, --int INT        int (default: 0)
-  -f, --flt FLOAT64    float64 (default: 0)
-  -a, --aflag BOOL     bool a (default: true)
-  -b, --bflag          bool b (default: false)
-  -c, --cflag          bool c (default: false)
-  -d, --dur DURATION   time.Duration (default: 0s)
-  -x, --xxx STR        collection of strings (repeatable)
-`)
 
 //
 //
@@ -45,26 +43,25 @@ func TestSection_StdFlags(t *testing.T) {
 	t.Parallel()
 
 	fs, _ := fftest.StdConstructor.Make(fftest.Vars{A: true})
-	want := strings.TrimSpace(stdFlagsSectionHelp)
+	want := fftest.Unindent(`
+		NAME
+		  fftest
+
+		FLAGS
+		  -a BOOL       bool a (default: true)
+		  -b            bool b (default: false)
+		  -c            bool c (default: false)
+		  -d DURATION   time.Duration (default: 0s)
+		  -f FLOAT64    float64 (default: 0)
+		  -i INT        int (default: 0)
+		  -s STRING     string
+		  -x STRING     collection of strings (repeatable)
+	`)
 	have := strings.TrimSpace(ffhelp.Flags(fs).String())
 	if want != have {
 		t.Errorf("\n%s", fftest.DiffString(want, have))
 	}
 }
-
-var stdFlagsSectionHelp = `
-fftest
-
-FLAGS
-  -a BOOL       bool a (default: true)
-  -b            bool b (default: false)
-  -c            bool c (default: false)
-  -d DURATION   time.Duration (default: 0s)
-  -f FLOAT64    float64 (default: 0)
-  -i INT        int (default: 0)
-  -s STRING     string
-  -x STRING     collection of strings (repeatable)
-`
 
 //
 //
@@ -123,8 +120,8 @@ func TestSections_Command(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			want := strings.TrimSpace(test.want)
-			have := strings.TrimSpace(ffhelp.Command(testcmd).String())
+			want := fftest.Unindent(test.want)
+			have := fftest.Unindent(ffhelp.Command(testcmd).String())
 			if want != have {
 				t.Errorf("\n%s", fftest.DiffString(want, have))
 			}
@@ -133,7 +130,8 @@ func TestSections_Command(t *testing.T) {
 }
 
 var testCommandRootHelp = `
-testcmd
+COMMAND
+  testcmd
 
 USAGE
   testcmd [FLAGS] <SUBCOMMAND> ...
@@ -156,7 +154,8 @@ FLAGS
 `
 
 var testCommandFooHelp = `
-foo -- the foo subcommand
+COMMAND
+  foo -- the foo subcommand
 
 USAGE
   foo [FLAGS] <SUBCOMMAND> ...
@@ -164,7 +163,7 @@ USAGE
 SUBCOMMANDS
   bar   the bar subcommand
 
-FLAGS
+FLAGS (foo)
   -a, --alpha INT            alpha integer (default: 10)
   -b, --beta                 beta boolean (default: false)
 
@@ -174,12 +173,13 @@ FLAGS (root)
 `
 
 var testCommandBarHelp = strings.ReplaceAll(`
-bar -- the bar subcommand
+COMMAND
+  bar -- the bar subcommand
 
 USAGE
   bar [FLAGS] ...
 
-FLAGS
+FLAGS (bar)
   -d, --delta δ              delta #δ# duration (default: 3s)
   -e, --epsilon FLOAT64      epsilon float (default: 3.21)
 
@@ -244,3 +244,5 @@ tortor. Quisque elit nibh, rhoncus in posuere et, bibendum non turpis.
 Maecenas eget dui malesuada, pretium tellus quis, bibendum felis. Duis erat
 enim, faucibus id auctor ac, ornare sed metus.
 `
+
+var loremIpsumSlice = strings.Split(strings.TrimSpace(loremIpsum), "\n")

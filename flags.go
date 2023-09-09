@@ -10,11 +10,10 @@ import (
 // command (or sub-command) executed by an end user.
 //
 // Any valid Flags can be provided to [Parse], or used as the Flags field in a
-// [Command]. This allows custom flag set implementations to take advantage of
-// the primary features of this module.
+// [Command]. This allows consumers to use their own flag set implementation(s)
+// while still taking advantage of the primary features of the module.
 //
-// Implementations are not expected to be safe for concurrent use by multiple
-// goroutines.
+// Implementations are not expected to be safe for concurrent use.
 type Flags interface {
 	// GetName should return the name of the flag set.
 	GetName() string
@@ -47,11 +46,10 @@ type Flags interface {
 	GetArgs() []string
 }
 
-// Flag describes a single runtime configuration parameter, defined within a set
-// of flags, and with a value that's parsed from a string.
+// Flag describes a single runtime configuration parameter, defined in a set of
+// [Flags], and with a value that can be parsed from a string.
 //
-// Implementations are not expected to be safe for concurrent use by multiple
-// goroutines.
+// Implementations are not expected to be safe for concurrent use.
 type Flag interface {
 	// GetFlags should return the set of flags in which this flag is defined.
 	// It's primarily used for help output.
@@ -59,12 +57,12 @@ type Flag interface {
 
 	// GetShortName should return the short name for this flag, if one is
 	// defined. A short name is always a single character (rune) which is
-	// typically parsed with a single leading - hyphen.
+	// typically parsed with a single leading hyphen, e.g. -f.
 	GetShortName() (rune, bool)
 
 	// GetLongName should return the long name for this flag, if one is defined.
 	// A long name is always a non-empty string which is typically parsed with
-	// two leading -- hyphens.
+	// two leading hyphens, e.g. --foo.
 	GetLongName() (string, bool)
 
 	// GetPlaceholder should return a string that can be used as a placeholder
@@ -87,7 +85,7 @@ type Flag interface {
 	SetValue(string) error
 
 	// GetValue should return the current value of the flag as a string. If no
-	// value has been set, it should return the default value.
+	// value has been set, it should return the default value as a string.
 	GetValue() string
 
 	// IsSet should return true if SetValue has been called successfully.
@@ -103,11 +101,7 @@ type Resetter interface {
 	Reset() error
 }
 
-// IsBoolFlagger is used to identify flag values representing booleans.
-type IsBoolFlagger interface{ IsBoolFlag() bool }
-
 var (
-	_ flag.Value    = (*ffval.Value[any])(nil)
-	_ Resetter      = (*ffval.Value[any])(nil)
-	_ IsBoolFlagger = (*ffval.Value[any])(nil)
+	_ flag.Value = (*ffval.Value[any])(nil)
+	_ Resetter   = (*ffval.Value[any])(nil)
 )

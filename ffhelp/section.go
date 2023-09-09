@@ -13,9 +13,9 @@ import (
 // DefaultLinePrefix is used by [Section] constructors in this package.
 var DefaultLinePrefix = "  "
 
-// Section describes a single block of help text. A section typically begins
-// with a typically uppercase TITLE, and contains one or more lines of content,
-// which are typically indented by LinePrefix.
+// Section describes a single block of help text. A section usually begins with
+// an uppercase TITLE, and contains one or more lines of content, which are
+// typically indented by LinePrefix.
 type Section struct {
 	// Title of the section, typically UPPERCASE.
 	Title string
@@ -190,7 +190,7 @@ func newFlagSections(cfg flagSectionsConfig) []Section {
 		lines    = splitLines(buffer.String())
 		sections = []*Section{}
 	)
-	for i, name := range order {
+	for _, name := range order {
 		flags := index[name]
 		if len(flags) <= 0 {
 			continue
@@ -206,7 +206,7 @@ func newFlagSections(cfg flagSectionsConfig) []Section {
 		}
 
 		title := "FLAGS"
-		if cfg.AlwaysSubtitle || i > 0 {
+		if cfg.AlwaysSubtitle || len(order) > 1 {
 			title = fmt.Sprintf("%s (%s)", title, name)
 		}
 

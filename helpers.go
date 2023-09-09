@@ -19,8 +19,25 @@ func isValidShortName(short rune) bool {
 	return isValid
 }
 
+var badStuff = strings.Join([]string{
+	string(rune(0x00)),   // zero rune
+	string([]byte{0x00}), // zero/NUL byte
+	` `,                  // space
+	"\t\n\v\f\r",         // control whitespace
+	string(rune(0x85)),   // unicode whitespace
+	string(rune(0xA0)),   // unicode whitespace
+	`"'`,                 // quotes
+	"`",                  // backtick
+	`\`,                  // backslash
+}, "")
+
 func isValidLongName(long string) bool {
-	return long != ""
+	var (
+		isEmpty     = long == ""
+		hasBadStuff = strings.ContainsAny(long, badStuff)
+		isValid     = !isEmpty && !hasBadStuff
+	)
+	return isValid
 }
 
 func getNameStrings(f Flag) []string {

@@ -8,7 +8,7 @@ import (
 )
 
 // TestCases are a collection of test cases that can be run as a group.
-type TestCases []TestCase
+type TestCases []ParseTest
 
 // Run the test cases in order.
 func (tcs TestCases) Run(t *testing.T, options ...ff.Option) {
@@ -21,8 +21,8 @@ func (tcs TestCases) Run(t *testing.T, options ...ff.Option) {
 	}
 }
 
-// TestCase describes a specific [ff.Parse] test scenario.
-type TestCase struct {
+// ParseTest describes a parsing test scenario.
+type ParseTest struct {
 	Name         string
 	Constructors []Constructor
 	Default      Vars
@@ -34,7 +34,7 @@ type TestCase struct {
 }
 
 // Run the test case.
-func (tc *TestCase) Run(t *testing.T, options ...ff.Option) {
+func (tc *ParseTest) Run(t *testing.T, options ...ff.Option) {
 	t.Helper()
 
 	// The test case options are the most specific, and so the highest priority.

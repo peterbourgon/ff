@@ -96,7 +96,8 @@ func TestExec(t *testing.T) {
 }
 
 const rootUsage = `
-objectctl -- control objects
+COMMAND
+  objectctl -- control objects
 
 USAGE
   objectctl [FLAGS] <SUBCOMMAND> ...
@@ -112,12 +113,13 @@ FLAGS
 `
 
 const listUsage = `
-list -- list available objects
+COMMAND
+  list -- list available objects
 
 USAGE
   objectctl list [FLAGS]
 
-FLAGS
+FLAGS (list)
   -a, --atime          include last access time of each object
 
 FLAGS (objectctl)

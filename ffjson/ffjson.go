@@ -1,4 +1,4 @@
-// Package ffjson provides a JSON config file paser.
+// Package ffjson provides a JSON config file parser.
 package ffjson
 
 import (

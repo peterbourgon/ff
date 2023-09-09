@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // Value is a generic [flag.Value] that can be set from a string.
@@ -149,3 +150,88 @@ func (v Value[T]) IsBoolFlag() bool {
 		return false
 	}
 }
+
+//
+//
+//
+
+type reflectValue struct {
+	set func(string) error
+	get func() string
+
+	isBoolFlag  bool
+	placeholder string
+}
+
+var _ flag.Value = (*reflectValue)(nil)
+
+// NewValueReflect produces a simple [flag.Value] which updates ptr when set.
+// ptr must be a pointer to a supported [ValueType]. If def is non-empty, the
+// flag will be set to that default string before being returned. Otherwise, the
+// default value of the flag will be the zero value of the type.
+//
+// This is a fairly low-level function, which exists only to support parsing
+// struct tags. Most consumers should not need to use it.
+func NewValueReflect(ptr any, def string) (flag.Value, error) {
+	if reflect.TypeOf(ptr).Kind() != reflect.Pointer {
+		return nil, fmt.Errorf("%T is not a pointer", ptr)
+	}
+
+	dst := reflect.ValueOf(ptr).Elem()
+	typ := dst.Type()
+	if !dst.CanSet() {
+		return nil, fmt.Errorf("unassignable value %T (%s)", ptr, typ)
+	}
+
+	parseFunc, ok := defaultParseFuncs[typ]
+	if !ok {
+		return nil, fmt.Errorf("unsupported type %s", typ)
+	}
+
+	set := func(s string) error {
+		parseFuncVal := reflect.ValueOf(parseFunc)
+		parseFuncIn := []reflect.Value{reflect.ValueOf(s)}
+		parseFuncOut := parseFuncVal.Call(parseFuncIn)
+		if len(parseFuncOut) != 2 {
+			panic(fmt.Errorf("calling parseFunc: expected 2 values, got %d", len(parseFuncOut)))
+		}
+		if err, ok := parseFuncOut[1].Interface().(error); ok && err != nil {
+			return err
+		}
+		dst.Set(parseFuncOut[0])
+		return nil
+	}
+
+	get := func() string {
+		sprintFuncVal := reflect.ValueOf(fmt.Sprint)
+		sprintFuncIn := []reflect.Value{dst}
+		sprintFuncOut := sprintFuncVal.Call(sprintFuncIn)
+		if len(sprintFuncOut) != 1 {
+			panic(fmt.Errorf("calling fmt.Sprint: expected 2 values, got %d", len(sprintFuncOut)))
+		}
+		var s string
+		reflect.ValueOf(&s).Elem().Set(sprintFuncOut[0])
+		return s
+	}
+
+	if def != "" {
+		if err := set(def); err != nil {
+			return nil, err
+		}
+	}
+
+	isBoolFlag := typ.ConvertibleTo(reflect.TypeOf(*new(bool)))
+	placeholder := strings.ToUpper(typ.Name())
+
+	return &reflectValue{
+		set:         set,
+		get:         get,
+		isBoolFlag:  isBoolFlag,
+		placeholder: placeholder,
+	}, nil
+}
+
+func (v *reflectValue) Set(s string) error     { return v.set(s) }
+func (v *reflectValue) String() string         { return v.get() }
+func (v *reflectValue) IsBoolFlag() bool       { return v.isBoolFlag }
+func (v *reflectValue) GetPlaceholder() string { return v.placeholder }

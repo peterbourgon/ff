@@ -1,11 +1,9 @@
 package ffval
 
 import (
-	"fmt"
 	"reflect"
 	"strconv"
 	"time"
-	"unicode/utf8"
 )
 
 // ValueType is a generic type constraint for a specific set of primitive types
@@ -13,14 +11,10 @@ import (
 // parser, which will be used if a parser is not explicitly provided by the
 // user. This permits the zero value of corresponding generic types to be
 // useful, which in turn allows this package to provide common and useful types
-// like [Bool], [String], [StringSet], etc.
+// like [Bool], [Duration], [StringSet], etc.
 type ValueType interface {
-	bool | int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64 | string | complex64 | complex128 | time.Duration | ffbyte | ffrune
+	bool | int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64 | string | complex64 | complex128 | time.Duration
 }
-
-//
-//
-//
 
 // Bool is a flag value representing a bool.
 // Values are parsed by [strconv.ParseBool].
@@ -85,38 +79,14 @@ type Complex64 = Value[complex64]
 // Values are parsed by [strconv.ParseComplex].
 type Complex128 = Value[complex128]
 
-// Byte is a flag value representing a byte. Values are parsed with a
-// custom function that expects a string containing a single byte.
-type Byte = Value[ffbyte]
-
-// Rune is a flag value representing a rune. Values are parsed with a
-// custom function that expects a string containing a single valid rune.
-type Rune = Value[ffrune]
-
 // Duration is a flag value representing a [time.Duration].
 // Values are parsed by [time.ParseDuration].
 type Duration = Value[time.Duration]
 
-//
-//
-//
-
-// BoolList is a [List] of bools. Duplicates are permitted.
-type BoolList = List[bool]
-
-// BoolSet is a [UniqueList] of bools. Duplicates are silently dropped.
-type BoolSet = UniqueList[bool]
-
-// IntList is a [List] of ints. Duplicates are permitted.
-type IntList = List[int]
-
-// IntSet is a [UniqueList] of ints. Duplicates are silently dropped.
-type IntSet = UniqueList[int]
-
-// StringList a [List] of strings. Duplicates are permitted.
+// StringList is a flag value representing a sequence of strings.
 type StringList = List[string]
 
-// StringSet is a [UniqueList] of strings. Duplicates are silently dropped.
+// StringSet is a flag value representing a unique set of strings.
 type StringSet = UniqueList[string]
 
 //
@@ -140,38 +110,5 @@ var defaultParseFuncs = map[reflect.Type]any{
 	reflect.TypeOf(*new(string)):        func(s string) (string, error) { return s, nil },
 	reflect.TypeOf(*new(complex64)):     func(s string) (complex64, error) { v, err := strconv.ParseComplex(s, 64); return complex64(v), err },
 	reflect.TypeOf(*new(complex128)):    func(s string) (complex128, error) { v, err := strconv.ParseComplex(s, 128); return complex128(v), err },
-	reflect.TypeOf(*new(ffbyte)):        parseByte,
-	reflect.TypeOf(*new(ffrune)):        parseRune,
 	reflect.TypeOf(*new(time.Duration)): time.ParseDuration,
-}
-
-// byte aliases uint8, but we want to distinguish them when parsing.
-type ffbyte byte
-
-func parseByte(s string) (ffbyte, error) {
-	if b, err := strconv.ParseUint(s, 0, 8); err == nil {
-		return ffbyte(b), nil
-	}
-
-	if b := []byte(s); len(b) == 1 {
-		return ffbyte(b[0]), nil
-	}
-
-	return 0, fmt.Errorf("invalid string %q", s)
-}
-
-// rune aliases int32, but we want to distinguish them when parsing.
-type ffrune rune
-
-func parseRune(s string) (ffrune, error) {
-	if n := utf8.RuneCountInString(s); n != 1 {
-		return 0, fmt.Errorf("invalid string: want 1 rune, have %d", n)
-	}
-
-	r, _ := utf8.DecodeRuneInString(s)
-	if r == utf8.RuneError {
-		return 0, fmt.Errorf("invalid string: invalid rune")
-	}
-
-	return ffrune(r), nil
 }

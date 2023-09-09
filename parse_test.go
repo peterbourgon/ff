@@ -2,6 +2,7 @@ package ff_test
 
 import (
 	"embed"
+	"flag"
 	"testing"
 	"time"
 
@@ -351,4 +352,37 @@ func TestParse_PlainParser(t *testing.T) {
 	}
 
 	testcases.Run(t)
+}
+
+func TestParse_types(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ff.CoreFlags", func(t *testing.T) {
+		fs := ff.NewFlags(t.Name())
+		foo := fs.String('f', "foo", "default-value", "foo string")
+		if err := ff.Parse(fs, []string{"--foo=bar"}); err != nil {
+			t.Fatal(err)
+		}
+		if want, have := "bar", *foo; want != have {
+			t.Errorf("foo: want %q, have %q", want, have)
+		}
+	})
+
+	t.Run("flag.FlagSet", func(t *testing.T) {
+		fs := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
+		foo := fs.String("foo", "default-value", "foo string")
+		if err := ff.Parse(fs, []string{"-foo", "bar"}); err != nil {
+			t.Fatal(err)
+		}
+		if want, have := "bar", *foo; want != have {
+			t.Errorf("foo: want %q, have %q", want, have)
+		}
+	})
+
+	t.Run("invalid type", func(t *testing.T) {
+		fs := "xxx" // should compile, but Parse should return an error
+		if err := ff.Parse(fs, []string{"-foo", "bar"}); err == nil {
+			t.Errorf("Parse(%T): want error, have none", fs)
+		}
+	})
 }
