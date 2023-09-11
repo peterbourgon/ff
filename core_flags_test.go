@@ -28,7 +28,7 @@ func TestCoreFlags_Basics(t *testing.T) {
 	} {
 		t.Run(argstr, func(t *testing.T) {
 			fs := ff.NewFlags("myset")
-			fs.Bool('b', "boolean", false, "boolean flag")
+			fs.Bool('b', "boolean", "boolean flag")
 			fs.StringLong("string", "default", "string flag")
 			fs.Duration('d', "duration", 250*time.Millisecond, "duration flag")
 			fftest.TestFlags(t, fs, strings.Fields(argstr))
@@ -108,8 +108,8 @@ func TestCoreFlags_Bool(t *testing.T) {
 	} {
 		t.Run(strings.Join(test.args, " "), func(t *testing.T) {
 			fs := ff.NewFlags(t.Name())
-			xflag := fs.Bool('x', "xflag", false, "one boolean flag")
-			yflag := fs.Bool('y', "yflag", true, "another boolean flag")
+			xflag := fs.Bool('x', "xflag", "one boolean flag")
+			yflag := fs.BoolDef('y', "yflag", true, "another boolean flag")
 			err := fs.Parse(test.args)
 			switch {
 			case test.wantErr == nil && err == nil:
@@ -190,7 +190,7 @@ func TestCoreFlags_HelpFlag(t *testing.T) {
 	t.Parallel()
 
 	fs := ff.NewFlags(t.Name())
-	helpflag := fs.BoolLong("help", false, "alternative help flag")
+	helpflag := fs.BoolLong("help", "alternative help flag")
 
 	// -h should still trigger ErrHelp.
 	if err := fs.Parse([]string{"-h"}); !errors.Is(err, ff.ErrHelp) {
@@ -302,7 +302,7 @@ func TestCoreFlags_invalid(t *testing.T) {
 			}
 		}()
 		fs := ff.NewFlags(t.Name())
-		fs.Bool('b', "b", false, "this should panic")
+		fs.Bool('b', "b", "this should panic")
 	})
 
 	t.Run("duplicate short name", func(t *testing.T) {
@@ -314,8 +314,8 @@ func TestCoreFlags_invalid(t *testing.T) {
 			}
 		}()
 		fs := ff.NewFlags(t.Name())
-		_ = fs.Bool('a', "alpha", false, "this should be OK")
-		_ = fs.Bool('a', "apple", false, "this should panic")
+		_ = fs.Bool('a', "alpha", "this should be OK")
+		_ = fs.Bool('a', "apple", "this should panic")
 	})
 
 	t.Run("duplicate long name", func(t *testing.T) {
@@ -327,8 +327,8 @@ func TestCoreFlags_invalid(t *testing.T) {
 			}
 		}()
 		fs := ff.NewFlags(t.Name())
-		_ = fs.Bool('a', "alpha", false, "this should be OK")
-		_ = fs.Bool('b', "alpha", false, "this should panic")
+		_ = fs.Bool('a', "alpha", "this should be OK")
+		_ = fs.Bool('b', "alpha", "this should panic")
 	})
 }
 
@@ -486,13 +486,13 @@ func TestCoreFlags_struct(t *testing.T) {
 
 func ExampleCoreFlags_AddStruct() {
 	var flags struct {
-		Alpha   string          `ff:" shortname=a , longname=alpha  , default=abc ,     ,             usage=alpha string   "`
-		Beta    int             `ff:"             , long=beta       ,             , p=β ,             usage: beta int      "`
-		Delta   bool            `ff:" short: d    ,                 ,             ,     , nodefault , usage: 'delta|bool'  "`
-		Epsilon bool            `ff:" s=e         , l=epsilon       ,             ,     , nodefault , u: 'epsilon: bool'   "`
-		Gamma   string          `ff:" s:g         | l:gamma         |             |     |             u='comma, ok'        "`
-		Iota    float64         `ff:"             | long=iota       | d=0.43      |     |             usage: 🦊            "`
-		Kappa   ffval.StringSet `ff:" short=k     | long=kappa      ,             |     ,             u:kappa (repeatable) "`
+		Alpha   string          `ff:" shortname=a , longname=alpha  , default=abc ,     , usage=alpha string   ,           "`
+		Beta    int             `ff:"             , long=beta       ,             , p=β , usage: beta int      ,           "`
+		Delta   bool            `ff:" short: d    ,                 ,             ,     , usage: 'delta|bool'  , nodefault "`
+		Epsilon bool            `ff:" s=e         , l=epsilon       ,             ,     , u: 'epsilon: bool'   , nodefault "`
+		Gamma   string          `ff:" s:g         | l:gamma         |             |     | u='comma, ok'        ,           "`
+		Iota    float64         `ff:"             | long=iota       | d=0.43      |     | usage: 🦊            ,           "`
+		Kappa   ffval.StringSet `ff:" short=k     | long=kappa      ,             |     , u:kappa (repeatable) ,           "`
 	}
 
 	fs := ff.NewFlags("mycommand")

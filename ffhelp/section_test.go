@@ -200,7 +200,7 @@ func makeTestCommand(t *testing.T) *ff.Command {
 	t.Helper()
 
 	rootFlags := ff.NewFlags("root")
-	rootFlags.Bool('v', "verbose", false, "verbose logging")
+	rootFlags.Bool('v', "verbose", "verbose logging")
 	rootFlags.String(0, "config-file", "", "config file")
 	rootCommand := &ff.Command{
 		Name:     "testcmd",
@@ -211,7 +211,7 @@ func makeTestCommand(t *testing.T) *ff.Command {
 
 	fooFlags := ff.NewFlags("foo").SetParent(rootFlags)
 	fooFlags.Int('a', "alpha", 10, "alpha integer")
-	fooFlags.Bool('b', "beta", false, "beta boolean")
+	fooFlags.Bool('b', "beta", "beta boolean")
 	fooCommand := &ff.Command{
 		Name:      "foo",
 		Usage:     "foo [FLAGS] <SUBCOMMAND> ...",

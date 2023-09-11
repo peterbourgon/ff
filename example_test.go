@@ -14,7 +14,7 @@ func ExampleParse_args() {
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
-		debug   = fs.Bool('d', "debug", false, "log debug information")
+		debug   = fs.Bool('d', "debug", "log debug information")
 	)
 
 	err := ff.Parse(fs, []string{"--refresh=1s", "-d"})
@@ -36,7 +36,7 @@ func ExampleParse_env() {
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
-		debug   = fs.Bool('d', "debug", false, "log debug information")
+		debug   = fs.Bool('d', "debug", "log debug information")
 	)
 
 	os.Setenv("MY_PROGRAM_REFRESH", "3s")
@@ -62,7 +62,7 @@ func ExampleParse_config() {
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
-		debug   = fs.Bool('d', "debug", false, "log debug information")
+		debug   = fs.Bool('d', "debug", "log debug information")
 		_       = fs.String('c', "config", "", "path to config file")
 	)
 
@@ -117,7 +117,7 @@ func ExampleParse_help() {
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.DurationLong("refresh", 15*time.Second, "refresh interval")
-		debug   = fs.BoolLong("debug", false, "log debug information")
+		debug   = fs.BoolLong("debug", "log debug information")
 	)
 
 	err := ff.Parse(fs, []string{"-h"})

@@ -30,9 +30,9 @@ var CoreConstructor = Constructor{
 		fs.StringVar(&v.S, 's', "str", def.S, "string")
 		fs.IntVar(&v.I, 'i', "int", def.I, "int")
 		fs.Float64Var(&v.F, 'f', "flt", def.F, "float64")
-		fs.BoolVar(&v.A, 'a', "aflag", def.A, "bool a")
-		fs.BoolVar(&v.B, 'b', "bflag", def.B, "bool b")
-		fs.BoolVar(&v.C, 'c', "cflag", def.C, "bool c")
+		fs.BoolVarDef(&v.A, 'a', "aflag", def.A, "bool a")
+		fs.BoolVarDef(&v.B, 'b', "bflag", def.B, "bool b")
+		fs.BoolVarDef(&v.C, 'c', "cflag", def.C, "bool c")
 		fs.DurationVar(&v.D, 'd', "dur", def.D, "time.Duration")
 		fs.AddFlag(ff.CoreFlagConfig{ShortName: 'x', LongName: "xxx", Placeholder: "STR", Usage: "collection of strings (repeatable)", Value: ffval.NewList(&v.X)})
 		return fs, &v

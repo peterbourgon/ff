@@ -16,7 +16,7 @@ import (
 
 func main() {
 	rootFlags := ff.NewFlags("textctl")
-	verbose := rootFlags.Bool('v', "verbose", false, "increase log verbosity")
+	verbose := rootFlags.Bool('v', "verbose", "increase log verbosity")
 	rootCmd := &ff.Command{
 		Name:  "textctl",
 		Usage: "textctl [FLAGS] <SUBCOMMAND>",

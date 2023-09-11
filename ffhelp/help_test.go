@@ -64,8 +64,8 @@ func TestFlagsHelp_OnlyLong(t *testing.T) {
 	t.Parallel()
 
 	fs := ff.NewFlags("fftest")
-	fs.BoolLong("alpha", false, "alpha usage")
-	fs.BoolLong("beta", false, "beta usage")
+	fs.BoolLong("alpha", "alpha usage")
+	fs.BoolLong("beta", "beta usage")
 
 	want := fftest.Unindent(`
 		NAME

@@ -734,30 +734,57 @@ func (fs *CoreFlags) ValueLong(long string, value flag.Value, usage string) Flag
 	return fs.Value(0, long, value, usage)
 }
 
-// BoolVar defines a new flag in the flag set, and panics on any error.
-// Bool flags should almost always be default false.
-func (fs *CoreFlags) BoolVar(pointer *bool, short rune, long string, def bool, usage string) Flag {
+// BoolVar defines a new default false bool flag in the flag set, and panics on
+// any error.
+func (fs *CoreFlags) BoolVar(pointer *bool, short rune, long string, usage string) Flag {
+	return fs.BoolVarDef(pointer, short, long, false, usage)
+}
+
+// BoolVarDef defines a new bool flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false. Prefer BoolVar to
+// BoolVarDef.
+func (fs *CoreFlags) BoolVarDef(pointer *bool, short rune, long string, def bool, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
-// Bool defines a new flag in the flag set, and panics on any error.
-// Bool flags should almost always be default false.
-func (fs *CoreFlags) Bool(short rune, long string, def bool, usage string) *bool {
+// Bool defines a new default false bool flag in the flag set, and panics on any
+// error.
+func (fs *CoreFlags) Bool(short rune, long string, usage string) *bool {
+	return fs.BoolDef(short, long, false, usage)
+}
+
+// BoolDef defines a new bool flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false. Prefer Bool to BoolDef.
+func (fs *CoreFlags) BoolDef(short rune, long string, def bool, usage string) *bool {
 	var value bool
-	fs.BoolVar(&value, short, long, def, usage)
+	fs.BoolVarDef(&value, short, long, def, usage)
 	return &value
 }
 
-// BoolShort defines a new flag in the flag set, and panics on any error.
-// Bool flags should almost always be default false.
-func (fs *CoreFlags) BoolShort(short rune, def bool, usage string) *bool {
-	return fs.Bool(short, "", def, usage)
+// BoolShort defines a new default false bool flag in the flag set, and panics
+// on any error.
+func (fs *CoreFlags) BoolShort(short rune, usage string) *bool {
+	return fs.Bool(short, "", usage)
 }
 
-// BoolLong defines a new flag in the flag set, and panics on any error.
-// Bool flags should almost always be default false.
-func (fs *CoreFlags) BoolLong(long string, def bool, usage string) *bool {
-	return fs.Bool(0, long, def, usage)
+// BoolShortDef defines a new bool flag in the flag set, and panics on any
+// error. Bool flags should almost always be default false. Prefer BoolShort to
+// BoolShortDef.
+func (fs *CoreFlags) BoolShortDef(short rune, def bool, usage string) *bool {
+	return fs.BoolDef(short, "", def, usage)
+}
+
+// BoolLong defines a new default false bool flag in the flag set, and panics on
+// any error.
+func (fs *CoreFlags) BoolLong(long string, usage string) *bool {
+	return fs.Bool(0, long, usage)
+}
+
+// BoolLongDef defines a new bool flag in the flag set, and panics on any error.
+// Bool flags should almost always be default false. Prefer BoolLong to
+// BoolLongDef.
+func (fs *CoreFlags) BoolLongDef(long string, def bool, usage string) *bool {
+	return fs.BoolDef(0, long, def, usage)
 }
 
 // StringVar defines a new flag in the flag set, and panics on any error.
