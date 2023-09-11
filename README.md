@@ -48,7 +48,7 @@ var (
 Once you have a set of flags, call [Parse][parse] to parse them.
 [Options][options] can be provided to control parsing behavior.
 
-[parse]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVars
+[parse]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Parse
 [options]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Option
 
 ```go
