@@ -221,7 +221,7 @@ func TestValue_types(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("%T", test.value), func(t *testing.T) {
-			fs := ff.NewFlags(t.Name())
+			fs := ff.NewFlagSet(t.Name())
 			fs.Value('v', "value", test.value, "usage string")
 
 			for _, s := range test.good {

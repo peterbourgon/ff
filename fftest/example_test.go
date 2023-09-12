@@ -9,7 +9,7 @@ import (
 )
 
 func ExampleUnindent() {
-	fs := ff.NewFlags("testcommand")
+	fs := ff.NewFlagSet("testcommand")
 	fs.String('f', "foo", "", "the foo parameter")
 	fs.IntLong("bar", 3, "the bar parameter")
 

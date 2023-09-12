@@ -13,10 +13,10 @@ import (
 func TestFlagFormat(t *testing.T) {
 	t.Parallel()
 
-	fs := ff.NewFlags("flags")
+	fs := ff.NewFlagSet("flags")
 
 	var foo ffhelp.Flag
-	if f, err := fs.AddFlag(ff.CoreFlagConfig{
+	if f, err := fs.AddFlag(ff.FlagConfig{
 		ShortName:   'f',
 		LongName:    "foo",
 		Value:       ffval.NewValueDefault(new(string), "hello world"),
@@ -29,7 +29,7 @@ func TestFlagFormat(t *testing.T) {
 	}
 
 	var bar ffhelp.Flag
-	if f, err := fs.AddFlag(ff.CoreFlagConfig{
+	if f, err := fs.AddFlag(ff.FlagConfig{
 		ShortName: 'b',
 		Value:     ffval.NewValueDefault(new(bool), false),
 	}); err != nil {
@@ -39,7 +39,7 @@ func TestFlagFormat(t *testing.T) {
 	}
 
 	var baz ffhelp.Flag
-	if f, err := fs.AddFlag(ff.CoreFlagConfig{
+	if f, err := fs.AddFlag(ff.FlagConfig{
 		LongName:    "baz",
 		Value:       ffval.NewValueDefault(new(bool), true),
 		Placeholder: "XX",
@@ -80,9 +80,9 @@ func TestFlagFormat(t *testing.T) {
 	}
 
 	t.Run("Empties", func(t *testing.T) {
-		fs := ff.NewFlags(t.Name())
+		fs := ff.NewFlagSet(t.Name())
 
-		fooFlag, _ := fs.AddFlag(ff.CoreFlagConfig{
+		fooFlag, _ := fs.AddFlag(ff.FlagConfig{
 			LongName:      "foo",
 			Value:         new(ffval.Int),
 			Usage:         "foo value",
@@ -99,7 +99,7 @@ func TestFlagFormat(t *testing.T) {
 			t.Errorf("foo: Default: (%%d): want '%s', have '%s'", want, have)
 		}
 
-		barFlag, _ := fs.AddFlag(ff.CoreFlagConfig{
+		barFlag, _ := fs.AddFlag(ff.FlagConfig{
 			ShortName: 'b',
 			LongName:  "bar",
 			Value:     ffval.NewValueDefault(new(time.Duration), time.Second),

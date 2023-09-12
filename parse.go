@@ -25,7 +25,7 @@ func Parse(fs FlagSetAny, args []string, options ...Option) error {
 	case Flags:
 		return parse(reified, args, options...)
 	case *flag.FlagSet:
-		return parse(NewStdFlags(reified), args, options...)
+		return parse(NewStdFlagSet(reified), args, options...)
 	default:
 		return fmt.Errorf("unsupported flag set %T", fs)
 	}

@@ -15,7 +15,7 @@ import (
 	"github.com/peterbourgon/ff/v4/ffval"
 )
 
-func TestCoreFlags_Basics(t *testing.T) {
+func TestFlagSet_Basics(t *testing.T) {
 	t.Parallel()
 
 	for _, argstr := range []string{
@@ -27,7 +27,7 @@ func TestCoreFlags_Basics(t *testing.T) {
 		"--duration 250ms --string=nondefault",
 	} {
 		t.Run(argstr, func(t *testing.T) {
-			fs := ff.NewFlags("myset")
+			fs := ff.NewFlagSet("myset")
 			fs.Bool('b', "boolean", "boolean flag")
 			fs.StringLong("string", "default", "string flag")
 			fs.Duration('d', "duration", 250*time.Millisecond, "duration flag")
@@ -52,30 +52,30 @@ func TestStdFlags_Basics(t *testing.T) {
 			stdfs.Bool("b", false, "boolean flag")
 			stdfs.String("string", "default", "string flag")
 			stdfs.Duration("d", 250*time.Millisecond, "duration flag")
-			corefs := ff.NewStdFlags(stdfs)
+			corefs := ff.NewStdFlagSet(stdfs)
 			fftest.TestFlags(t, corefs, strings.Fields(argstr))
 		})
 	}
 }
 
-func TestCoreFlags_Bool(t *testing.T) {
+func TestFlagSet_Bool(t *testing.T) {
 	t.Parallel()
 
 	t.Run("add bool flag", func(t *testing.T) {
 		var (
-			fs     = ff.NewFlags(t.Name())
+			fs     = ff.NewFlagSet(t.Name())
 			bflag  bool
 			bvalue = ffval.NewValueDefault(&bflag, true)
 		)
 
-		if _, err := fs.AddFlag(ff.CoreFlagConfig{
+		if _, err := fs.AddFlag(ff.FlagConfig{
 			ShortName: 'b',
 			Value:     bvalue,
 		}); err == nil {
 			t.Errorf("add default true bool with no long name: want error, have none")
 		}
 
-		if _, err := fs.AddFlag(ff.CoreFlagConfig{
+		if _, err := fs.AddFlag(ff.FlagConfig{
 			ShortName: 'b',
 			LongName:  "bflag",
 			Value:     bvalue,
@@ -107,9 +107,9 @@ func TestCoreFlags_Bool(t *testing.T) {
 		{args: []string{"-y", "--help"}, wantX: false, wantY: false, wantErr: ff.ErrHelp},
 	} {
 		t.Run(strings.Join(test.args, " "), func(t *testing.T) {
-			fs := ff.NewFlags(t.Name())
+			fs := ff.NewFlagSet(t.Name())
 			xflag := fs.Bool('x', "xflag", "one boolean flag")
-			yflag := fs.BoolDef('y', "yflag", true, "another boolean flag")
+			yflag := fs.BoolDefault('y', "yflag", true, "another boolean flag")
 			err := fs.Parse(test.args)
 			switch {
 			case test.wantErr == nil && err == nil:
@@ -162,7 +162,7 @@ func TestStdFlags_Bool(t *testing.T) {
 			stdfs := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 			xflag := stdfs.Bool("xflag", false, "one boolean flag")
 			yflag := stdfs.Bool("y", true, "another boolean flag")
-			corefs := ff.NewStdFlags(stdfs)
+			corefs := ff.NewStdFlagSet(stdfs)
 			err := corefs.Parse(test.args)
 			switch {
 			case test.wantErr == nil && err == nil:
@@ -186,10 +186,10 @@ func TestStdFlags_Bool(t *testing.T) {
 	}
 }
 
-func TestCoreFlags_HelpFlag(t *testing.T) {
+func TestFlagSet_HelpFlag(t *testing.T) {
 	t.Parallel()
 
-	fs := ff.NewFlags(t.Name())
+	fs := ff.NewFlagSet(t.Name())
 	helpflag := fs.BoolLong("help", "alternative help flag")
 
 	// -h should still trigger ErrHelp.
@@ -212,10 +212,10 @@ func TestCoreFlags_HelpFlag(t *testing.T) {
 	}
 }
 
-func TestCoreFlags_GetFlag(t *testing.T) {
+func TestFlagSet_GetFlag(t *testing.T) {
 	t.Parallel()
 
-	fs := ff.NewFlags(t.Name())
+	fs := ff.NewFlagSet(t.Name())
 	fs.IntLong("foo", 0, "first flag")
 	fs.IntShort('f', 0, "second flag")
 
@@ -236,12 +236,12 @@ func TestCoreFlags_GetFlag(t *testing.T) {
 	}
 }
 
-func TestCoreFlags_NoDefault(t *testing.T) {
+func TestFlagSet_NoDefault(t *testing.T) {
 	t.Parallel()
 
-	fs := ff.NewFlags(t.Name())
-	alpha, _ := fs.AddFlag(ff.CoreFlagConfig{LongName: "alpha", Value: &ffval.Duration{}, Usage: "zero duration"})
-	beta, _ := fs.AddFlag(ff.CoreFlagConfig{LongName: "beta", Value: &ffval.Duration{}, Usage: "zero duration with NoDefault", NoDefault: true})
+	fs := ff.NewFlagSet(t.Name())
+	alpha, _ := fs.AddFlag(ff.FlagConfig{LongName: "alpha", Value: &ffval.Duration{}, Usage: "zero duration"})
+	beta, _ := fs.AddFlag(ff.FlagConfig{LongName: "beta", Value: &ffval.Duration{}, Usage: "zero duration with NoDefault", NoDefault: true})
 
 	if want, have := "0s", alpha.GetDefault(); want != have {
 		t.Errorf("alpha: default: want %q, have %q", want, have)
@@ -252,14 +252,14 @@ func TestCoreFlags_NoDefault(t *testing.T) {
 	}
 }
 
-func TestCoreFlags_NoPlaceholder(t *testing.T) {
+func TestFlagSet_NoPlaceholder(t *testing.T) {
 	t.Parallel()
 
-	fs := ff.NewFlags(t.Name())
-	alpha, _ := fs.AddFlag(ff.CoreFlagConfig{LongName: "alpha", Value: &ffval.Bool{}, Usage: "alpha", NoPlaceholder: true})
-	beta, _ := fs.AddFlag(ff.CoreFlagConfig{LongName: "beta", Value: ffval.NewValueDefault(new(bool), true), Usage: "beta", NoPlaceholder: true})
-	delta, _ := fs.AddFlag(ff.CoreFlagConfig{LongName: "delta", Value: ffval.NewValueDefault(new(bool), true), Usage: "delta `D` flag", NoPlaceholder: true})
-	kappa, _ := fs.AddFlag(ff.CoreFlagConfig{LongName: "kappa", Value: ffval.NewValue(new(bool)), Usage: "kappa `K` flag", NoPlaceholder: true})
+	fs := ff.NewFlagSet(t.Name())
+	alpha, _ := fs.AddFlag(ff.FlagConfig{LongName: "alpha", Value: &ffval.Bool{}, Usage: "alpha", NoPlaceholder: true})
+	beta, _ := fs.AddFlag(ff.FlagConfig{LongName: "beta", Value: ffval.NewValueDefault(new(bool), true), Usage: "beta", NoPlaceholder: true})
+	delta, _ := fs.AddFlag(ff.FlagConfig{LongName: "delta", Value: ffval.NewValueDefault(new(bool), true), Usage: "delta `D` flag", NoPlaceholder: true})
+	kappa, _ := fs.AddFlag(ff.FlagConfig{LongName: "kappa", Value: ffval.NewValue(new(bool)), Usage: "kappa `K` flag", NoPlaceholder: true})
 
 	for _, f := range []ff.Flag{alpha, beta, delta, kappa} {
 		if want, have := "", f.GetPlaceholder(); want != have {
@@ -268,11 +268,11 @@ func TestCoreFlags_NoPlaceholder(t *testing.T) {
 	}
 }
 
-func TestCoreFlags_Get(t *testing.T) {
+func TestFlagSet_Get(t *testing.T) {
 	t.Parallel()
 
-	fs := ff.NewFlags(t.Name())
-	f, err := fs.AddFlag(ff.CoreFlagConfig{
+	fs := ff.NewFlagSet(t.Name())
+	f, err := fs.AddFlag(ff.FlagConfig{
 		LongName:    "alpha",
 		Value:       new(ffval.Int),
 		Placeholder: "X",
@@ -290,7 +290,7 @@ func TestCoreFlags_Get(t *testing.T) {
 	}
 }
 
-func TestCoreFlags_invalid(t *testing.T) {
+func TestFlagSet_invalid(t *testing.T) {
 	t.Parallel()
 
 	t.Run("same short and long name", func(t *testing.T) {
@@ -301,7 +301,7 @@ func TestCoreFlags_invalid(t *testing.T) {
 				t.Logf("have expected panic (%v)", x)
 			}
 		}()
-		fs := ff.NewFlags(t.Name())
+		fs := ff.NewFlagSet(t.Name())
 		fs.Bool('b', "b", "this should panic")
 	})
 
@@ -313,7 +313,7 @@ func TestCoreFlags_invalid(t *testing.T) {
 				t.Logf("have expected panic (%v)", x)
 			}
 		}()
-		fs := ff.NewFlags(t.Name())
+		fs := ff.NewFlagSet(t.Name())
 		_ = fs.Bool('a', "alpha", "this should be OK")
 		_ = fs.Bool('a', "apple", "this should panic")
 	})
@@ -326,13 +326,13 @@ func TestCoreFlags_invalid(t *testing.T) {
 				t.Logf("have expected panic (%v)", x)
 			}
 		}()
-		fs := ff.NewFlags(t.Name())
+		fs := ff.NewFlagSet(t.Name())
 		_ = fs.Bool('a', "alpha", "this should be OK")
 		_ = fs.Bool('b', "alpha", "this should panic")
 	})
 }
 
-func TestCoreFlags_struct(t *testing.T) {
+func TestFlagSet_struct(t *testing.T) {
 	t.Parallel()
 
 	type myFlags struct {
@@ -345,11 +345,11 @@ func TestCoreFlags_struct(t *testing.T) {
 	}
 
 	var flags myFlags
-	fs := ff.NewStructFlags(t.Name(), &flags)
+	fs := ff.NewStructFlagSet(t.Name(), &flags)
 
 	if want, have := fftest.Unindent(`
 		NAME
-		  TestCoreFlags_struct
+		  TestFlagSet_struct
 
 		FLAGS
 		  -a, --alpha STRING   alpha string (default: alpha-default)
@@ -434,7 +434,7 @@ func TestCoreFlags_struct(t *testing.T) {
 			Bar ffval.Value[int]         `ff:"longname=bar , usage=bar int"`
 		}
 
-		fs := ff.NewFlags(t.Name())
+		fs := ff.NewFlagSet(t.Name())
 		if err := fs.AddStruct(&flags); err != nil { // should allow
 			t.Fatalf("AddStruct: %v", err)
 		}
@@ -473,7 +473,7 @@ func TestCoreFlags_struct(t *testing.T) {
 			}{},
 		} {
 			t.Run(fmt.Sprint(i+1), func(t *testing.T) {
-				fs := ff.NewFlags(t.Name())
+				fs := ff.NewFlagSet(t.Name())
 				if err := fs.AddStruct(st); err == nil {
 					t.Errorf("want error, have none\n%s", ffhelp.Flags(fs))
 				} else {
@@ -482,33 +482,18 @@ func TestCoreFlags_struct(t *testing.T) {
 			})
 		}
 	})
-}
 
-func ExampleCoreFlags_AddStruct() {
-	var flags struct {
-		Alpha   string          `ff:" shortname=a , longname=alpha  , default=abc ,     , usage=alpha string   ,           "`
-		Beta    int             `ff:"             , long=beta       ,             , p=β , usage: beta int      ,           "`
-		Delta   bool            `ff:" short: d    ,                 ,             ,     , usage: 'delta|bool'  , nodefault "`
-		Epsilon bool            `ff:" s=e         , l=epsilon       ,             ,     , u: 'epsilon: bool'   , nodefault "`
-		Gamma   string          `ff:" s:g         | l:gamma         |             |     | u='comma, ok'        ,           "`
-		Iota    float64         `ff:"             | long=iota       | d=0.43      |     | usage: 🦊            ,           "`
-		Kappa   ffval.StringSet `ff:" short=k     | long=kappa      ,             |     , u:kappa (repeatable) ,           "`
-	}
+	t.Run("dupe", func(t *testing.T) {
+		fs := ff.NewFlagSet(t.Name())
+		fs.Bool('a', "alpha", "some bool flag")
 
-	fs := ff.NewFlags("mycommand")
-	fs.AddStruct(&flags)
-	fmt.Print(ffhelp.Flags(fs))
-
-	// Output:
-	// NAME
-	//   mycommand
-	//
-	// FLAGS
-	//   -a, --alpha STRING   alpha string (default: abc)
-	//       --beta β         beta int (default: 0)
-	//   -d                   delta|bool
-	//   -e, --epsilon        epsilon: bool
-	//   -g, --gamma STRING   comma, ok
-	//       --iota FLOAT64   🦊 (default: 0.43)
-	//   -k, --kappa STRING   kappa (repeatable)
+		var s struct {
+			Apple string `ff:"short=a, long=apple"`
+		}
+		if err := fs.AddStruct(&s); err == nil {
+			t.Errorf("want error, have none")
+		} else {
+			t.Logf("have expected error (%v)", err)
+		}
+	})
 }

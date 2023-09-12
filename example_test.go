@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"github.com/peterbourgon/ff/v4"
+	"github.com/peterbourgon/ff/v4/ffhelp"
+	"github.com/peterbourgon/ff/v4/ffval"
 )
 
 func ExampleParse_args() {
-	fs := ff.NewFlags("myprogram")
+	fs := ff.NewFlagSet("myprogram")
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
@@ -32,7 +34,7 @@ func ExampleParse_args() {
 }
 
 func ExampleParse_env() {
-	fs := ff.NewFlags("myprogram")
+	fs := ff.NewFlagSet("myprogram")
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
@@ -58,7 +60,7 @@ func ExampleParse_env() {
 }
 
 func ExampleParse_config() {
-	fs := ff.NewFlags("myprogram")
+	fs := ff.NewFlagSet("myprogram")
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
@@ -113,7 +115,7 @@ func ExampleParse_stdlib() {
 }
 
 func ExampleParse_help() {
-	fs := ff.NewFlags("myprogram")
+	fs := ff.NewFlagSet("myprogram")
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.DurationLong("refresh", 15*time.Second, "refresh interval")
@@ -132,4 +134,37 @@ func ExampleParse_help() {
 	// listen=localhost:8080
 	// refresh=15s
 	// debug=false
+}
+
+func ExampleFlagSet_AddStruct() {
+	var firstFlags struct {
+		Alpha   string `ff:"shortname: a, longname: alpha, usage: alpha string,    default: abc   "`
+		Beta    int    `ff:"              longname: beta,  usage: 'beta: an int',  placeholder: β "`
+		Delta   bool   `ff:"shortname: d,                  usage: 'delta, a bool', nodefault      "`
+		Epsilon bool   `ff:"short: e,     long: epsilon,   usage: epsilon bool,    nodefault      "`
+	}
+
+	var secondFlags struct {
+		Gamma string          `ff:" short=g | long=gamma |              | usage: gamma string       "`
+		Iota  float64         `ff:"         | long=iota  | default=0.43 | usage: 🦊                 "`
+		Kappa ffval.StringSet `ff:" short=k | long=kappa |              | usage: kappa (repeatable) "`
+	}
+
+	fs := ff.NewFlagSet("mycommand")
+	fs.AddStruct(&firstFlags)
+	fs.AddStruct(&secondFlags)
+	fmt.Print(ffhelp.Flags(fs))
+
+	// Output:
+	// NAME
+	//   mycommand
+	//
+	// FLAGS
+	//   -a, --alpha STRING   alpha string (default: abc)
+	//       --beta β         beta: an int (default: 0)
+	//   -d                   delta, a bool
+	//   -e, --epsilon        epsilon bool
+	//   -g, --gamma STRING   gamma string
+	//       --iota FLOAT64   🦊 (default: 0.43)
+	//   -k, --kappa STRING   kappa (repeatable)
 }

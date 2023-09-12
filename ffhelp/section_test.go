@@ -199,7 +199,7 @@ FLAGS (root)
 func makeTestCommand(t *testing.T) *ff.Command {
 	t.Helper()
 
-	rootFlags := ff.NewFlags("root")
+	rootFlags := ff.NewFlagSet("root")
 	rootFlags.Bool('v', "verbose", "verbose logging")
 	rootFlags.String(0, "config-file", "", "config file")
 	rootCommand := &ff.Command{
@@ -209,7 +209,7 @@ func makeTestCommand(t *testing.T) *ff.Command {
 		Flags:    rootFlags,
 	}
 
-	fooFlags := ff.NewFlags("foo").SetParent(rootFlags)
+	fooFlags := ff.NewFlagSet("foo").SetParent(rootFlags)
 	fooFlags.Int('a', "alpha", 10, "alpha integer")
 	fooFlags.Bool('b', "beta", "beta boolean")
 	fooCommand := &ff.Command{
@@ -220,7 +220,7 @@ func makeTestCommand(t *testing.T) *ff.Command {
 	}
 	rootCommand.Subcommands = append(rootCommand.Subcommands, fooCommand)
 
-	barFlags := ff.NewFlags("bar").SetParent(fooFlags)
+	barFlags := ff.NewFlagSet("bar").SetParent(fooFlags)
 	barFlags.Duration('d', "delta", 3*time.Second, "delta `δ` duration")
 	barFlags.Float64('e', "epsilon", 3.21, "epsilon float")
 	barCommand := &ff.Command{

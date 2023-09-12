@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	fs := ff.NewFlags("basicflags")
+	fs := ff.NewFlagSet("basicflags")
 	var (
 		config  = fs.String('c', "config", "", "config file")
 		delta   = fs.Duration('d', "delta", time.Second, "value for `∆` parameter")

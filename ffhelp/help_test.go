@@ -12,7 +12,7 @@ func TestFlagsHelp(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {
-		fs := ff.NewFlags("fftest")
+		fs := ff.NewFlagSet("fftest")
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
@@ -31,7 +31,7 @@ func TestFlagsHelp(t *testing.T) {
 	})
 
 	t.Run("usage", func(t *testing.T) {
-		fs := ff.NewFlags("fftest")
+		fs := ff.NewFlagSet("fftest")
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
@@ -63,7 +63,7 @@ func TestFlagsHelp(t *testing.T) {
 func TestFlagsHelp_OnlyLong(t *testing.T) {
 	t.Parallel()
 
-	fs := ff.NewFlags("fftest")
+	fs := ff.NewFlagSet("fftest")
 	fs.BoolLong("alpha", "alpha usage")
 	fs.BoolLong("beta", "beta usage")
 
