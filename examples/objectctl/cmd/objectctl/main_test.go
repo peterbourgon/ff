@@ -80,7 +80,7 @@ func TestExec(t *testing.T) {
 				want := strings.TrimSpace(test.wantStdout)
 				have := strings.TrimSpace(stdout.String())
 				if want != have {
-					t.Errorf("stdout:\n%s", fftest.DiffString(want, have))
+					t.Errorf("stdout: %s", fftest.DiffString(want, have))
 				}
 			}
 
@@ -88,7 +88,7 @@ func TestExec(t *testing.T) {
 				want := strings.TrimSpace(test.wantStderr)
 				have := strings.TrimSpace(stderr.String())
 				if want != have {
-					t.Errorf("stderr:\n%s", fftest.DiffString(want, have))
+					t.Errorf("stderr: %s", fftest.DiffString(want, have))
 				}
 			}
 		})

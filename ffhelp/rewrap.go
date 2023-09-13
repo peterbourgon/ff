@@ -8,100 +8,97 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"unicode"
+	"sync/atomic"
 )
 
-var (
-	// DefaultWidth is the default number of columns that e.g. [Rewrap] will
-	// use, if they can't be determined from the current TTY.
-	DefaultWidth = 120
-
-	ttyColumns = DefaultWidth
-	getColumns = sync.Once{}
-)
-
-// Columns returns the number of columns in the current TTY, or [DefaultWidth]
-// if the current TTY can't be determined.
-func Columns() int {
-	getColumns.Do(func() {
-		if cols, err := sttySizeCols(); err == nil {
-			ttyColumns = cols
-		}
-	})
-	return ttyColumns
-}
-
-// Rewrap calls [RewrapAt] with [Columns] as the max width.
+// Rewrap calls [RewrapAt] with a max width of [Columns]. If columns is less
+// than 40, the max width will be set to 40. If columns is greater than 180, the
+// max width will be scaled down proportional to its value.
 func Rewrap(s string) string {
-	return RewrapAt(s, Columns())
-}
-
-// RewrapAt rewraps s at max columns.
-func RewrapAt(s string, max int) string {
-	var paragraphs []string
-	for _, p := range strings.Split(s, "\n\n") {
-		p := strings.TrimSpace(p)
-		lines := strings.Split(p, "\n")
-		for i := range lines {
-			lines[i] = strings.TrimSpace(lines[i])
-		}
-		p = strings.Join(lines, "\n")
-		if p == "" {
-			continue
-		}
-		paragraphs = append(paragraphs, wrapString(p, max))
+	cols := Columns()
+	switch {
+	case cols < 40:
+		cols = 40
+	case cols > 180:
+		cols = 180 + int(0.5*float64(cols-180))
 	}
-	return strings.Join(paragraphs, "\n\n")
+	return RewrapAt(s, cols)
 }
 
-const nbsp = 0xA0
-
-// Adapted from github.com/mitchellh/go-wordwrap.
-func wrapString(s string, max int) string {
+// RewrapAt rewraps s at max columns. Each line in s is trimmed of any leading
+// tabs. Single newlines are treated as spaces. Two or more newlines are treated
+// as paragraph breaks.
+func RewrapAt(s string, max int) string {
 	var (
-		output        strings.Builder
-		currentLine   strings.Builder
-		pendingSpaces strings.Builder
-		pendingWord   strings.Builder
+		pendingLine strings.Builder
+		outputLines strings.Builder
 	)
 
-	maybeWriteWord := func() {
-		if pendingWord.Len() <= 0 {
-			return
-		}
-		if tooLong := currentLine.Len()+pendingSpaces.Len()+pendingWord.Len() > max; tooLong {
-			currentLine.WriteRune('\n')
-			output.WriteString(currentLine.String())
-			currentLine.Reset()
-			pendingSpaces.Reset()
-		}
-		currentLine.WriteString(pendingSpaces.String())
-		pendingSpaces.Reset()
-		currentLine.WriteString(pendingWord.String())
-		pendingWord.Reset()
-	}
-
-	for _, r := range s {
-		if r == '\n' {
-			r = ' '
-		}
+	writeField := func(field string) {
 		switch {
-		case unicode.IsSpace(r) && r != nbsp:
-			maybeWriteWord()
-			pendingSpaces.WriteRune(r)
-		default:
-			pendingWord.WriteRune(r)
+		case pendingLine.Len()+1+len(field) > max: // need linebreak
+			outputLines.WriteString(pendingLine.String())
+			outputLines.WriteRune('\n')
+			pendingLine.Reset()
+			pendingLine.WriteString(field)
+		case pendingLine.Len() > 0: // need a space first
+			pendingLine.WriteRune(' ')
+			pendingLine.WriteString(field)
+		default: // just the field
+			pendingLine.WriteString(field)
 		}
 	}
 
-	maybeWriteWord()
+	for _, paragraph := range strings.Split(s, "\n\n") {
+		paragraph := strings.TrimSpace(paragraph)
+		if paragraph == "" {
+			continue
+		}
 
-	if currentLine.Len() > 0 {
-		output.WriteString(currentLine.String())
+		for _, line := range strings.Split(paragraph, "\n") {
+			line = strings.Trim(line, "\t") // allow strings to be defined in nested source
+			if line == "" {
+				continue
+			}
+			for _, field := range strings.Fields(line) {
+				writeField(field)
+			}
+		}
+
+		outputLines.WriteString(pendingLine.String())
+		pendingLine.Reset()
+
+		outputLines.WriteRune('\n')
+		outputLines.WriteRune('\n')
 	}
 
-	return output.String()
+	return strings.TrimSuffix(outputLines.String(), "\n\n")
 }
+
+//
+//
+//
+
+// DefaultColumns is the default value returned by [Columns].
+var DefaultColumns = 120
+
+// Columns in the current TTY, or [DefaultColumns] if the TTY can't be determined.
+func Columns() int {
+	getColumns.Do(func() {
+		// Don't run the stty subprocess unless we have to.
+		if cols, err := sttySizeCols(); err == nil {
+			ttyColumns.Store(int64(cols))
+		} else {
+			ttyColumns.Store(int64(DefaultColumns))
+		}
+	})
+	return int(ttyColumns.Load())
+}
+
+var (
+	getColumns sync.Once
+	ttyColumns atomic.Int64
+)
 
 func sttySizeCols() (int, error) {
 	stty, err := exec.LookPath("stty")
@@ -124,14 +121,6 @@ func sttySizeCols() (int, error) {
 	cols, err := strconv.Atoi(string(fields[1]))
 	if err != nil {
 		return 0, fmt.Errorf("unexpected output (%s): %w", string(out), err)
-	}
-
-	if cols < 40 {
-		cols = 40
-	}
-
-	if cols > 120 {
-		cols = int(float64(cols) * 0.66)
 	}
 
 	return cols, nil

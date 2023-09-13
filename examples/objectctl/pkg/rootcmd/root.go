@@ -5,7 +5,6 @@ import (
 
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/examples/objectctl/pkg/objectapi"
-	"github.com/peterbourgon/ff/v4/ffhelp"
 	"github.com/peterbourgon/ff/v4/ffval"
 )
 
@@ -35,15 +34,8 @@ func New(stdout, stderr io.Writer) *RootConfig {
 	cfg.Command = &ff.Command{
 		Name:      "objectctl",
 		ShortHelp: "control objects",
-		LongHelp: ffhelp.Rewrap(`
-			Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam diam eros,
-			vestibulum at pulvinar vulputate, vehicula id lacus. Class aptent taciti
-			sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Mauris
-			venenatis felis orci, ac consectetur mi molestie ac. Integer pharetra pharetra
-			odio. Maecenas metus eros, viverra eget efficitur ut, feugiat in tortor.
-		`),
-		Usage: "objectctl [FLAGS] <SUBCOMMAND> ...",
-		Flags: cfg.Flags,
+		Usage:     "objectctl [FLAGS] <SUBCOMMAND> ...",
+		Flags:     cfg.Flags,
 	}
 	return &cfg
 }

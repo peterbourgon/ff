@@ -35,7 +35,7 @@ func DiffString(a, b string) string {
 	for _, c := range chunks {
 		lines = append(lines, c.String())
 	}
-	return strings.Join(lines, "\n")
+	return "\n" + strings.Join(lines, "\n")
 }
 
 // diffChunks adapted from github.com/kylelemons/godebug.

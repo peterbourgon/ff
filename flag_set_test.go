@@ -359,7 +359,7 @@ func TestFlagSet_struct(t *testing.T) {
 		  -g, --gamma STRING   usage, with a comma
 		      --iota FLOAT64   iota float (default: 0.43)
 	`), fftest.Unindent(ffhelp.Flags(fs).String()); want != have {
-		t.Errorf("\n%s", fftest.DiffString(want, have))
+		t.Error(fftest.DiffString(want, have))
 	}
 
 	for _, testcase := range []struct {

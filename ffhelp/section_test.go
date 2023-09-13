@@ -30,7 +30,7 @@ func TestSection_Flags(t *testing.T) {
 			`)
 		have := fftest.Unindent(ffhelp.NewFlagsSection(fs).String())
 		if want != have {
-			t.Errorf("\n%s", fftest.DiffString(want, have))
+			t.Error(fftest.DiffString(want, have))
 		}
 	})
 }
@@ -59,7 +59,7 @@ func TestSection_StdFlags(t *testing.T) {
 	`)
 	have := strings.TrimSpace(ffhelp.Flags(fs).String())
 	if want != have {
-		t.Errorf("\n%s", fftest.DiffString(want, have))
+		t.Error(fftest.DiffString(want, have))
 	}
 }
 
@@ -75,7 +75,7 @@ func TestSections_Command(t *testing.T) {
 		want := strings.TrimSpace(testCommandRootHelp)
 		have := strings.TrimSpace(ffhelp.Command(testcmd).String())
 		if want != have {
-			t.Errorf("\n%s", fftest.DiffString(want, have))
+			t.Error(fftest.DiffString(want, have))
 		}
 	})
 
@@ -123,7 +123,7 @@ func TestSections_Command(t *testing.T) {
 			want := fftest.Unindent(test.want)
 			have := fftest.Unindent(ffhelp.Command(testcmd).String())
 			if want != have {
-				t.Errorf("\n%s", fftest.DiffString(want, have))
+				t.Error(fftest.DiffString(want, have))
 			}
 		})
 	}

@@ -26,7 +26,7 @@ func TestFlagsHelp(t *testing.T) {
 		`)
 		have := fftest.Unindent(ffhelp.Flags(fs).String())
 		if want != have {
-			t.Errorf("\n%s", fftest.DiffString(want, have))
+			t.Error(fftest.DiffString(want, have))
 		}
 	})
 
@@ -55,7 +55,7 @@ func TestFlagsHelp(t *testing.T) {
 		`)
 		have := fftest.Unindent(ffhelp.Flags(fs, loremIpsumSlice...).String())
 		if want != have {
-			t.Errorf("\n%s", fftest.DiffString(want, have))
+			t.Error(fftest.DiffString(want, have))
 		}
 	})
 }
@@ -77,6 +77,6 @@ func TestFlagsHelp_OnlyLong(t *testing.T) {
 	`)
 	have := fftest.Unindent(ffhelp.Flags(fs).String())
 	if want != have {
-		t.Errorf("\n%s", fftest.DiffString(want, have))
+		t.Error(fftest.DiffString(want, have))
 	}
 }
