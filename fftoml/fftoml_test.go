@@ -51,5 +51,5 @@ func TestParser(t *testing.T) {
 		},
 	}
 
-	testcases.Run(t, ff.WithConfigFileParser(fftoml.Parse))
+	testcases.Run(t)
 }

@@ -52,11 +52,11 @@ type Flags interface {
 // Implementations are not expected to be safe for concurrent use.
 type Flag interface {
 	// GetFlags should return the set of flags in which this flag is defined.
-	// It's primarily used for help output.
+	// It's primarily used to produce help text for hierarchical commands.
 	GetFlags() Flags
 
 	// GetShortName should return the short name for this flag, if one is
-	// defined. A short name is always a single character (rune) which is
+	// defined. A short name is always a single valid rune (character) which is
 	// typically parsed with a single leading hyphen, e.g. -f.
 	GetShortName() (rune, bool)
 
@@ -66,12 +66,12 @@ type Flag interface {
 	GetLongName() (string, bool)
 
 	// GetPlaceholder should return a string that can be used as a placeholder
-	// for the flag value in help output. For example, a placeholder for a
+	// for the flag value in help text. For example, a placeholder for a
 	// string flag might be STRING. An empty placeholder is valid.
 	GetPlaceholder() string
 
 	// GetUsage should return a short description of the flag, which can be
-	// included in the help output on the same line as the flag name(s). For
+	// included in the help text on the same line as the flag name(s). For
 	// example, the usage string for a timeout flag used in an HTTP client might
 	// be "timeout for outgoing HTTP requests". An empty usage string is valid,
 	// but not recommended.

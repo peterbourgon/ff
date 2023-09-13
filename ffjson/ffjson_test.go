@@ -49,5 +49,5 @@ func TestParser(t *testing.T) {
 		},
 	}
 
-	testcases.Run(t, ff.WithConfigFileParser(ffjson.Parse))
+	testcases.Run(t)
 }

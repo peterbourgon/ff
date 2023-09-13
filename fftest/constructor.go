@@ -20,8 +20,7 @@ type Constructor struct {
 	Make func(def Vars) (ff.Flags, *Vars)
 }
 
-// CoreConstructor produces a core flag set, with both short and long flag names
-// for each value.
+// CoreConstructor produces a standard flag set with both short and long names.
 var CoreConstructor = Constructor{
 	Name: "ff.FlagSet",
 	Make: func(def Vars) (ff.Flags, *Vars) {
@@ -53,7 +52,7 @@ var StdConstructor = Constructor{
 		fs.BoolVar(&v.C, "c", def.C, "bool c")
 		fs.DurationVar(&v.D, "d", def.D, "time.Duration")
 		fs.Var(ffval.NewList(&v.X), "x", "collection of strings (repeatable)")
-		return ff.NewStdFlagSet(fs), &v
+		return ff.NewFlagSetFrom(fs.Name(), fs), &v
 	},
 }
 
@@ -88,7 +87,7 @@ func NewNestedConstructor(delim string) Constructor {
 			fs.BoolVar(&v.B, bkey, def.B, "bool var b")
 			fs.BoolVar(&v.C, ckey, def.C, "bool var c")
 			fs.Var(ffval.NewList(&v.X), xkey, "x var")
-			return ff.NewStdFlagSet(fs), &v
+			return ff.NewFlagSetFrom(fs.Name(), fs), &v
 		},
 	}
 }

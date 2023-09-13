@@ -39,35 +39,33 @@ func NewFlagSet(name string) *FlagSet {
 	}
 }
 
-// NewStdFlagSet returns a flag set which acts as an adapter for the provided
-// flag.FlagSet, allowing it to implement the [Flags] interface.
+// NewFlagSetFrom is a helper method that calls [NewFlagSet] with name, and then
+// [FlagSet.AddStruct] with val, which must be a pointer to a struct. Any error
+// results in a panic.
 //
-// The returned flag set has slightly different behavior than normal. It's a
-// fixed "snapshot" of the provided stdfs, which means it doesn't allow new
-// flags to be defined, and won't reflect changes made to stdfs in the future.
-// Also, to approximate standard library parsing behavior, each stdfs flag name
-// is treated as a long name, and single hyphen - prefixes are treated the same
-// as double hyphen -- prefixes.
-func NewStdFlagSet(stdfs *flag.FlagSet) *FlagSet {
-	corefs := NewFlagSet(stdfs.Name())
-	stdfs.VisitAll(func(f *flag.Flag) {
-		if _, err := corefs.AddFlag(FlagConfig{
-			LongName: f.Name,
-			Usage:    f.Usage,
-			Value:    f.Value,
-		}); err != nil {
-			panic(fmt.Errorf("add %s: %w", f.Name, err))
+// As a special case, val may also be a pointer to a flag.FlagSet. In this case,
+// the returned ff.FlagSet is a fixed "snapshot" of the input, and new flags may
+// not be added. Also, to approximate standard library parsing behavior, -abc is
+// parsed as --abc, rather than as -a -b -c.
+func NewFlagSetFrom(name string, val any) *FlagSet {
+	if stdfs, ok := val.(*flag.FlagSet); ok {
+		if name == "" {
+			name = stdfs.Name()
 		}
-	})
-	corefs.isStdAdapter = true
-	return corefs
-}
+		corefs := NewFlagSet(name)
+		stdfs.VisitAll(func(f *flag.Flag) {
+			if _, err := corefs.AddFlag(FlagConfig{
+				LongName: f.Name,
+				Usage:    f.Usage,
+				Value:    f.Value,
+			}); err != nil {
+				panic(fmt.Errorf("add %s: %w", f.Name, err))
+			}
+		})
+		corefs.isStdAdapter = true
+		return corefs
+	}
 
-// NewStructFlagSet returns a flag set with the given name, and with flags taken
-// from the provided val, which must be a pointer to a struct. See
-// [FlagSet.AddStruct] for more information on how struct tags are parsed. Any
-// error results in a panic.
-func NewStructFlagSet(name string, val any) *FlagSet {
 	fs := NewFlagSet(name)
 	if err := fs.AddStruct(val); err != nil {
 		panic(err)
@@ -75,10 +73,9 @@ func NewStructFlagSet(name string, val any) *FlagSet {
 	return fs
 }
 
-// SetParent assigns a parent flag set to this one. In this case, all of the
-// flags in all parent flag sets are available, recursively, to this one. For
-// example, Parse will match against any parent flag, WalkFlags will traverse
-// all parent flags, etc.
+// SetParent assigns a parent flag set to this one, making all parent flags
+// available, recursively, to the receiver. For example, Parse will match
+// against any parent flag, WalkFlags will traverse all parent flags, etc.
 //
 // This method returns its receiver to allow for builder-style initialization.
 func (fs *FlagSet) SetParent(parent *FlagSet) *FlagSet {
@@ -395,7 +392,7 @@ type FlagConfig struct {
 	//
 	//      -f, --foo BAR   set the foo parameter
 	//
-	// Optional.
+	// Optional. If not provided, a default based on the value type is used.
 	Placeholder string
 
 	// NoPlaceholder will force GetPlaceholder to return the empty string. This

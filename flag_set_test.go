@@ -31,29 +31,7 @@ func TestFlagSet_Basics(t *testing.T) {
 			fs.Bool('b', "boolean", "boolean flag")
 			fs.StringLong("string", "default", "string flag")
 			fs.Duration('d', "duration", 250*time.Millisecond, "duration flag")
-			fftest.TestFlags(t, fs, strings.Fields(argstr))
-		})
-	}
-}
-
-func TestStdFlags_Basics(t *testing.T) {
-	t.Parallel()
-
-	for _, argstr := range []string{
-		"",
-		"-b",
-		"-d=250ms",
-		"-string 250ms",
-		"--string=250ms",
-		"--string 250ms",
-	} {
-		t.Run(argstr, func(t *testing.T) {
-			stdfs := flag.NewFlagSet("myset", flag.ContinueOnError)
-			stdfs.Bool("b", false, "boolean flag")
-			stdfs.String("string", "default", "string flag")
-			stdfs.Duration("d", 250*time.Millisecond, "duration flag")
-			corefs := ff.NewStdFlagSet(stdfs)
-			fftest.TestFlags(t, corefs, strings.Fields(argstr))
+			fftest.ValidateFlags(t, fs, strings.Fields(argstr))
 		})
 	}
 }
@@ -162,8 +140,7 @@ func TestStdFlags_Bool(t *testing.T) {
 			stdfs := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 			xflag := stdfs.Bool("xflag", false, "one boolean flag")
 			yflag := stdfs.Bool("y", true, "another boolean flag")
-			corefs := ff.NewStdFlagSet(stdfs)
-			err := corefs.Parse(test.args)
+			err := ff.Parse(stdfs, test.args)
 			switch {
 			case test.wantErr == nil && err == nil:
 				break // good, and we should test the other stuff
@@ -332,24 +309,25 @@ func TestFlagSet_invalid(t *testing.T) {
 	})
 }
 
-func TestFlagSet_struct(t *testing.T) {
+func TestFlagSet_structs(t *testing.T) {
 	t.Parallel()
 
 	type myFlags struct {
-		Alpha   string  `ff:" short=a , long=alpha   , default=alpha-default   ,     , usage=alpha string      ,           "`
-		Beta    int     `ff:"         , long=beta    ,                         , p=β , usage=beta int          ,           "`
-		Delta   bool    `ff:" short=d ,              ,                         ,     , usage=delta bool        , nodefault "`
-		Epsilon bool    `ff:" short=e , long=epsilon ,                         ,     , usage=epsilon bool      , nodefault "`
-		Gamma   string  `ff:" s    =g , l   =gamma   ,                         ,     , u='usage, with a comma' ,           "`
-		Iota    float64 `ff:"         , long=iota    ,       d=0.43            ,     , usage=iota float        ,           "`
+		Alpha string `ff:"short: a, long: alpha, default: alpha-default, usage: alpha string"`
+		Beta  int    `ff:"          long: beta,  placeholder: β,         usage: beta int"`
+		Delta bool   `ff:"short: d,              nodefault,              usage: delta bool"`
+
+		Epsilon bool    `ff:"| short=e | long=epsilon | nodefault    | usage: epsilon bool          |"`
+		Gamma   string  `ff:"| short=g | long=gamma   |              | usage: 'usage, with a comma' |"`
+		Iota    float64 `ff:"|         | long=iota    | default=0.43 | usage: iota float            |"`
 	}
 
 	var flags myFlags
-	fs := ff.NewStructFlagSet(t.Name(), &flags)
+	fs := ff.NewFlagSetFrom(t.Name(), &flags)
 
-	if want, have := fftest.Unindent(`
+	if want, have := fftest.UnindentString(`
 		NAME
-		  TestFlagSet_struct
+		  TestFlagSet_structs
 
 		FLAGS
 		  -a, --alpha STRING   alpha string (default: alpha-default)
@@ -358,32 +336,32 @@ func TestFlagSet_struct(t *testing.T) {
 		  -e, --epsilon        epsilon bool
 		  -g, --gamma STRING   usage, with a comma
 		      --iota FLOAT64   iota float (default: 0.43)
-	`), fftest.Unindent(ffhelp.Flags(fs).String()); want != have {
+	`), fftest.UnindentString(ffhelp.Flags(fs).String()); want != have {
 		t.Error(fftest.DiffString(want, have))
 	}
 
 	for _, testcase := range []struct {
-		args []string
+		args string
 		want myFlags
 	}{
 		{
-			args: []string{"--alpha=x"},
+			args: "--alpha=x",
 			want: myFlags{Alpha: "x", Iota: 0.43},
 		},
 		{
-			args: []string{"-e", "--iota=1.23"},
+			args: "-e --iota=1.23",
 			want: myFlags{Alpha: "alpha-default", Epsilon: true, Iota: 1.23},
 		},
 		{
-			args: []string{"-gabc", "-d"},
+			args: "-gabc -d",
 			want: myFlags{Alpha: "alpha-default", Delta: true, Gamma: "abc", Iota: 0.43},
 		},
 	} {
-		t.Run(strings.Join(testcase.args, " "), func(t *testing.T) {
+		t.Run(testcase.args, func(t *testing.T) {
 			if err := fs.Reset(); err != nil {
 				t.Fatalf("Reset: %v", err)
 			}
-			if err := ff.Parse(fs, testcase.args); err != nil {
+			if err := ff.Parse(fs, strings.Fields(testcase.args)); err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
 			if want, have := testcase.want, flags; !reflect.DeepEqual(want, have) {

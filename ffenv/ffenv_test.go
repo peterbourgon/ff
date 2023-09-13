@@ -13,66 +13,56 @@ import (
 func TestEnvFileParser(t *testing.T) {
 	t.Parallel()
 
-	for _, testcase := range []struct {
-		file string
-		opts []ff.Option
-		want fftest.Vars
-	}{
+	testcases := fftest.TestCases{
 		{
-			file: "testdata/empty.env",
-			want: fftest.Vars{},
+			ConfigFile: "testdata/empty.env",
+			Want:       fftest.Vars{},
 		},
 		{
-			file: "testdata/basic.env",
-			want: fftest.Vars{S: "bar", I: 99, B: true, D: time.Hour},
+			ConfigFile: "testdata/basic.env",
+			Want:       fftest.Vars{S: "bar", I: 99, B: true, D: time.Hour},
 		},
 		{
-			file: "testdata/prefix.env",
-			opts: []ff.Option{ff.WithEnvVarPrefix("MYPROG")},
-			want: fftest.Vars{S: "bingo", I: 123},
+			ConfigFile: "testdata/prefix.env",
+			Options:    []ff.Option{ff.WithEnvVarPrefix("MYPROG")},
+			Want:       fftest.Vars{S: "bingo", I: 123},
 		},
 		{
-			file: "testdata/prefix-undef.env",
-			opts: []ff.Option{ff.WithEnvVarPrefix("MYPROG"), ff.WithConfigIgnoreUndefinedFlags()},
-			want: fftest.Vars{S: "bango", I: 9},
+			ConfigFile: "testdata/prefix-undef.env",
+			Options:    []ff.Option{ff.WithEnvVarPrefix("MYPROG"), ff.WithConfigIgnoreUndefinedFlags()},
+			Want:       fftest.Vars{S: "bango", I: 9},
 		},
 		{
-			file: "testdata/quotes.env",
-			want: fftest.Vars{S: "", I: 32, X: []string{"1", "2 2", "3 3 3"}},
+			ConfigFile: "testdata/quotes.env",
+			Want:       fftest.Vars{S: "", I: 32, X: []string{"1", "2 2", "3 3 3"}},
 		},
 		{
-			file: "testdata/no-value.env",
-			want: fftest.Vars{WantParseErrorIs: ffenv.ErrInvalidLine},
+			ConfigFile: "testdata/no-value.env",
+			Want:       fftest.Vars{WantParseErrorIs: ffenv.ErrInvalidLine},
 		},
 		{
-			file: "testdata/spaces.env",
-			want: fftest.Vars{X: []string{"1", "2", "3", "4", "5", " 6", " 7 ", " 8 ", "9"}},
+			ConfigFile: "testdata/spaces.env",
+			Want:       fftest.Vars{X: []string{"1", "2", "3", "4", "5", " 6", " 7 ", " 8 ", "9"}},
 		},
 		{
-			file: "testdata/newlines.env",
-			want: fftest.Vars{S: "one\ntwo\nthree\n\n", X: []string{`A\nB\n\n`}},
+			ConfigFile: "testdata/newlines.env",
+			Want:       fftest.Vars{S: "one\ntwo\nthree\n\n", X: []string{`A\nB\n\n`}},
 		},
 		{
-			file: "testdata/capitalization.env",
-			want: fftest.Vars{S: "hello", I: 12345},
+			ConfigFile: "testdata/capitalization.env",
+			Want:       fftest.Vars{S: "hello", I: 12345},
 		},
 		{
-			file: "testdata/comments.env",
-			want: fftest.Vars{S: "abc # def"},
+			ConfigFile: "testdata/comments.env",
+			Want:       fftest.Vars{S: "abc # def"},
 		},
-	} {
-		t.Run(filepath.Base(testcase.file), func(t *testing.T) {
-			testcase.opts = append(testcase.opts,
-				ff.WithConfigFile(testcase.file),
-				ff.WithConfigFileParser(ffenv.Parse),
-			)
-			for _, constr := range fftest.DefaultConstructors {
-				t.Run(constr.Name, func(t *testing.T) {
-					fs, vars := constr.Make(fftest.Vars{})
-					vars.ParseError = ff.Parse(fs, []string{}, testcase.opts...)
-					fftest.Compare(t, &testcase.want, vars)
-				})
-			}
-		})
 	}
+
+	for i := range testcases {
+		if testcases[i].Name == "" {
+			testcases[i].Name = filepath.Base(testcases[i].ConfigFile)
+		}
+	}
+
+	testcases.Run(t)
 }

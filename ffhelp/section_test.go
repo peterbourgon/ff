@@ -17,7 +17,7 @@ func TestSection_Flags(t *testing.T) {
 
 	t.Run("default", func(t *testing.T) {
 		fs, _ := fftest.CoreConstructor.Make(fftest.Vars{A: true})
-		want := fftest.Unindent(`
+		want := fftest.UnindentString(`
 			FLAGS
 			  -s, --str STRING     string
 			  -i, --int INT        int (default: 0)
@@ -28,7 +28,7 @@ func TestSection_Flags(t *testing.T) {
 			  -d, --dur DURATION   time.Duration (default: 0s)
 			  -x, --xxx STR        collection of strings (repeatable)
 			`)
-		have := fftest.Unindent(ffhelp.NewFlagsSection(fs).String())
+		have := fftest.UnindentString(ffhelp.NewFlagsSection(fs).String())
 		if want != have {
 			t.Error(fftest.DiffString(want, have))
 		}
@@ -43,7 +43,7 @@ func TestSection_StdFlags(t *testing.T) {
 	t.Parallel()
 
 	fs, _ := fftest.StdConstructor.Make(fftest.Vars{A: true})
-	want := fftest.Unindent(`
+	want := fftest.UnindentString(`
 		NAME
 		  fftest
 
@@ -120,8 +120,8 @@ func TestSections_Command(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			want := fftest.Unindent(test.want)
-			have := fftest.Unindent(ffhelp.Command(testcmd).String())
+			want := fftest.UnindentString(test.want)
+			have := fftest.UnindentString(ffhelp.Command(testcmd).String())
 			if want != have {
 				t.Error(fftest.DiffString(want, have))
 			}

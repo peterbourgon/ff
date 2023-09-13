@@ -87,7 +87,7 @@ func Compare(t *testing.T, want, have *Vars) {
 		t.Errorf("var X: want %v, have %v", want.X, have.X)
 	}
 
-	if len(want.Args) > 0 {
+	if want.Args != nil {
 		if !reflect.DeepEqual(want.Args, have.Args) {
 			t.Errorf("post-parse args: want %v, have %v", want.Args, have.Args)
 		}

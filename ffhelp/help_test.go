@@ -16,7 +16,7 @@ func TestFlagsHelp(t *testing.T) {
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
-		want := fftest.Unindent(`
+		want := fftest.UnindentString(`
 			NAME
 			  fftest
 
@@ -24,7 +24,7 @@ func TestFlagsHelp(t *testing.T) {
 			  -d, --dur DURATION   duration flag (default: 0s)
 			  -s, --str STRING     string flag
 		`)
-		have := fftest.Unindent(ffhelp.Flags(fs).String())
+		have := fftest.UnindentString(ffhelp.Flags(fs).String())
 		if want != have {
 			t.Error(fftest.DiffString(want, have))
 		}
@@ -35,7 +35,7 @@ func TestFlagsHelp(t *testing.T) {
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
-		want := fftest.Unindent(`
+		want := fftest.UnindentString(`
 			NAME
 			  fftest
 
@@ -53,7 +53,7 @@ func TestFlagsHelp(t *testing.T) {
 			  -d, --dur DURATION   duration flag (default: 0s)
 			  -s, --str STRING     string flag
 		`)
-		have := fftest.Unindent(ffhelp.Flags(fs, loremIpsumSlice...).String())
+		have := fftest.UnindentString(ffhelp.Flags(fs, loremIpsumSlice...).String())
 		if want != have {
 			t.Error(fftest.DiffString(want, have))
 		}
@@ -67,7 +67,7 @@ func TestFlagsHelp_OnlyLong(t *testing.T) {
 	fs.BoolLong("alpha", "alpha usage")
 	fs.BoolLong("beta", "beta usage")
 
-	want := fftest.Unindent(`
+	want := fftest.UnindentString(`
 		NAME
 		  fftest
 
@@ -75,7 +75,7 @@ func TestFlagsHelp_OnlyLong(t *testing.T) {
 		  --alpha   alpha usage (default: false)
 		  --beta    beta usage (default: false)
 	`)
-	have := fftest.Unindent(ffhelp.Flags(fs).String())
+	have := fftest.UnindentString(ffhelp.Flags(fs).String())
 	if want != have {
 		t.Error(fftest.DiffString(want, have))
 	}

@@ -9,10 +9,10 @@ import (
 	"github.com/peterbourgon/ff/v4/ffhelp"
 )
 
-// TestFlags checks the core invariants of a flag set and its flags. The
+// ValidateFlags checks the core invariants of a flag set and its flags. The
 // provided flag set should contain at least two flags, and calling parse with
 // the provided args should succeed.
-func TestFlags(t *testing.T, fs ff.Flags, args []string) {
+func ValidateFlags(t *testing.T, fs ff.Flags, args []string) {
 	t.Helper()
 
 	if fs.GetName() == "" {

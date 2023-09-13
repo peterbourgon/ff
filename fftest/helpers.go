@@ -4,11 +4,11 @@ import (
 	"strings"
 )
 
-// Unindent trims s of leading and trailing whitespace, and then trims each line
-// of every given prefix. If no prefixes are provided, each line is trimmed of
-// all leading tab characters. This allows multi-line strings to be written
-// in-line with other code, while remaining comparable.
-func Unindent(s string, prefixes ...string) string {
+// UnindentString trims s of leading and trailing whitespace, and then trims
+// each line in s of every prefix. If no prefixes are provided, each line is
+// trimmed of all leading tab characters. This allows multi-line strings to be
+// written in-line with other code, while remaining comparable.
+func UnindentString(s string, prefixes ...string) string {
 	s = strings.TrimSpace(s)
 
 	lines := strings.Split(s, "\n")
