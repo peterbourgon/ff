@@ -170,7 +170,7 @@ var _ flag.Value = (*reflectValue)(nil)
 // flag will be set to that default string before being returned. Otherwise, the
 // default value of the flag will be the zero value of the type.
 //
-// This is a fairly low-level function, which exists only to support parsing
+// This is a fairly low-level function, which exists mainly to support parsing
 // struct tags. Most consumers should not need to use it.
 func NewValueReflect(ptr any, def string) (flag.Value, error) {
 	if reflect.TypeOf(ptr).Kind() != reflect.Pointer {

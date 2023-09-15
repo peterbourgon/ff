@@ -20,28 +20,27 @@ type Constructor struct {
 	Make func(def Vars) (ff.Flags, *Vars)
 }
 
-// CoreConstructor produces a core flag set, with both short and long flag names
-// for each value.
+// CoreConstructor produces a standard flag set with both short and long names.
 var CoreConstructor = Constructor{
-	Name: "core",
+	Name: "ff.FlagSet",
 	Make: func(def Vars) (ff.Flags, *Vars) {
 		var v Vars
-		fs := ff.NewFlags("fftest")
+		fs := ff.NewFlagSet("fftest")
 		fs.StringVar(&v.S, 's', "str", def.S, "string")
 		fs.IntVar(&v.I, 'i', "int", def.I, "int")
 		fs.Float64Var(&v.F, 'f', "flt", def.F, "float64")
-		fs.BoolVar(&v.A, 'a', "aflag", def.A, "bool a")
-		fs.BoolVar(&v.B, 'b', "bflag", def.B, "bool b")
-		fs.BoolVar(&v.C, 'c', "cflag", def.C, "bool c")
+		fs.BoolVarDefault(&v.A, 'a', "aflag", def.A, "bool a")
+		fs.BoolVarDefault(&v.B, 'b', "bflag", def.B, "bool b")
+		fs.BoolVarDefault(&v.C, 'c', "cflag", def.C, "bool c")
 		fs.DurationVar(&v.D, 'd', "dur", def.D, "time.Duration")
-		fs.AddFlag(ff.CoreFlagConfig{ShortName: 'x', LongName: "xxx", Placeholder: "STR", Usage: "collection of strings (repeatable)", Value: ffval.NewList(&v.X)})
+		fs.AddFlag(ff.FlagConfig{ShortName: 'x', LongName: "xxx", Placeholder: "STR", Usage: "collection of strings (repeatable)", Value: ffval.NewList(&v.X)})
 		return fs, &v
 	},
 }
 
 // StdConstructor produces a stdlib flag set adapter.
 var StdConstructor = Constructor{
-	Name: "std",
+	Name: "flag.FlagSet",
 	Make: func(def Vars) (ff.Flags, *Vars) {
 		var v Vars
 		fs := flag.NewFlagSet("fftest", flag.ContinueOnError)
@@ -53,7 +52,7 @@ var StdConstructor = Constructor{
 		fs.BoolVar(&v.C, "c", def.C, "bool c")
 		fs.DurationVar(&v.D, "d", def.D, "time.Duration")
 		fs.Var(ffval.NewList(&v.X), "x", "collection of strings (repeatable)")
-		return ff.NewStdFlags(fs), &v
+		return ff.NewFlagSetFrom(fs.Name(), fs), &v
 	},
 }
 
@@ -88,7 +87,7 @@ func NewNestedConstructor(delim string) Constructor {
 			fs.BoolVar(&v.B, bkey, def.B, "bool var b")
 			fs.BoolVar(&v.C, ckey, def.C, "bool var c")
 			fs.Var(ffval.NewList(&v.X), xkey, "x var")
-			return ff.NewStdFlags(fs), &v
+			return ff.NewFlagSetFrom(fs.Name(), fs), &v
 		},
 	}
 }

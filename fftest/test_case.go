@@ -2,21 +2,27 @@ package fftest
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/peterbourgon/ff/v4"
+	"github.com/peterbourgon/ff/v4/ffenv"
+	"github.com/peterbourgon/ff/v4/ffjson"
+	"github.com/peterbourgon/ff/v4/fftoml"
+	"github.com/peterbourgon/ff/v4/ffyaml"
 )
 
 // TestCases are a collection of test cases that can be run as a group.
 type TestCases []ParseTest
 
 // Run the test cases in order.
-func (tcs TestCases) Run(t *testing.T, options ...ff.Option) {
+func (tcs TestCases) Run(t *testing.T) {
 	t.Helper()
 	for _, tc := range tcs {
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Helper()
-			tc.Run(t, options...)
+			tc.Run(t)
 		})
 	}
 }
@@ -34,24 +40,36 @@ type ParseTest struct {
 }
 
 // Run the test case.
-func (tc *ParseTest) Run(t *testing.T, options ...ff.Option) {
+func (tc *ParseTest) Run(t *testing.T) {
 	t.Helper()
 
-	// The test case options are the most specific, and so the highest priority.
-	opts := tc.Options
+	// Set up the options we'll pass to parse.
+	var opts []ff.Option
 
-	// The options passed to run are the next-highest priority. Options are
-	// evaluated first-to-last, and later options override earlier options, so
-	// lower-priority options should come before higher-priority options.
-	opts = append(options, opts...)
-
-	// Default options have lowest priority, and so are first in the list.
+	// Some default options.
 	if tc.ConfigFile != "" {
-		opts = append(
-			[]ff.Option{ff.WithConfigFile(tc.ConfigFile), ff.WithConfigFileParser(ff.PlainParser)},
-			opts...,
-		)
+		// Try to deduce a default parser from the config file.
+		var parseFunc ff.ConfigFileParseFunc
+		switch strings.ToLower(filepath.Ext(tc.ConfigFile)) {
+		case ".json":
+			parseFunc = ffjson.Parse
+		case ".yaml":
+			parseFunc = ffyaml.Parse
+		case ".toml":
+			parseFunc = fftoml.Parse
+		case ".env":
+			parseFunc = ffenv.Parse
+		default:
+			parseFunc = ff.PlainParser
+		}
+		opts = append(opts, ff.WithConfigFile(tc.ConfigFile), ff.WithConfigFileParser(parseFunc))
 	}
+
+	// Any options in the test case.
+	//
+	// Options are evaluated first-to-last, and later options override earlier
+	// ones, so higher-priority stuff should come after lower-priority stuff.
+	opts = append(opts, tc.Options...)
 
 	// If there are any environment variables, set them before running the
 	// tests, and reset them afterwards. Note that this means test cases cannot

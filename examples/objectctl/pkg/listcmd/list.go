@@ -15,14 +15,14 @@ type Config struct {
 	*rootcmd.RootConfig
 	WithAccessTimes bool
 	Command         *ff.Command
-	Flags           *ff.CoreFlags
+	Flags           *ff.FlagSet
 }
 
 func New(parent *rootcmd.RootConfig) *Config {
 	var cfg Config
 	cfg.RootConfig = parent
-	cfg.Flags = ff.NewFlags("list").SetParent(parent.Flags)
-	cfg.Flags.AddFlag(ff.CoreFlagConfig{
+	cfg.Flags = ff.NewFlagSet("list").SetParent(parent.Flags)
+	cfg.Flags.AddFlag(ff.FlagConfig{
 		ShortName: 'a',
 		LongName:  "atime",
 		Value:     ffval.NewValue(&cfg.WithAccessTimes),

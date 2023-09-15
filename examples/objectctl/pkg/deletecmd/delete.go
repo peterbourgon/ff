@@ -13,15 +13,15 @@ import (
 type DeleteConfig struct {
 	*rootcmd.RootConfig
 	Force   bool
-	Flags   *ff.CoreFlags
+	Flags   *ff.FlagSet
 	Command *ff.Command
 }
 
 func New(parent *rootcmd.RootConfig) *DeleteConfig {
 	var cfg DeleteConfig
 	cfg.RootConfig = parent
-	cfg.Flags = ff.NewFlags("delete").SetParent(parent.Flags)
-	cfg.Flags.AddFlag(ff.CoreFlagConfig{
+	cfg.Flags = ff.NewFlagSet("delete").SetParent(parent.Flags)
+	cfg.Flags.AddFlag(ff.FlagConfig{
 		LongName:  "force",
 		Value:     ffval.NewValue(&cfg.Force),
 		Usage:     "force delete",

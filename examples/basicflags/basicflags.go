@@ -11,13 +11,13 @@ import (
 )
 
 func main() {
-	fs := ff.NewFlags("basicflags")
+	fs := ff.NewFlagSet("basicflags")
 	var (
 		config  = fs.String('c', "config", "", "config file")
 		delta   = fs.Duration('d', "delta", time.Second, "value for `∆` parameter")
 		epsilon = fs.IntLong("epsilon", 32, "value for `ε` parameter")
 		urls    = fs.StringSet('u', "url", "remote URL (repeatable)")
-		verbose = fs.Bool('v', "verbose", false, "verbose logging")
+		verbose = fs.Bool('v', "verbose", "verbose logging")
 	)
 
 	err := ff.Parse(fs, os.Args[1:],

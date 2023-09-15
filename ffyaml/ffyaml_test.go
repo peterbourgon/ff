@@ -88,5 +88,5 @@ func TestParser(t *testing.T) {
 		},
 	}
 
-	testcases.Run(t, ff.WithConfigFileParser(ffyaml.Parse))
+	testcases.Run(t)
 }

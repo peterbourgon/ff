@@ -17,7 +17,7 @@ func TestSection_Flags(t *testing.T) {
 
 	t.Run("default", func(t *testing.T) {
 		fs, _ := fftest.CoreConstructor.Make(fftest.Vars{A: true})
-		want := fftest.Unindent(`
+		want := fftest.UnindentString(`
 			FLAGS
 			  -s, --str STRING     string
 			  -i, --int INT        int (default: 0)
@@ -28,9 +28,9 @@ func TestSection_Flags(t *testing.T) {
 			  -d, --dur DURATION   time.Duration (default: 0s)
 			  -x, --xxx STR        collection of strings (repeatable)
 			`)
-		have := fftest.Unindent(ffhelp.NewFlagsSection(fs).String())
+		have := fftest.UnindentString(ffhelp.NewFlagsSection(fs).String())
 		if want != have {
-			t.Errorf("\n%s", fftest.DiffString(want, have))
+			t.Error(fftest.DiffString(want, have))
 		}
 	})
 }
@@ -43,7 +43,7 @@ func TestSection_StdFlags(t *testing.T) {
 	t.Parallel()
 
 	fs, _ := fftest.StdConstructor.Make(fftest.Vars{A: true})
-	want := fftest.Unindent(`
+	want := fftest.UnindentString(`
 		NAME
 		  fftest
 
@@ -59,7 +59,7 @@ func TestSection_StdFlags(t *testing.T) {
 	`)
 	have := strings.TrimSpace(ffhelp.Flags(fs).String())
 	if want != have {
-		t.Errorf("\n%s", fftest.DiffString(want, have))
+		t.Error(fftest.DiffString(want, have))
 	}
 }
 
@@ -75,7 +75,7 @@ func TestSections_Command(t *testing.T) {
 		want := strings.TrimSpace(testCommandRootHelp)
 		have := strings.TrimSpace(ffhelp.Command(testcmd).String())
 		if want != have {
-			t.Errorf("\n%s", fftest.DiffString(want, have))
+			t.Error(fftest.DiffString(want, have))
 		}
 	})
 
@@ -120,10 +120,10 @@ func TestSections_Command(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			want := fftest.Unindent(test.want)
-			have := fftest.Unindent(ffhelp.Command(testcmd).String())
+			want := fftest.UnindentString(test.want)
+			have := fftest.UnindentString(ffhelp.Command(testcmd).String())
 			if want != have {
-				t.Errorf("\n%s", fftest.DiffString(want, have))
+				t.Error(fftest.DiffString(want, have))
 			}
 		})
 	}
@@ -199,8 +199,8 @@ FLAGS (root)
 func makeTestCommand(t *testing.T) *ff.Command {
 	t.Helper()
 
-	rootFlags := ff.NewFlags("root")
-	rootFlags.Bool('v', "verbose", false, "verbose logging")
+	rootFlags := ff.NewFlagSet("root")
+	rootFlags.Bool('v', "verbose", "verbose logging")
 	rootFlags.String(0, "config-file", "", "config file")
 	rootCommand := &ff.Command{
 		Name:     "testcmd",
@@ -209,9 +209,9 @@ func makeTestCommand(t *testing.T) *ff.Command {
 		Flags:    rootFlags,
 	}
 
-	fooFlags := ff.NewFlags("foo").SetParent(rootFlags)
+	fooFlags := ff.NewFlagSet("foo").SetParent(rootFlags)
 	fooFlags.Int('a', "alpha", 10, "alpha integer")
-	fooFlags.Bool('b', "beta", false, "beta boolean")
+	fooFlags.Bool('b', "beta", "beta boolean")
 	fooCommand := &ff.Command{
 		Name:      "foo",
 		Usage:     "foo [FLAGS] <SUBCOMMAND> ...",
@@ -220,7 +220,7 @@ func makeTestCommand(t *testing.T) *ff.Command {
 	}
 	rootCommand.Subcommands = append(rootCommand.Subcommands, fooCommand)
 
-	barFlags := ff.NewFlags("bar").SetParent(fooFlags)
+	barFlags := ff.NewFlagSet("bar").SetParent(fooFlags)
 	barFlags.Duration('d', "delta", 3*time.Second, "delta `δ` duration")
 	barFlags.Float64('e', "epsilon", 3.21, "epsilon float")
 	barCommand := &ff.Command{

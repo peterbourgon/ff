@@ -125,7 +125,7 @@ func TestParse(t *testing.T) {
 	testcases.Run(t)
 }
 
-func TestParse_CoreFlags(t *testing.T) {
+func TestParse_FlagSet(t *testing.T) {
 	t.Parallel()
 
 	testcases := fftest.TestCases{
@@ -357,8 +357,8 @@ func TestParse_PlainParser(t *testing.T) {
 func TestParse_types(t *testing.T) {
 	t.Parallel()
 
-	t.Run("ff.CoreFlags", func(t *testing.T) {
-		fs := ff.NewFlags(t.Name())
+	t.Run("ff.FlagSet", func(t *testing.T) {
+		fs := ff.NewFlagSet(t.Name())
 		foo := fs.String('f', "foo", "default-value", "foo string")
 		if err := ff.Parse(fs, []string{"--foo=bar"}); err != nil {
 			t.Fatal(err)

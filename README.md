@@ -14,15 +14,12 @@ easier to maintain, than many common alternatives.
 
 ## Usage
 
-This module defines a [Flags][flags] interface to represent a flag set, and
-provides a [getopts(3)-inspired implementation][coreflags] that can be used as
-follows.
+This module provides a [FlagSet][flagset] that can be used as follows.
 
-[flags]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Flags
-[coreflags]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#CoreFlags
+[flagset]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#FlagSet
 
 ```go
-fs := ff.NewFlags("myprogram")
+fs := ff.NewFlagSet("myprogram")
 var (
 	listenAddr = fs.StringLong("listen", "localhost:8080", "listen address")
 	refresh    = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
@@ -45,8 +42,12 @@ var (
 )
 ```
 
-Once you have a set of flags, call [Parse][parse] to parse them.
-[Options][options] can be provided to control parsing behavior.
+You can also provide your own implementation of the [Flags][flags] interface.
+
+[flags]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Flags
+
+Call [ff.Parse][parse] to parse the flag set. [Options][options] can be provided
+to control parsing behavior.
 
 [parse]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Parse
 [options]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Option
@@ -59,18 +60,17 @@ err := ff.Parse(fs, os.Args[1:],
 )
 ```
 
-Here, flags are first set from the provided command-line arguments, then from
-env vars beginning with `MY_PROGRAM`, and, finally, if the user specifies a
-config file, from values in that file, as parsed by [PlainParser][plainparser].
+Here, flags are first set from the provided command-line arguments, from env
+vars beginning with `MY_PROGRAM`, and, if the user specifies a config file, from
+values in that file, as parsed by [ff.PlainParser][plainparser].
 
 [plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#PlainParser
 
-Unlike other flag packages, help/usage text is not automatically printed as a
-side effect of parsing. When a user requests help via e.g. -h or --help, it's
+Unlike other flag packages, help text is not automatically printed as a side
+effect of parsing. When a user requests help via e.g. -h or --help, it's
 reported as a parse error. Callers are responsible for checking parse errors,
-and printing help/usage text when appropriate. [package ffhelp][ffhelp] has
-helpers for producing help/usage text in a standard format, but you can always
-write your own.
+and printing help text when appropriate. [package ffhelp][ffhelp] has helpers
+for producing help text in a standard format, but you can always write your own.
 
 [ffhelp]: https://pkg.go.dev/github.com/peterbourgon/ff/v4/ffhelp
 
@@ -91,10 +91,10 @@ It's possible to take runtime configuration from the environment. The options
 feature, and determine how flag names are mapped to environment variable names.
 
 [withenvvars]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVars
-[withenvvarprefix]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVarPrefix
+[withenvvarprefix]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#FlagSet
 
 ```go
-fs := ff.NewFlags("myservice")
+fs := ff.NewFlagSet("myservice")
 var (
 	port  = fs.Int('p', "port", 8080, "listen port for server (also via PORT)")
 	debug = fs.Bool('d', "debug", false, "log debug information (also via DEBUG)")
@@ -121,10 +121,10 @@ specified and parsed. This module includes support for JSON, YAML, TOML, and
 [withconfigfile]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFile
 [withconfigfileflag]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileFlag
 [withconfigfileparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileParser
-[plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#PlainParser
+[plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#FlagSet
 
 ```go
-fs := ff.NewFlags("myservice")
+fs := ff.NewFlagSet("myservice")
 var (
 	port  = fs.IntLong("port", 8080, "listen port for server")
 	debug = fs.BoolLong("debug", false, "log debug information")

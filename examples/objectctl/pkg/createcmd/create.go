@@ -14,15 +14,15 @@ import (
 type CreateConfig struct {
 	*rootcmd.RootConfig
 	Overwrite bool
-	Flags     *ff.CoreFlags
+	Flags     *ff.FlagSet
 	Command   *ff.Command
 }
 
 func New(rootConfig *rootcmd.RootConfig) *CreateConfig {
 	var cfg CreateConfig
 	cfg.RootConfig = rootConfig
-	cfg.Flags = ff.NewFlags("create").SetParent(cfg.RootConfig.Flags)
-	cfg.Flags.AddFlag(ff.CoreFlagConfig{
+	cfg.Flags = ff.NewFlagSet("create").SetParent(cfg.RootConfig.Flags)
+	cfg.Flags.AddFlag(ff.FlagConfig{
 		LongName:  "overwrite",
 		Value:     ffval.NewValue(&cfg.Overwrite),
 		Usage:     "overwrite an existing object",

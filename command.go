@@ -10,7 +10,7 @@ import (
 // set and zero or more subcommands. It's intended to model CLI applications
 // which can be represented as a tree of such commands.
 type Command struct {
-	// Name of the command, which is used when producing the help output for the
+	// Name of the command, which is used when producing the help text for the
 	// command, as well as for subcommand matching.
 	//
 	// Required.
@@ -18,20 +18,20 @@ type Command struct {
 
 	// Usage is a single line string which should describe the syntax of the
 	// command, including flags and arguments. It's typically printed at the top
-	// of the help output for the command. For example,
+	// of the help text for the command. For example,
 	//
 	//    USAGE
 	//      cmd [FLAGS] subcmd [FLAGS] <ARG> [<ARG>...]
 	//
 	// Here, the usage string begins with "cmd [FLAGS] ...".
 	//
-	// Recommended. If not provided, the help output for the command should not
+	// Recommended. If not provided, the help text for the command should not
 	// include a usage section.
 	Usage string
 
 	// ShortHelp is a single line which should very briefly describe the purpose
 	// of the command in prose. It's typically printed next to the command name
-	// when it appears as a subcommand in help output. For example,
+	// when it appears as a subcommand in help text. For example,
 	//
 	//    SUBCOMMANDS
 	//      commandname   this is the short help string
@@ -53,9 +53,9 @@ type Command struct {
 	// Flags is the set of flags associated with, and parsed by, this command.
 	//
 	// When building a command tree, it's often useful to allow flags defined by
-	// parent commands to be specified by any subcommand. The core flag set
-	// supports this behavior via SetParent, see the documentation of that
-	// method for details.
+	// parent commands to be specified by any subcommand. A FlagSet supports
+	// this behavior via SetParent, see the documentation of that method for
+	// details.
 	//
 	// Optional. If not provided, an empty flag set will be constructed and used
 	// so that the -h, --help flag works as expected.
@@ -97,7 +97,7 @@ func (cmd *Command) Parse(args []string, options ...Option) error {
 
 	// If no flag set was given, set an empty default, so -h, --help works.
 	if cmd.Flags == nil {
-		cmd.Flags = NewFlags(cmd.Name)
+		cmd.Flags = NewFlagSet(cmd.Name)
 	}
 
 	// Parse this command's flag set from the provided args.

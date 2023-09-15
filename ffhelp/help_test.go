@@ -12,11 +12,11 @@ func TestFlagsHelp(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {
-		fs := ff.NewFlags("fftest")
+		fs := ff.NewFlagSet("fftest")
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
-		want := fftest.Unindent(`
+		want := fftest.UnindentString(`
 			NAME
 			  fftest
 
@@ -24,18 +24,18 @@ func TestFlagsHelp(t *testing.T) {
 			  -d, --dur DURATION   duration flag (default: 0s)
 			  -s, --str STRING     string flag
 		`)
-		have := fftest.Unindent(ffhelp.Flags(fs).String())
+		have := fftest.UnindentString(ffhelp.Flags(fs).String())
 		if want != have {
-			t.Errorf("\n%s", fftest.DiffString(want, have))
+			t.Error(fftest.DiffString(want, have))
 		}
 	})
 
 	t.Run("usage", func(t *testing.T) {
-		fs := ff.NewFlags("fftest")
+		fs := ff.NewFlagSet("fftest")
 		fs.Duration('d', "dur", 0, "duration flag")
 		fs.String('s', "str", "", "string flag")
 
-		want := fftest.Unindent(`
+		want := fftest.UnindentString(`
 			NAME
 			  fftest
 
@@ -53,9 +53,9 @@ func TestFlagsHelp(t *testing.T) {
 			  -d, --dur DURATION   duration flag (default: 0s)
 			  -s, --str STRING     string flag
 		`)
-		have := fftest.Unindent(ffhelp.Flags(fs, loremIpsumSlice...).String())
+		have := fftest.UnindentString(ffhelp.Flags(fs, loremIpsumSlice...).String())
 		if want != have {
-			t.Errorf("\n%s", fftest.DiffString(want, have))
+			t.Error(fftest.DiffString(want, have))
 		}
 	})
 }
@@ -63,11 +63,11 @@ func TestFlagsHelp(t *testing.T) {
 func TestFlagsHelp_OnlyLong(t *testing.T) {
 	t.Parallel()
 
-	fs := ff.NewFlags("fftest")
-	fs.BoolLong("alpha", false, "alpha usage")
-	fs.BoolLong("beta", false, "beta usage")
+	fs := ff.NewFlagSet("fftest")
+	fs.BoolLong("alpha", "alpha usage")
+	fs.BoolLong("beta", "beta usage")
 
-	want := fftest.Unindent(`
+	want := fftest.UnindentString(`
 		NAME
 		  fftest
 
@@ -75,8 +75,8 @@ func TestFlagsHelp_OnlyLong(t *testing.T) {
 		  --alpha   alpha usage (default: false)
 		  --beta    beta usage (default: false)
 	`)
-	have := fftest.Unindent(ffhelp.Flags(fs).String())
+	have := fftest.UnindentString(ffhelp.Flags(fs).String())
 	if want != have {
-		t.Errorf("\n%s", fftest.DiffString(want, have))
+		t.Error(fftest.DiffString(want, have))
 	}
 }

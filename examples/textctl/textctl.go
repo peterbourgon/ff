@@ -15,15 +15,15 @@ import (
 // tree, and how to give subcommands access to parent command flags.
 
 func main() {
-	rootFlags := ff.NewFlags("textctl")
-	verbose := rootFlags.Bool('v', "verbose", false, "increase log verbosity")
+	rootFlags := ff.NewFlagSet("textctl")
+	verbose := rootFlags.Bool('v', "verbose", "increase log verbosity")
 	rootCmd := &ff.Command{
 		Name:  "textctl",
 		Usage: "textctl [FLAGS] <SUBCOMMAND>",
 		Flags: rootFlags,
 	}
 
-	repeatFlags := ff.NewFlags("repeat").SetParent(rootFlags) // SetParent allows repeatFlags access to rootFlags
+	repeatFlags := ff.NewFlagSet("repeat").SetParent(rootFlags) // SetParent allows repeatFlags access to rootFlags
 	n := repeatFlags.IntShort('n', 3, "how many times to repeat")
 	repeatCmd := &ff.Command{
 		Name:      "repeat",
@@ -50,7 +50,7 @@ func main() {
 		Name:      "count",
 		Usage:     "textctl count [<ARG> ...]",
 		ShortHelp: "count the number of bytes in the arguments",
-		Flags:     ff.NewFlags("count").SetParent(rootFlags), // count has no flags itself, but it should still be able to parse root flags
+		Flags:     ff.NewFlagSet("count").SetParent(rootFlags), // count has no flags itself, but it should still be able to parse root flags
 		Exec: func(_ context.Context, args []string) error {
 			if *verbose {
 				fmt.Fprintf(os.Stderr, "count: argument count %d\n", len(args))

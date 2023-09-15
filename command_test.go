@@ -82,8 +82,8 @@ func makeTestCommand(t *testing.T) (*ff.Command, *testCommandVars) {
 
 	var vars testCommandVars
 
-	rootFlags := ff.NewFlags("root")
-	rootFlags.BoolVar(&vars.Verbose, 'v', "verbose", false, "verbose logging")
+	rootFlags := ff.NewFlagSet("root")
+	rootFlags.BoolVar(&vars.Verbose, 'v', "verbose", "verbose logging")
 	rootFlags.StringVar(&vars.ConfigFile, 0, "config-file", "", "config file")
 	rootCommand := &ff.Command{
 		Name:     "testcmd",
@@ -92,9 +92,9 @@ func makeTestCommand(t *testing.T) (*ff.Command, *testCommandVars) {
 		Flags:    rootFlags,
 	}
 
-	fooFlags := ff.NewFlags("foo").SetParent(rootFlags)
+	fooFlags := ff.NewFlagSet("foo").SetParent(rootFlags)
 	fooFlags.IntVar(&vars.Alpha, 'a', "alpha", 10, "alpha integer")
-	fooFlags.BoolVar(&vars.Beta, 'b', "beta", false, "beta boolean")
+	fooFlags.BoolVar(&vars.Beta, 'b', "beta", "beta boolean")
 	fooCommand := &ff.Command{
 		Name:      "foo",
 		Usage:     "foo [FLAGS] <SUBCOMMAND> ...",
@@ -104,7 +104,7 @@ func makeTestCommand(t *testing.T) (*ff.Command, *testCommandVars) {
 	}
 	rootCommand.Subcommands = append(rootCommand.Subcommands, fooCommand)
 
-	barFlags := ff.NewFlags("bar").SetParent(fooFlags)
+	barFlags := ff.NewFlagSet("bar").SetParent(fooFlags)
 	barFlags.DurationVar(&vars.Delta, 'd', "delta", 3*time.Second, "delta `δ` duration")
 	barFlags.Float64Var(&vars.Epsilon, 'e', "epsilon", 3.21, "epsilon float")
 	barCommand := &ff.Command{
