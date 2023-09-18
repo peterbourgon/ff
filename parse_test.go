@@ -3,6 +3,8 @@ package ff_test
 import (
 	"embed"
 	"flag"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -385,4 +387,32 @@ func TestParse_types(t *testing.T) {
 			t.Errorf("Parse(%T): want error, have none", fs)
 		}
 	})
+}
+
+func TestParse_stdfs(t *testing.T) {
+	t.Parallel()
+
+	configFile := filepath.Join(t.TempDir(), "config.conf")
+	if err := os.WriteFile(configFile, []byte(`foo hello`), 0655); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	args := []string{"-config", configFile}
+
+	fs := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
+	var (
+		foo = fs.String("foo", "abc", "foo string")
+		_   = fs.String("config", "", "config file")
+	)
+
+	if err := ff.Parse(fs, args,
+		ff.WithConfigFileFlag("config"),
+		ff.WithConfigFileParser(ff.PlainParser),
+	); err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if want, have := "hello", *foo; want != have {
+		t.Errorf("foo: want %q, have %q", want, have)
+	}
 }
