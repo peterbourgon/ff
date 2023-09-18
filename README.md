@@ -6,7 +6,7 @@ The basic idea is that `myprogram -h` should always show the complete
 configuration "surface area" of a program. Therefore, every config parameter
 should be defined as a flag. This module provides a simple and robust way to
 define those flags, and to parse them from command-line arguments, environment
-variables, and/or a config file.
+variables, and/or config files.
 
 Building a command-line application in the style of `kubectl` or `docker`?
 [Command](#command) provides a declarative approach that's simpler to write, and
@@ -14,7 +14,9 @@ easier to maintain, than many common alternatives.
 
 ## Usage
 
-This module provides a [FlagSet][flagset] that can be used as follows.
+Define all of the configuration parameters for your program in a flag set. This
+module provides a getopts(3)-inspired [FlagSet][flagset] type, which is a
+reasonable default flag set implementaiton.
 
 [flagset]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#FlagSet
 
@@ -28,7 +30,7 @@ var (
 )
 ```
 
-It's also possible to use a standard library flag.FlagSet. Be sure to pass the
+You can also use a standard library flag.FlagSet. Be sure to pass the
 ContinueOnError error handling strategy, as other options either panic or
 terminate the program on parse errors -- rude!
 
@@ -42,12 +44,12 @@ var (
 )
 ```
 
-You can also provide your own implementation of the [Flags][flags] interface.
+You can also use your own implementation of the [Flags][flags] interface.
 
 [flags]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Flags
 
-Call [ff.Parse][parse] to parse the flag set. [Options][options] can be provided
-to control parsing behavior.
+Then, use [ff.Parse][parse] to parse the flag set. [Options][options] can be
+provided to control parsing behavior.
 
 [parse]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Parse
 [options]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Option
@@ -60,8 +62,8 @@ err := ff.Parse(fs, os.Args[1:],
 )
 ```
 
-Here, flags are first set from the provided command-line arguments, from env
-vars beginning with `MY_PROGRAM`, and, if the user specifies a config file, from
+Here, flags are set from the provided command-line arguments, from env vars
+beginning with `MY_PROGRAM`, and, if the user specifies a config file, from
 values in that file, as parsed by [ff.PlainParser][plainparser].
 
 [plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#PlainParser
@@ -69,29 +71,30 @@ values in that file, as parsed by [ff.PlainParser][plainparser].
 Unlike other flag packages, help text is not automatically printed as a side
 effect of parsing. When a user requests help via e.g. -h or --help, it's
 reported as a parse error. Callers are responsible for checking parse errors,
-and printing help text when appropriate. [package ffhelp][ffhelp] has helpers
-for producing help text in a standard format, but you can always write your own.
+and printing help text when appropriate. [package ffhelp][ffhelp] provides
+helpers for producing help text in a standard format, but you can always write
+your own.
 
 [ffhelp]: https://pkg.go.dev/github.com/peterbourgon/ff/v4/ffhelp
 
 ```go
 if errors.Is(err, ff.ErrHelp) {
-	fmt.Fprint(os.Stderr, ffhelp.Flags(fs))
+	fmt.Fprintln(os.Stderr, ffhelp.Flags(fs))
 	os.Exit(0)
 } else if err != nil {
-	fmt.Fprintf(os.Stderr, "error: %v\n", )
+	fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	os.Exit(1)
 }
 ```
 
 ## Environment variables
 
-It's possible to take runtime configuration from the environment. The options
-[WithEnvVars][withenvvars] and [WithEnvVarPrefix][withenvvarprefix] enable this
-feature, and determine how flag names are mapped to environment variable names.
+It's possible to set flags from env vars. The options [WithEnvVars][withenvvars]
+and [WithEnvVarPrefix][withenvvarprefix] enable this feature, and determine how
+environment variable names map to flag names.
 
 [withenvvars]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVars
-[withenvvarprefix]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#FlagSet
+[withenvvarprefix]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVarsPrefix
 
 ```go
 fs := ff.NewFlagSet("myservice")
@@ -112,16 +115,14 @@ port 1234, debug true
 
 ## Config files
 
-It's possible to take runtime configuration from config files. The options
-[WithConfigFile][withconfigfile], [WithConfigFileFlag][withconfigfileflag], and
-[WithConfigFileParser][withconfigfileparser] control how config files are
+It's possible to set flags from config files. The [WithConfigFileFlag][cfflag]
+and [WithConfigFileParser][cfparser] options control how config files are
 specified and parsed. This module includes support for JSON, YAML, TOML, and
 .env config files, as well as the simple [PlainParser][plainparser] format.
 
-[withconfigfile]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFile
-[withconfigfileflag]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileFlag
-[withconfigfileparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileParser
-[plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#FlagSet
+[cfflag]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileFlag
+[cfparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileParser
+[plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#PlainParser
 
 ```go
 fs := ff.NewFlagSet("myservice")
@@ -143,12 +144,12 @@ port 1234, debug true
 
 ## Priority
 
-Command-line args have the highest priority, because they're explicitly given to
-each running instance of a program by the user. Think of command-line args as the
-"user" configuration.
+Command-line args have the highest priority, because they're explicitly provided
+to the program by the user. Think of command-line args as the "user"
+configuration.
 
-Environment variables have the next-highest priority, because they reflect
-configuration set in the runtime context. Think of env vars as the "session"
+Environment variables have the next-highest priority, because they represent
+configuration in the runtime environment. Think of env vars as the "session"
 configuration.
 
 Config files have the lowest priority, because they represent config that's
