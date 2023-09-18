@@ -475,3 +475,89 @@ func TestFlagSet_structs(t *testing.T) {
 		}
 	})
 }
+
+func TestFlagSet_StructIgnoreReset(t *testing.T) {
+	t.Parallel()
+
+	type A struct {
+		Foo string `ff:"long=foo, usage=foo string, default=xxx" json:"foo"`
+		Bar string `json:"bar"`
+		Baz string `ff:"long=baz, usage=baz string"`
+		Qux string
+	}
+
+	var aval A
+
+	fs := ff.NewFlagSet(t.Name())
+	if err := fs.AddStruct(&aval); err != nil {
+		t.Fatalf("AddStruct(&aval): %v", err)
+	}
+
+	{
+		args := []string{"--foo=abc", "--bar=def", "--baz=ghi"}
+		if err := fs.Parse(args); err == nil {
+			t.Errorf("ff.Parse(%v): want error, have none", args)
+		}
+	}
+
+	{
+		args := []string{"--foo=1", "--baz=2"}
+		if err := fs.Parse(args); err != nil {
+			t.Errorf("ff.Parse(%v): %v", args, err)
+		}
+		if want, have := "1", aval.Foo; want != have {
+			t.Errorf("Foo: want %q, have %q", want, have)
+		}
+		if want, have := "2", aval.Baz; want != have {
+			t.Errorf("Baz: want %q, have %q", want, have)
+		}
+	}
+
+	{
+		if err := fs.Reset(); err != nil {
+			t.Fatalf("Reset: %v", err)
+		}
+		if want, have := "xxx", aval.Foo; want != have {
+			t.Errorf("Foo: want %q, have %q", want, have)
+		}
+		if want, have := "", aval.Baz; want != have {
+			t.Errorf("Baz: want %q, have %q", want, have)
+		}
+	}
+}
+
+func TestFlagSet_StructEmbedded(t *testing.T) {
+	t.Parallel()
+
+	type A struct {
+		Foo string `ff:"short=f, long=foo, usage=foo string"`
+		Bar int    `ff:"         long=bar, usage=bar int, default=32"`
+	}
+
+	type B struct {
+		A
+		Quux bool `ff:"short=q, long=quux, usage=quux bool"`
+	}
+
+	type C struct {
+		*A
+		Zombo bool `ff:"short=z, long=zombo, usage=zombo bool"`
+	}
+
+	fs := ff.NewFlagSet(t.Name())
+
+	var aflags A
+	if err := fs.AddStruct(&aflags); err != nil {
+		t.Fatalf("AddStruct(&aflags): %v", err)
+	}
+
+	var bflags B
+	if err := fs.AddStruct(&bflags); err != nil { // should not try to re-add flags in embedded A
+		t.Fatalf("AddStruct(&bflags): %v", err)
+	}
+
+	var cflags C
+	if err := fs.AddStruct(&cflags); err != nil { // should not try to re-add flags in embedded *A
+		t.Fatalf("AddStruct(&cflags): %v", err)
+	}
+}
