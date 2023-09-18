@@ -23,8 +23,8 @@ func TestSection_Flags(t *testing.T) {
 			  -i, --int INT        int (default: 0)
 			  -f, --flt FLOAT64    float64 (default: 0)
 			  -a, --aflag BOOL     bool a (default: true)
-			  -b, --bflag          bool b (default: false)
-			  -c, --cflag          bool c (default: false)
+			  -b, --bflag          bool b
+			  -c, --cflag          bool c
 			  -d, --dur DURATION   time.Duration (default: 0s)
 			  -x, --xxx STR        collection of strings (repeatable)
 			`)
@@ -49,8 +49,8 @@ func TestSection_StdFlags(t *testing.T) {
 
 		FLAGS
 		  -a BOOL       bool a (default: true)
-		  -b            bool b (default: false)
-		  -c            bool c (default: false)
+		  -b            bool b
+		  -c            bool c
 		  -d DURATION   time.Duration (default: 0s)
 		  -f FLOAT64    float64 (default: 0)
 		  -i INT        int (default: 0)
@@ -149,7 +149,7 @@ SUBCOMMANDS
   foo   the foo subcommand
 
 FLAGS
-  -v, --verbose              verbose logging (default: false)
+  -v, --verbose              verbose logging
       --config-file STRING   config file
 `
 
@@ -165,10 +165,10 @@ SUBCOMMANDS
 
 FLAGS (foo)
   -a, --alpha INT            alpha integer (default: 10)
-  -b, --beta                 beta boolean (default: false)
+  -b, --beta                 beta boolean
 
 FLAGS (root)
-  -v, --verbose              verbose logging (default: false)
+  -v, --verbose              verbose logging
       --config-file STRING   config file
 `
 
@@ -185,10 +185,10 @@ FLAGS (bar)
 
 FLAGS (foo)
   -a, --alpha INT            alpha integer (default: 10)
-  -b, --beta                 beta boolean (default: false)
+  -b, --beta                 beta boolean
 
 FLAGS (root)
-  -v, --verbose              verbose logging (default: false)
+  -v, --verbose              verbose logging
       --config-file STRING   config file
 `, "#", "`")
 

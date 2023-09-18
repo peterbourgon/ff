@@ -62,7 +62,7 @@ func TestFlagFormat(t *testing.T) {
 		{format: `%+n`, wantFoo: `-f`, wantBar: `-b`, wantBaz: ``},
 		{format: `%l`, wantFoo: `foo`, wantBar: ``, wantBaz: `baz`},
 		{format: `%+l`, wantFoo: `--foo`, wantBar: ``, wantBaz: `--baz`},
-		{format: `%d`, wantFoo: `hello world`, wantBar: `false`, wantBaz: `true`},
+		{format: `%d`, wantFoo: `hello world`, wantBar: ``, wantBaz: `true`},
 		{format: `%u`, wantFoo: `usage text`, wantBar: ``, wantBaz: ``},
 		{format: `%k`, wantFoo: `STR`, wantBar: ``, wantBaz: `XX`},
 	} {

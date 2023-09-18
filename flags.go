@@ -77,7 +77,10 @@ type Flag interface {
 	// but not recommended.
 	GetUsage() string
 
-	// GetDefault should return the default value of the flag as a string.
+	// GetDefault should return a string that represents the default value of
+	// the flag in the context of help text. An empty string is valid, and
+	// doesn't mean that the true default value of the flag is actually an empty
+	// string.
 	GetDefault() string
 
 	// SetValue should parse the provided string into the appropriate type for

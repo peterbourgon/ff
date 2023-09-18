@@ -84,10 +84,6 @@ func ValidateFlags(t *testing.T, fs ff.Flags, args []string) {
 			t.Errorf("%s: GetFlags: returned nil", name)
 		}
 
-		if f.GetDefault() != f.GetValue() {
-			t.Errorf("%s: GetDefault (%q) != GetValue (%q) before being set", name, f.GetDefault(), f.GetValue())
-		}
-
 		if haveShort {
 			if ff, ok := fs.GetFlag(string(short)); !ok {
 				t.Errorf("%s: GetFlag(%s): returned ok=false", name, string(short))
