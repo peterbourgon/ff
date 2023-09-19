@@ -34,17 +34,18 @@ func ExampleParse_args() {
 }
 
 func ExampleParse_env() {
-	fs := ff.NewFlagSet("myprogram")
+	fs := ff.NewFlagSet("myprogramenv")
 	var (
 		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
 		refresh = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
 		debug   = fs.Bool('d', "debug", "log debug information")
 	)
 
-	os.Setenv("MY_PROGRAM_REFRESH", "3s")
+	defer os.Setenv("MY_PROGRAM_ENV_REFRESH", os.Getenv("MY_PROGRAM_ENV_REFRESH"))
+	os.Setenv("MY_PROGRAM_ENV_REFRESH", "3s")
 
 	err := ff.Parse(fs, []string{},
-		ff.WithEnvVarPrefix("MY_PROGRAM"),
+		ff.WithEnvVarPrefix("MY_PROGRAM_ENV"),
 	)
 
 	fmt.Printf("err=%v\n", err)
@@ -149,7 +150,7 @@ func ExampleParse_parent() {
 		refresh   = childfs.DurationLong("refresh", 15*time.Second, "refresh interval")
 	)
 
-	f, _ := os.CreateTemp("", "ExampleParse_parents")
+	f, _ := os.CreateTemp("", "ExampleParse_parent")
 	defer func() { f.Close(); os.Remove(f.Name()) }()
 	fmt.Fprint(f, `
 		log error
