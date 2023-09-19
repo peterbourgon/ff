@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 
@@ -28,15 +27,15 @@ func main() {
 	repeatCmd := &ff.Command{
 		Name:      "repeat",
 		Usage:     "textctl repeat [-n TIMES] <ARG>",
-		ShortHelp: "repeatedly print the argument to stdout",
+		ShortHelp: "repeatedly print the first argument to stdout",
 		Flags:     repeatFlags,
-		Exec: func(_ context.Context, args []string) error { // defining Exec inline allows it to access the e.g. verbose flag, above
-			if n := len(args); n != 1 {
-				return fmt.Errorf("repeat requires exactly 1 argument, but you provided %d", n)
+		Exec: func(ctx context.Context, args []string) error { // defining Exec inline allows it to access the e.g. verbose flag, above
+			if len(args) <= 0 {
+				return fmt.Errorf("repeat requires an argument")
 			}
 			if *verbose {
+				fmt.Fprintf(os.Stderr, "repeat: arg=%q\n", args[0])
 				fmt.Fprintf(os.Stderr, "repeat: n=%d\n", *n)
-				fmt.Fprintf(os.Stderr, "repeat: will generate %dB of output\n", (*n)*len(args[0]))
 			}
 			for i := 0; i < *n; i++ {
 				fmt.Fprintf(os.Stdout, "%s\n", args[0])
@@ -51,26 +50,23 @@ func main() {
 		Usage:     "textctl count [<ARG> ...]",
 		ShortHelp: "count the number of bytes in the arguments",
 		Flags:     ff.NewFlagSet("count").SetParent(rootFlags), // count has no flags itself, but it should still be able to parse root flags
-		Exec: func(_ context.Context, args []string) error {
+		Exec: func(ctx context.Context, args []string) error {
 			if *verbose {
-				fmt.Fprintf(os.Stderr, "count: argument count %d\n", len(args))
+				fmt.Fprintf(os.Stderr, "count: nargs=%d\n", len(args))
 			}
-			var n int
+			var count int
 			for _, arg := range args {
-				n += len(arg)
+				count += len(arg)
 			}
-			fmt.Fprintf(os.Stdout, "%d\n", n)
+			fmt.Fprintf(os.Stdout, "%d\n", count)
 			return nil
 		},
 	}
 	rootCmd.Subcommands = append(rootCmd.Subcommands, countCmd) // add the count command underneath the root command
 
-	err := rootCmd.ParseAndRun(context.Background(), os.Args[1:])
-	if errors.Is(err, ff.ErrHelp) || errors.Is(err, ff.ErrNoExec) {
-		fmt.Fprintf(os.Stderr, "\n%s\n", ffhelp.Command(rootCmd))
-		os.Exit(0)
-	} else if err != nil {
+	if err := rootCmd.ParseAndRun(context.Background(), os.Args[1:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", ffhelp.Command(rootCmd))
 		fmt.Fprintf(os.Stderr, "error: %s\n", err)
-		os.Exit(1)
+		os.Exit(0)
 	}
 }

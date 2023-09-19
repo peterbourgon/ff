@@ -7,7 +7,7 @@
 // behavior.
 //
 // [FlagSet] is provided as a standard implementation of the [Flags] interface,
-// inspired by getopts(3). Callers are free to provide their own implementation.
+// inspired by getopts(3). It supports single (-f) and long (--foo) flag names.
 //
 // [Command] is provided as a tool for building CLI applications, like docker or
 // kubectl, in a simple and declarative style. It's intended to be easier to

@@ -21,6 +21,7 @@ type FlagSet struct {
 	isParsed      bool
 	postParseArgs []string
 	isStdAdapter  bool // stdlib package flag behavior: treat -foo the same as --foo
+	stdUsageFunc  func()
 	parent        *FlagSet
 }
 
@@ -35,6 +36,7 @@ func NewFlagSet(name string) *FlagSet {
 		isParsed:      false,
 		postParseArgs: []string{},
 		isStdAdapter:  false,
+		stdUsageFunc:  nil,
 		parent:        nil,
 	}
 }
@@ -44,9 +46,10 @@ func NewFlagSet(name string) *FlagSet {
 // results in a panic.
 //
 // As a special case, val may also be a pointer to a flag.FlagSet. In this case,
-// the returned ff.FlagSet is a fixed "snapshot" of the input, and new flags may
-// not be added. Also, to approximate standard library parsing behavior, -abc is
-// parsed as --abc, rather than as -a -b -c.
+// the returned ff.FlagSet is a fixed "snapshot" of the input, and doesn't allow
+// new flags to be added. Also, parsing is slightly different: -abc is parsed as
+// --abc rather than as -a -b -c, to approximate the behavior of the standard
+// library.
 func NewFlagSetFrom(name string, val any) *FlagSet {
 	if stdfs, ok := val.(*flag.FlagSet); ok {
 		if name == "" {
@@ -63,6 +66,7 @@ func NewFlagSetFrom(name string, val any) *FlagSet {
 			}
 		})
 		corefs.isStdAdapter = true
+		corefs.stdUsageFunc = stdfs.Usage
 		return corefs
 	}
 
@@ -109,11 +113,17 @@ func (fs *FlagSet) Parse(args []string) error {
 	return err
 }
 
-func (fs *FlagSet) parseArgs(args []string) error {
+func (fs *FlagSet) parseArgs(args []string) (err error) {
 	// Credit where credit is due: this implementation is adapted from
 	// https://pkg.go.dev/github.com/pborman/getopt/v2.
 
 	fs.postParseArgs = args
+
+	defer func() {
+		if err != nil && fs.stdUsageFunc != nil {
+			fs.stdUsageFunc()
+		}
+	}()
 
 	for len(args) > 0 {
 		arg := args[0]

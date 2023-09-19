@@ -92,6 +92,91 @@ func ExampleParse_config() {
 	// debug=true
 }
 
+func ExampleParse_flag_set_features() {
+	fs := ff.NewFlagSet("myprogram")
+	var (
+		addrs     = fs.StringSet('a', "addr", "remote address (repeatable)")
+		refresh   = fs.DurationLong("refresh", 15*time.Second, "refresh interval")
+		compress  = fs.Bool('c', "compress", "enable compression")
+		transform = fs.Bool('t', "transform", "enable transformation")
+		loglevel  = fs.StringEnum('l', "log", "log level: debug, info, error", "info", "debug", "error")
+		_         = fs.StringLong("config", "", "config file (optional)")
+	)
+	err := ff.Parse(fs, []string{"-afoo", "-a", "bar", "--log=debug", "-ct"},
+		ff.WithEnvVarPrefix("MY_PROGRAM"),
+		ff.WithConfigFileFlag("config"),
+		ff.WithConfigFileParser(ff.PlainParser),
+	)
+	fmt.Printf("%s\n", ffhelp.Flags(fs))
+	fmt.Printf("err=%v\n", err)
+	fmt.Printf("addrs=%v\n", *addrs)
+	fmt.Printf("refresh=%v\n", *refresh)
+	fmt.Printf("compress=%v\n", *compress)
+	fmt.Printf("transform=%v\n", *transform)
+	fmt.Printf("loglevel=%v\n", *loglevel)
+
+	// Output:
+	// NAME
+	//   myprogram
+	//
+	// FLAGS
+	//   -a, --addr STRING        remote address (repeatable)
+	//       --refresh DURATION   refresh interval (default: 15s)
+	//   -c, --compress           enable compression
+	//   -t, --transform          enable transformation
+	//   -l, --log STRING         log level: debug, info, error (default: info)
+	//       --config STRING      config file (optional)
+	//
+	// err=<nil>
+	// addrs=[foo bar]
+	// refresh=15s
+	// compress=true
+	// transform=true
+	// loglevel=debug
+}
+
+func ExampleParse_parent() {
+	parentfs := ff.NewFlagSet("mycommand")
+	var (
+		loglevel = parentfs.StringEnum('l', "log", "log level: debug, info, error", "info", "debug", "error")
+		_        = parentfs.StringLong("config", "", "config file (optional)")
+	)
+
+	childfs := ff.NewFlagSet("subcommand").SetParent(parentfs)
+	var (
+		compress  = childfs.Bool('c', "compress", "enable compression")
+		transform = childfs.Bool('t', "transform", "enable transformation")
+		refresh   = childfs.DurationLong("refresh", 15*time.Second, "refresh interval")
+	)
+
+	f, _ := os.CreateTemp("", "ExampleParse_parents")
+	defer func() { f.Close(); os.Remove(f.Name()) }()
+	fmt.Fprint(f, `
+		log error
+		compress
+		refresh 3s
+	`)
+
+	err := ff.Parse(childfs, []string{"--config", f.Name(), "--refresh=1s"},
+		ff.WithEnvVarPrefix("MY_PROGRAM"),
+		ff.WithConfigFileFlag("config"),
+		ff.WithConfigFileParser(ff.PlainParser),
+	)
+
+	fmt.Printf("err=%v\n", err)
+	fmt.Printf("loglevel=%v\n", *loglevel)
+	fmt.Printf("compress=%v\n", *compress)
+	fmt.Printf("transform=%v\n", *transform)
+	fmt.Printf("refresh=%v\n", *refresh)
+
+	// Output:
+	// err=<nil>
+	// loglevel=error
+	// compress=true
+	// transform=false
+	// refresh=1s
+}
+
 func ExampleParse_stdlib() {
 	fs := flag.NewFlagSet("myprogram", flag.ContinueOnError)
 	var (
@@ -117,23 +202,38 @@ func ExampleParse_stdlib() {
 func ExampleParse_help() {
 	fs := ff.NewFlagSet("myprogram")
 	var (
-		listen  = fs.StringLong("listen", "localhost:8080", "listen address")
-		refresh = fs.DurationLong("refresh", 15*time.Second, "refresh interval")
-		debug   = fs.BoolLong("debug", "log debug information")
+		addrs     = fs.StringSet('a', "addr", "remote address (repeatable)")
+		compress  = fs.Bool('c', "compress", "enable compression")
+		transform = fs.Bool('t', "transform", "enable transformation")
+		loglevel  = fs.StringEnum('l', "log", "log level: debug, info, error", "info", "debug", "error")
+		_         = fs.StringLong("config", "", "config file (optional)")
 	)
 
-	err := ff.Parse(fs, []string{"-h"})
+	err := ff.Parse(fs, []string{"-h"},
+		ff.WithEnvVarPrefix("MY_PROGRAM"),
+		ff.WithConfigFileFlag("config"),
+		ff.WithConfigFileParser(ff.PlainParser),
+	)
 
-	fmt.Printf("err=%v\n", err)
-	fmt.Printf("listen=%v\n", *listen)
-	fmt.Printf("refresh=%v\n", *refresh)
-	fmt.Printf("debug=%v\n", *debug)
+	if err != nil {
+		fmt.Printf("%s\n", ffhelp.Flags(fs))
+		fmt.Printf("err=%v\n", err)
+	} else {
+		fmt.Printf("addrs=%v compress=%v transform=%v loglevel=%v\n", *addrs, *compress, *transform, *loglevel)
+	}
 
 	// Output:
+	// NAME
+	//   myprogram
+	//
+	// FLAGS
+	//   -a, --addr STRING     remote address (repeatable)
+	//   -c, --compress        enable compression
+	//   -t, --transform       enable transformation
+	//   -l, --log STRING      log level: debug, info, error (default: info)
+	//       --config STRING   config file (optional)
+	//
 	// err=parse args: flag: help requested
-	// listen=localhost:8080
-	// refresh=15s
-	// debug=false
 }
 
 func ExampleFlagSet_AddStruct() {

@@ -152,11 +152,11 @@ func (cmd *Command) Run(ctx context.Context) error {
 // ParseAndRun calls [Command.Parse] and, upon success, [Command.Run].
 func (cmd *Command) ParseAndRun(ctx context.Context, args []string, options ...Option) error {
 	if err := cmd.Parse(args, options...); err != nil {
-		return fmt.Errorf("parse: %w", err)
+		return err
 	}
 
 	if err := cmd.Run(ctx); err != nil {
-		return fmt.Errorf("run: %w", err)
+		return err
 	}
 
 	return nil
