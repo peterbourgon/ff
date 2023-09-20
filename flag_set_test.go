@@ -560,4 +560,36 @@ func TestFlagSet_StructEmbedded(t *testing.T) {
 	if err := fs.AddStruct(&cflags); err != nil { // should not try to re-add flags in embedded *A
 		t.Fatalf("AddStruct(&cflags): %v", err)
 	}
+
+	var flagNames []string
+	fs.WalkFlags(func(f ff.Flag) error {
+		flagNames = append(flagNames, ffhelp.FormatFlag(f, "%+s"))
+		return nil
+	})
+	if want, have := []string{"-f, --foo", "--bar", "-q, --quux", "-z, --zombo"}, flagNames; !reflect.DeepEqual(want, have) {
+		t.Errorf("flag names: want %v, have %v", want, have)
+	}
+}
+
+func TestFlagSet_Std(t *testing.T) {
+	t.Parallel()
+
+	stdfs := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
+	var (
+		_ = stdfs.String("foo", "hello world", "foo string")
+		_ = stdfs.Int("b", 123, "b int")
+	)
+
+	fs := ff.NewFlagSetFrom(stdfs.Name(), stdfs)
+
+	var flagNames []string
+	fs.WalkFlags(func(f ff.Flag) error {
+		flagNames = append(flagNames, ffhelp.FormatFlag(f, "%+s"))
+		return nil
+	})
+
+	// flag.FlagSet sorts flags lexicographically
+	if want, have := []string{"--b", "--foo"}, flagNames; !reflect.DeepEqual(want, have) {
+		t.Errorf("flag names: want %v, have %v", want, have)
+	}
 }

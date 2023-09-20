@@ -21,7 +21,6 @@ type FlagSet struct {
 	isParsed      bool
 	postParseArgs []string
 	isStdAdapter  bool // stdlib package flag behavior: treat -foo the same as --foo
-	stdUsageFunc  func()
 	parent        *FlagSet
 }
 
@@ -36,7 +35,6 @@ func NewFlagSet(name string) *FlagSet {
 		isParsed:      false,
 		postParseArgs: []string{},
 		isStdAdapter:  false,
-		stdUsageFunc:  nil,
 		parent:        nil,
 	}
 }
@@ -46,10 +44,14 @@ func NewFlagSet(name string) *FlagSet {
 // results in a panic.
 //
 // As a special case, val may also be a pointer to a flag.FlagSet. In this case,
-// the returned ff.FlagSet is a fixed "snapshot" of the input, and doesn't allow
-// new flags to be added. Also, parsing is slightly different: -abc is parsed as
-// --abc rather than as -a -b -c, to approximate the behavior of the standard
-// library.
+// the returned ff.FlagSet behaves differently than normal. It acts as a fixed
+// "snapshot" of the flag.FlagSet, and so doesn't allow new flags to be added.
+// To approximate the behavior of the standard library, every flag.FlagSet flag
+// name is treated as a long name, and parsing treats single-hyphen and
+// double-hyphen flag arguments identically: -abc is parsed as --abc rather than
+// -a -b -c. The flag.FlagSet error handling strategy is (effectively) forced to
+// ContinueOnError. The usage function is ignored, and usage is never printed as
+// a side effect of parsing.
 func NewFlagSetFrom(name string, val any) *FlagSet {
 	if stdfs, ok := val.(*flag.FlagSet); ok {
 		if name == "" {
@@ -66,7 +68,6 @@ func NewFlagSetFrom(name string, val any) *FlagSet {
 			}
 		})
 		corefs.isStdAdapter = true
-		corefs.stdUsageFunc = stdfs.Usage
 		return corefs
 	}
 
@@ -118,12 +119,6 @@ func (fs *FlagSet) parseArgs(args []string) (err error) {
 	// https://pkg.go.dev/github.com/pborman/getopt/v2.
 
 	fs.postParseArgs = args
-
-	defer func() {
-		if err != nil && fs.stdUsageFunc != nil {
-			fs.stdUsageFunc()
-		}
-	}()
 
 	for len(args) > 0 {
 		arg := args[0]
@@ -634,7 +629,7 @@ func (fs *FlagSet) AddStruct(val any) error {
 			def string
 		)
 		for _, item := range items {
-			// Allow the tag string to include padding spaces.
+			// Allow spaces for padding.
 			item = strings.TrimSpace(item)
 			if item == "" {
 				continue

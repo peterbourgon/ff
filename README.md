@@ -122,11 +122,11 @@ loglevel=error compress=false transform=false refresh=5s
 
 ### Help output
 
-Unlike package flag, ff doesn't emit help text to os.Stderr as an invisible side
-effect of a failed parse. Callers are expected to check the error returned by
-parse, and to emit help text to the user as appropriate. You can use package
-ffhelp to produce help text in a standard format, or to create your own help
-text format.
+Unlike flag.FlagSet, ff.FlagSet doesn't emit help text to os.Stderr as an
+invisible side effect of a failed parse. When using an ff.FlagSet, callers are
+expected to check the error returned by parse, and to emit help text to the user
+as appropriate. Package ffhelp provides functions that produce help text in a
+standard format, and tools for creating your own help text format.
 
 ```go
 parentfs := ff.NewFlagSet("parentcommand")
