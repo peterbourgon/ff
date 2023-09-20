@@ -6,175 +6,235 @@ The basic idea is that `myprogram -h` should always show the complete
 configuration "surface area" of a program. Therefore, every config parameter
 should be defined as a flag. This module provides a simple and robust way to
 define those flags, and to parse them from command-line arguments, environment
-variables, and/or a config file.
+variables, and/or config files.
 
 Building a command-line application in the style of `kubectl` or `docker`?
-[Command](#command) provides a declarative approach that's simpler to write, and
+[ff.Command](#ff-command) is a declarative approach that's simpler to write, and
 easier to maintain, than many common alternatives.
 
 ## Usage
 
-This module provides a [FlagSet][flagset] that can be used as follows.
+### Parse a flag.FlagSet
 
-[flagset]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#FlagSet
+Parse a flag.FlagSet from commandline args, env vars, and/or a config file, by
+using [ff.Parse][ffparse] instead of flag.FlagSet.Parse, and passing relevant
+[options][option] to control parse behavior.
 
-```go
-fs := ff.NewFlagSet("myprogram")
-var (
-	listenAddr = fs.StringLong("listen", "localhost:8080", "listen address")
-	refresh    = fs.Duration('r', "refresh", 15*time.Second, "refresh interval")
-	debug      = fs.Bool('d', "debug", false, "log debug information")
-	_          = fs.StringLong("config", "", "config file (optional)")
-)
-```
-
-It's also possible to use a standard library flag.FlagSet. Be sure to pass the
-ContinueOnError error handling strategy, as other options either panic or
-terminate the program on parse errors -- rude!
+[ffparse]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Parse
+[option]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Option
 
 ```go
 fs := flag.NewFlagSet("myprogram", flag.ContinueOnError)
 var (
 	listenAddr = fs.String("listen", "localhost:8080", "listen address")
 	refresh    = fs.Duration("refresh", 15*time.Second, "refresh interval")
-	debug      = fs.Bool("debug", "log debug information")
+	debug      = fs.Bool("debug", false, "log debug information")
 	_          = fs.String("config", "", "config file (optional)")
 )
-```
 
-You can also provide your own implementation of the [Flags][flags] interface.
-
-[flags]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Flags
-
-Call [ff.Parse][parse] to parse the flag set. [Options][options] can be provided
-to control parsing behavior.
-
-[parse]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Parse
-[options]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Option
-
-```go
-err := ff.Parse(fs, os.Args[1:],
+ff.Parse(fs, os.Args[1:],
 	ff.WithEnvVarPrefix("MY_PROGRAM"),
 	ff.WithConfigFileFlag("config"),
 	ff.WithConfigFileParser(ff.PlainParser),
 )
+
+fmt.Printf("listen=%s refresh=%s debug=%v\n", *listen, *refresh, *debug)
 ```
 
-Here, flags are first set from the provided command-line arguments, from env
-vars beginning with `MY_PROGRAM`, and, if the user specifies a config file, from
-values in that file, as parsed by [ff.PlainParser][plainparser].
+```shell
+$ myprogram -listen=localhost:9090
+listen=localhost:9090 refresh=15s debug=false
 
-[plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#PlainParser
+$ env MY_PROGRAM_DEBUG=1 myprogram
+listen=localhost:8080 refresh=15s debug=true
 
-Unlike other flag packages, help text is not automatically printed as a side
-effect of parsing. When a user requests help via e.g. -h or --help, it's
-reported as a parse error. Callers are responsible for checking parse errors,
-and printing help text when appropriate. [package ffhelp][ffhelp] has helpers
-for producing help text in a standard format, but you can always write your own.
+$ printf 'refresh 30s \n debug \n' > my.conf
+$ myprogram -config=my.conf
+listen=localhost:8080 refresh=30s debug=true
+```
 
-[ffhelp]: https://pkg.go.dev/github.com/peterbourgon/ff/v4/ffhelp
+### Upgrade to an ff.FlagSet
+
+Alternatively, you can use the getopts(3)-inspired [ff.FlagSet][flagset], which
+provides short (-f) and long (--foo) flag names, more useful flag types, and
+other niceities.
 
 ```go
-if errors.Is(err, ff.ErrHelp) {
-	fmt.Fprint(os.Stderr, ffhelp.Flags(fs))
-	os.Exit(0)
-} else if err != nil {
-	fmt.Fprintf(os.Stderr, "error: %v\n", )
-	os.Exit(1)
+fs := ff.NewFlagSet("myprogram")
+var (
+	addrs     = fs.StringSet('a', "addr", "remote address (repeatable)")
+	compress  = fs.Bool('c', "compress", "enable compression")
+	transform = fs.Bool('t', "transform", "enable transformation")
+	loglevel  = fs.StringEnum('l', "log", "log level: debug, info, error", "info", "debug", "error")
+	_         = fs.StringLong("config", "", "config file (optional)")
+)
+
+ff.Parse(fs, os.Args[1:],
+	ff.WithEnvVarPrefix("MY_PROGRAM"),
+	ff.WithConfigFileFlag("config"),
+	ff.WithConfigFileParser(ff.PlainParser),
+)
+
+fmt.Printf("addrs=%v compress=%v transform=%v loglevel=%v\n", *addrs, *compress, *transform, *loglevel)
+```
+
+```shell
+$ env MY_PROGRAM_LOG=debug myprogram -afoo -a bar --addr=baz --addr qux -ct
+addrs=[foo bar baz qux] compress=true transform=true loglevel=debug
+```
+
+### Parent flag sets
+
+ff.FlagSet supports the notion of a parent flag set, which allows a "child" flag
+set to successfully parse every "parent" flag.
+
+```go
+parentfs := ff.NewFlagSet("parentcommand")
+var (
+	loglevel = parentfs.StringEnum('l', "log", "log level: debug, info, error", "info", "debug", "error")
+	_        = parentfs.StringLong("config", "", "config file (optional)")
+)
+
+childfs := ff.NewFlagSet("childcommand").SetParent(parentfs)
+var (
+	compress  = childfs.Bool('c', "compress", "enable compression")
+	transform = childfs.Bool('t', "transform", "enable transformation")
+	refresh   = childfs.DurationLong("refresh", 15*time.Second, "refresh interval")
+)
+
+ff.Parse(childfs, os.Args[1:],
+	ff.WithEnvVarPrefix("MY_PROGRAM"),
+	ff.WithConfigFileFlag("config"),
+	ff.WithConfigFileParser(ff.PlainParser),
+)
+
+fmt.Printf("loglevel=%v compress=%v transform=%v refresh=%v\n", *loglevel, *compress, *transform, *refresh)
+```
+
+```shell
+$ myprogram --log=debug --refresh=1s
+loglevel=debug compress=false transform=false refresh=1s
+
+$ printf 'log error \n refresh 5s \n' > my.conf
+$ myprogram --config my.conf
+loglevel=error compress=false transform=false refresh=5s
+```
+
+### Help output
+
+Unlike flag.FlagSet, ff.FlagSet doesn't emit help text to os.Stderr as an
+invisible side effect of a failed parse. When using an ff.FlagSet, callers are
+expected to check the error returned by parse, and to emit help text to the user
+as appropriate. Package ffhelp provides functions that produce help text in a
+standard format, and tools for creating your own help text format.
+
+```go
+parentfs := ff.NewFlagSet("parentcommand")
+var (
+	loglevel  = parentfs.StringEnum('l', "log", "log level: debug, info, error", "info", "debug", "error")
+	_         = parentfs.StringLong("config", "", "config file (optional)")
+)
+
+childfs := ff.NewFlagSet("childcommand").SetParent(parentfs)
+var (
+	compress  = childfs.Bool('c', "compress", "enable compression")
+	transform = childfs.Bool('t', "transform", "enable transformation")
+	refresh   = childfs.DurationLong("refresh", 15*time.Second, "refresh interval")
+)
+
+if err := ff.Parse(childfs, os.Args[1:],
+	ff.WithEnvVarPrefix("MY_PROGRAM"),
+	ff.WithConfigFileFlag("config"),
+	ff.WithConfigFileParser(ff.PlainParser),
+); err != nil {
+	fmt.Printf("%s\n", ffhelp.Flags(childfs))
+	fmt.Printf("err=%v\n", err)
+} else {
+	fmt.Printf("loglevel=%v compress=%v transform=%v refresh=%v\n", *loglevel, *compress, *transform, *refresh)
 }
 ```
 
-## Environment variables
-
-It's possible to take runtime configuration from the environment. The options
-[WithEnvVars][withenvvars] and [WithEnvVarPrefix][withenvvarprefix] enable this
-feature, and determine how flag names are mapped to environment variable names.
-
-[withenvvars]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithEnvVars
-[withenvvarprefix]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#FlagSet
-
-```go
-fs := ff.NewFlagSet("myservice")
-var (
-	port  = fs.Int('p', "port", 8080, "listen port for server (also via PORT)")
-	debug = fs.Bool('d', "debug", false, "log debug information (also via DEBUG)")
-)
-ff.Parse(fs, os.Args[1:], ff.WithEnvVars())
-fmt.Printf("port %d, debug %v\n", *port, *debug)
-```
-
 ```shell
-$ env PORT=9090 myservice
-port 9090, debug false
-$ env PORT=9090 DEBUG=1 myservice --port=1234
-port 1234, debug true
+$ childcommand -h
+NAME
+  childcommand
+
+FLAGS (childcommand)
+  -c, --compress           enable compression
+  -t, --transform          enable transformation
+      --refresh DURATION   refresh interval (default: 15s)
+
+FLAGS (parentcommand)
+  -l, --log STRING         log level: debug, info, error (default: info)
+      --config STRING      config file (optional)
+
+err=parse args: flag: help requested
 ```
 
-## Config files
+## Parse priority
 
-It's possible to take runtime configuration from config files. The options
-[WithConfigFile][withconfigfile], [WithConfigFileFlag][withconfigfileflag], and
-[WithConfigFileParser][withconfigfileparser] control how config files are
-specified and parsed. This module includes support for JSON, YAML, TOML, and
-.env config files, as well as the simple [PlainParser][plainparser] format.
+Command-line args have the highest priority, because they're explicitly provided
+to the program by the user. Think of command-line args as the "user"
+configuration.
 
-[withconfigfile]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFile
-[withconfigfileflag]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileFlag
-[withconfigfileparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#WithConfigFileParser
-[plainparser]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#FlagSet
-
-```go
-fs := ff.NewFlagSet("myservice")
-var (
-	port  = fs.IntLong("port", 8080, "listen port for server")
-	debug = fs.BoolLong("debug", false, "log debug information")
-	_     = fs.StringLong("config", "", "config file")
-)
-ff.Parse(fs, os.Args[1:], ff.WithConfigFileFlag("config"), ff.WithConfigFileParser(ff.PlainParser))
-fmt.Printf("port %d, debug %v\n", *port, *debug)
-```
-
-```shell
-$ printf "port 9090\n" >1.conf ; myservice --config=1.conf
-port 9090, debug false
-$ printf "port 9090\ndebug\n" >2.conf ; myservice --config=2.conf --port=1234
-port 1234, debug true
-```
-
-## Priority
-
-Command-line args have the highest priority, because they're explicitly given to
-each running instance of a program by the user. Think of command-line args as the
-"user" configuration.
-
-Environment variables have the next-highest priority, because they reflect
-configuration set in the runtime context. Think of env vars as the "session"
+Environment variables have the next-highest priority, because they represent
+configuration in the runtime environment. Think of env vars as the "session"
 configuration.
 
 Config files have the lowest priority, because they represent config that's
 static to the host. Think of config files as the "host" configuration.
 
-# Commands
+## ff.Command
 
-[Command][command] is a declarative and lightweight alternative to common CLI
-frameworks like [spf13/cobra][cobra], [urfave/cli][urfave], or
-[alecthomas/kingpin][kingpin].
+[ff.Command][command] is a tool for building larger CLI programs with
+sub-commands, like `docker` or `kubectl`. It's a declarative and lightweight
+alternative to more common frameworks like [spf13/cobra][cobra],
+[urfave/cli][urfave], or [alecthomas/kingpin][kingpin].
 
 [command]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Command
 [cobra]: https://github.com/spf13/cobra
 [urfave]: https://github.com/urfave/cli
 [kingpin]: https://github.com/alecthomas/kingpin
 
-Those frameworks have relatively large APIs, in order to support a large number
-of "table stakes" features. In contrast, the command API is quite small, with
-the immediate goal of being intuitive and productive, and the long-term goal of
-producing CLI applications that are substantially easier to understand and
-maintain.
-
 Commands are concerned only with the core mechanics of defining a command tree,
 parsing flags, and selecting a command to run. They're not intended to be a
 one-stop-shop for everything a command-line application may need. Features like
 tab completion, colorized output, etc. are orthogonal to command tree parsing,
-and can be easily provided by the consumer.
+and can be easily added on top.
 
-See [the examples directory](examples/) for some CLI tools built with commands.
+Here's a simple example of a basic command tree.
+
+```go
+// textctl -- root command
+textctlFlags := ff.NewFlagSet("textctl")
+verbose := textctlFlags.Bool('v', "verbose", "increase log verbosity")
+textctlCmd := &ff.Command{
+	Name:  "textctl",
+	Usage: "textctl [FLAGS] SUBCOMMAND ...",
+	Flags: textctlFlags,
+}
+
+// textctl repeat -- subcommand
+repeatFlags := ff.NewFlagSet("repeat").SetParent(textctlFlags) // <-- set parent flag set
+n := repeatFlags.IntShort('n', 3, "how many times to repeat")
+repeatCmd := &ff.Command{
+	Name:      "repeat",
+	Usage:     "textctl repeat [-n TIMES] ARG",
+	ShortHelp: "repeatedly print the first argument to stdout",
+	Flags:     repeatFlags,
+	Exec:      func(ctx context.Context, args []string) error { /* ... */ },
+}
+textctlCmd.Subcommands = append(textctlCmd.Subcommands, repeatCmd) // <-- append to parent subcommands
+
+// ...
+
+if err := textctlCmd.ParseAndRun(context.Background(), os.Args[1:]); err != nil {
+	fmt.Fprintf(os.Stderr, "%s\n", ffhelp.Command(textctlCmd))
+	fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	os.Exit(1)
+}
+```
+
+More sophisticated programs are available in [the examples directory][examples].
+
+[examples]: https://github.com/peterbourgon/ff/tree/main/examples

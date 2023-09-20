@@ -72,8 +72,8 @@ func TestFlagsHelp_OnlyLong(t *testing.T) {
 		  fftest
 
 		FLAGS
-		  --alpha   alpha usage (default: false)
-		  --beta    beta usage (default: false)
+		  --alpha   alpha usage
+		  --beta    beta usage
 	`)
 	have := fftest.UnindentString(ffhelp.Flags(fs).String())
 	if want != have {

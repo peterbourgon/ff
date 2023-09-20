@@ -44,9 +44,14 @@ func NewFlagSet(name string) *FlagSet {
 // results in a panic.
 //
 // As a special case, val may also be a pointer to a flag.FlagSet. In this case,
-// the returned ff.FlagSet is a fixed "snapshot" of the input, and new flags may
-// not be added. Also, to approximate standard library parsing behavior, -abc is
-// parsed as --abc, rather than as -a -b -c.
+// the returned ff.FlagSet behaves differently than normal. It acts as a fixed
+// "snapshot" of the flag.FlagSet, and so doesn't allow new flags to be added.
+// To approximate the behavior of the standard library, every flag.FlagSet flag
+// name is treated as a long name, and parsing treats single-hyphen and
+// double-hyphen flag arguments identically: -abc is parsed as --abc rather than
+// -a -b -c. The flag.FlagSet error handling strategy is (effectively) forced to
+// ContinueOnError. The usage function is ignored, and usage is never printed as
+// a side effect of parsing.
 func NewFlagSetFrom(name string, val any) *FlagSet {
 	if stdfs, ok := val.(*flag.FlagSet); ok {
 		if name == "" {
@@ -109,7 +114,7 @@ func (fs *FlagSet) Parse(args []string) error {
 	return err
 }
 
-func (fs *FlagSet) parseArgs(args []string) error {
+func (fs *FlagSet) parseArgs(args []string) (err error) {
 	// Credit where credit is due: this implementation is adapted from
 	// https://pkg.go.dev/github.com/pborman/getopt/v2.
 
@@ -465,6 +470,23 @@ func (cfg FlagConfig) getPlaceholder() string {
 	return typeName
 }
 
+func (cfg FlagConfig) getHelpDefault() string {
+	// If a default is explicitly refused, use an empty string.
+	if cfg.NoDefault {
+		return ""
+	}
+
+	// Bool flags with default value false should have empty defaults.
+	if bf, ok := cfg.Value.(interface{ IsBoolFlag() bool }); ok && bf.IsBoolFlag() {
+		if b, err := strconv.ParseBool(cfg.Value.String()); err == nil && !b {
+			return ""
+		}
+	}
+
+	// Otherwise, use the flag value.
+	return cfg.Value.String()
+}
+
 var genericTypeNameRegexp = regexp.MustCompile(`[A-Z0-9\_\.\*]+\[(.+)\]`)
 
 // AddFlag adds a flag to the flag set, as specified by the provided config. An
@@ -520,7 +542,7 @@ func (fs *FlagSet) AddFlag(cfg FlagConfig) (Flag, error) {
 		isBoolFlag:  isBoolFlag,
 		isSet:       false,
 		placeholder: cfg.getPlaceholder(),
-		noDefault:   cfg.NoDefault,
+		helpDefault: cfg.getHelpDefault(),
 	}
 
 	for _, existing := range fs.flags {
@@ -607,7 +629,7 @@ func (fs *FlagSet) AddStruct(val any) error {
 			def string
 		)
 		for _, item := range items {
-			// Allow the tag string to include padding spaces.
+			// Allow spaces for padding.
 			item = strings.TrimSpace(item)
 			if item == "" {
 				continue
@@ -801,6 +823,17 @@ func (fs *FlagSet) BoolLongDefault(long string, def bool, usage string) *bool {
 	return fs.BoolDefault(0, long, def, usage)
 }
 
+// BoolConfig defines a new flag in the flag set, and panics on any error.
+// The value field of the provided config is overwritten.
+func (fs *FlagSet) BoolConfig(cfg FlagConfig) *bool {
+	var value bool
+	cfg.Value = ffval.NewValue(&value)
+	if _, err := fs.AddFlag(cfg); err != nil {
+		panic(err)
+	}
+	return &value
+}
+
 // StringVar defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) StringVar(pointer *string, short rune, long string, def string, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
@@ -821,6 +854,17 @@ func (fs *FlagSet) StringShort(short rune, def string, usage string) *string {
 // StringLong defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) StringLong(long string, def string, usage string) *string {
 	return fs.String(0, long, def, usage)
+}
+
+// StringConfig defines a new flag in the flag set, and panics on any error.
+// The value field of the provided config is overwritten.
+func (fs *FlagSet) StringConfig(cfg FlagConfig, def string) *string {
+	var value string
+	cfg.Value = ffval.NewValueDefault(&value, def)
+	if _, err := fs.AddFlag(cfg); err != nil {
+		panic(err)
+	}
+	return &value
 }
 
 // StringListVar defines a new flag in the flag set, and panics on any error.
@@ -927,6 +971,17 @@ func (fs *FlagSet) Float64Long(long string, def float64, usage string) *float64 
 	return fs.Float64(0, long, def, usage)
 }
 
+// Float64Config defines a new flag in the flag set, and panics on any error.
+// The value field of the provided config is overwritten.
+func (fs *FlagSet) Float64Config(cfg FlagConfig, def float64) *float64 {
+	var value float64
+	cfg.Value = ffval.NewValueDefault(&value, def)
+	if _, err := fs.AddFlag(cfg); err != nil {
+		panic(err)
+	}
+	return &value
+}
+
 // IntVar defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) IntVar(pointer *int, short rune, long string, def int, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
@@ -947,6 +1002,17 @@ func (fs *FlagSet) IntShort(short rune, def int, usage string) *int {
 // IntLong defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) IntLong(long string, def int, usage string) *int {
 	return fs.Int(0, long, def, usage)
+}
+
+// IntConfig defines a new flag in the flag set, and panics on any error.
+// The value field of the provided config is overwritten.
+func (fs *FlagSet) IntConfig(cfg FlagConfig, def int) *int {
+	var value int
+	cfg.Value = ffval.NewValueDefault(&value, def)
+	if _, err := fs.AddFlag(cfg); err != nil {
+		panic(err)
+	}
+	return &value
 }
 
 // UintVar defines a new flag in the flag set, and panics on any error.
@@ -971,6 +1037,17 @@ func (fs *FlagSet) UintLong(long string, def uint, usage string) *uint {
 	return fs.Uint(0, long, def, usage)
 }
 
+// UintConfig defines a new flag in the flag set, and panics on any error.
+// The value field of the provided config is overwritten.
+func (fs *FlagSet) UintConfig(cfg FlagConfig, def uint) *uint {
+	var value uint
+	cfg.Value = ffval.NewValueDefault(&value, def)
+	if _, err := fs.AddFlag(cfg); err != nil {
+		panic(err)
+	}
+	return &value
+}
+
 // Uint64Var defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) Uint64Var(pointer *uint64, short rune, long string, def uint64, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
@@ -993,6 +1070,17 @@ func (fs *FlagSet) Uint64Long(long string, def uint64, usage string) *uint64 {
 	return fs.Uint64(0, long, def, usage)
 }
 
+// Uint64Config defines a new flag in the flag set, and panics on any error.
+// The value field of the provided config is overwritten.
+func (fs *FlagSet) Uint64Config(cfg FlagConfig, def uint64) *uint64 {
+	var value uint64
+	cfg.Value = ffval.NewValueDefault(&value, def)
+	if _, err := fs.AddFlag(cfg); err != nil {
+		panic(err)
+	}
+	return &value
+}
+
 // DurationVar defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) DurationVar(pointer *time.Duration, short rune, long string, def time.Duration, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
@@ -1013,6 +1101,17 @@ func (fs *FlagSet) DurationShort(short rune, def time.Duration, usage string) *t
 // DurationLong defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) DurationLong(long string, def time.Duration, usage string) *time.Duration {
 	return fs.Duration(0, long, def, usage)
+}
+
+// DurationConfig defines a new flag in the flag set, and panics on any error.
+// The value field of the provided config is overwritten.
+func (fs *FlagSet) DurationConfig(cfg FlagConfig, def time.Duration) *time.Duration {
+	var value time.Duration
+	cfg.Value = ffval.NewValueDefault(&value, def)
+	if _, err := fs.AddFlag(cfg); err != nil {
+		panic(err)
+	}
+	return &value
 }
 
 // Func defines a new flag in the flag set, and panics on any error.
@@ -1047,7 +1146,7 @@ type coreFlag struct {
 	isBoolFlag  bool
 	isSet       bool
 	placeholder string
-	noDefault   bool // in help text
+	helpDefault string // string used in help text
 }
 
 var _ Flag = (*coreFlag)(nil)
@@ -1105,10 +1204,7 @@ func (f *coreFlag) GetPlaceholder() string {
 }
 
 func (f *coreFlag) GetDefault() string {
-	if f.noDefault {
-		return ""
-	}
-	return f.trueDefault
+	return f.helpDefault
 }
 
 func (f *coreFlag) IsStdFlag() bool {

@@ -1,7 +1,6 @@
 package ff
 
 import (
-	"embed"
 	"io"
 	iofs "io/fs"
 )
@@ -127,7 +126,7 @@ func WithEnvVarSplit(delimiter string) Option {
 // files on disk, typically when reading a config file.
 //
 // By default, the host filesystem is used, via [os.Open].
-func WithFilesystem(fs embed.FS) Option {
+func WithFilesystem(fs iofs.FS) Option {
 	return func(pc *ParseContext) {
 		pc.configOpenFunc = fs.Open
 	}
