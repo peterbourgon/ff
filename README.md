@@ -9,15 +9,15 @@ define those flags, and to parse them from command-line arguments, environment
 variables, and/or config files.
 
 Building a command-line application in the style of `kubectl` or `docker`?
-[ff.Command](#ff-command) is a declarative approach that's simpler to write, and
-easier to maintain, than many common alternatives.
+[ff.Command](#ff-command) offers a declarative approach that may be simpler to
+write, and easier to maintain, than many common alternatives.
 
 ## Usage
 
 ### Parse a flag.FlagSet
 
 Parse a flag.FlagSet from commandline args, env vars, and/or a config file, by
-using [ff.Parse][ffparse] instead of flag.FlagSet.Parse, and passing relevant
+using [ff.Parse][ffparse] instead of flag.FlagSet.Parse. Use
 [options][option] to control parse behavior.
 
 [ffparse]: https://pkg.go.dev/github.com/peterbourgon/ff/v4#Parse
@@ -59,6 +59,8 @@ Alternatively, you can use the getopts(3)-inspired [ff.FlagSet][flagset], which
 provides short (-f) and long (--foo) flag names, more useful flag types, and
 other niceities.
 
+[flagset]: https://github.com/peterbourgon/ff/v4#FlagSet
+
 ```go
 fs := ff.NewFlagSet("myprogram")
 var (
@@ -86,7 +88,7 @@ addrs=[foo bar baz qux] compress=true transform=true loglevel=debug
 ### Parent flag sets
 
 ff.FlagSet supports the notion of a parent flag set, which allows a "child" flag
-set to successfully parse every "parent" flag.
+set to parse all "parent" flags, in addition to their own flags.
 
 ```go
 parentfs := ff.NewFlagSet("parentcommand")
@@ -122,11 +124,13 @@ loglevel=error compress=false transform=false refresh=5s
 
 ### Help output
 
-Unlike flag.FlagSet, ff.FlagSet doesn't emit help text to os.Stderr as an
+Unlike flag.FlagSet, the ff.FlagSet doesn't emit help text to os.Stderr as an
 invisible side effect of a failed parse. When using an ff.FlagSet, callers are
 expected to check the error returned by parse, and to emit help text to the user
-as appropriate. Package ffhelp provides functions that produce help text in a
-standard format, and tools for creating your own help text format.
+as appropriate. [Package ffhelp][ffhelp] provides functions that produce help
+text in a standard format, and tools for creating your own help text format.
+
+[ffhelp]: https://pkg.go.dev/github.com/peterbourgon/ff/v4/ffhelp
 
 ```go
 parentfs := ff.NewFlagSet("parentcommand")
