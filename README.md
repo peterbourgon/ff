@@ -9,7 +9,7 @@ define those flags, and to parse them from command-line arguments, environment
 variables, and/or config files.
 
 Building a command-line application in the style of `kubectl` or `docker`?
-[ff.Command](#ff-command) offers a declarative approach that may be simpler to
+[ff.Command](#ffcommand) offers a declarative approach that may be simpler to
 write, and easier to maintain, than many common alternatives.
 
 ## Usage
