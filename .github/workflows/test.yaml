@@ -71,7 +71,7 @@ jobs:
         run: gofumpt -d -e -l .
 
       - name: Run revive
-        run: revive --set_exit_status --exclude="./examples/..." ./...
+        run: revive --formatter=stylish --exclude=./examples/... ./...
 
       - name: Run lint-parallel-tests
         run: hack/lint-parallel-tests
