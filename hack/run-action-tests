@@ -2,23 +2,14 @@
 
 set -o pipefail
 
-function test_workflow    { cat .github/workflows/test.yaml ; }
-function install_commands { yq '.jobs.test.steps[] | select(.name == "Install tools") | .run' ; }
-function test_commands    { yq '.jobs.test.steps[] | select(.name == "Run *") | .run' ; }
+function test_workflow { cat .github/workflows/test.yaml ; }
+function test_commands { yq '.jobs.test.steps[] | select(.name == "Run *") | .run' ; }
 
-function run_commands {
-	while read COMMAND
-	do
-		echo ${COMMAND}
-		TEMPFILE=$(mktemp)
-		eval ${COMMAND} >${TEMPFILE} \
-		 && { rm ${TEMPFILE}; } \
-		 || { cat ${TEMPFILE}; rm ${TEMPFILE}; exit 1; }
-	done
-}
-
-case "$1" in
-	update) test_workflow | install_commands | run_commands ;;
-	run)    test_workflow | test_commands    | run_commands ;;
-	*)      test_workflow | test_commands    | run_commands ;;
-esac
+test_workflow | test_commands |	while read COMMAND
+do
+	echo ${COMMAND}
+	TEMPFILE=$(mktemp)
+	eval ${COMMAND} >${TEMPFILE} \
+	 && { rm ${TEMPFILE}; } \
+	 || { cat ${TEMPFILE}; rm ${TEMPFILE}; exit 1; }
+done
