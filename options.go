@@ -114,6 +114,12 @@ func WithEnvVarPrefix(prefix string) Option {
 // one time, with the value `a,b,c`. Providing WithEnvVarSplit with a comma
 // delimiter would set `foo` multiple times, with the values `a`, `b`, and `c`.
 //
+// If an env var value contains the delimeter prefixed by a single backslash,
+// that occurrence will be treated as a literal string, and not as a split
+// point. For example, `FOO=a,b\,c` with a delimiter of `,` would yield values
+// `a` and `b,c`. Or, `FOO=axxxb\xxxc` with a delimiter of `xxx` would yield
+// values `a` and `bxxxc`.
+//
 // By default, no splitting of environment variable values occurs.
 func WithEnvVarSplit(delimiter string) Option {
 	return func(pc *ParseContext) {
