@@ -99,7 +99,7 @@ func parse(fs Flags, args []string, options ...Option) error {
 					// The value may need to be split.
 					vals := []string{val}
 					if pc.envVarSplit != "" {
-						vals = strings.Split(val, pc.envVarSplit)
+						vals = splitEscape(val, pc.envVarSplit)
 					}
 
 					// Set the flag to the value(s).
@@ -289,6 +289,18 @@ func maybePrefix(key string, prefix string) string {
 		key = strings.ToUpper(prefix) + "_" + key
 	}
 	return key
+}
+
+func splitEscape(s string, separator string) []string {
+	escape := `\`
+	tokens := strings.Split(s, separator)
+	for i := len(tokens) - 2; i >= 0; i-- {
+		if strings.HasSuffix(tokens[i], escape) {
+			tokens[i] = tokens[i][:len(tokens[i])-len(escape)] + separator + tokens[i+1]
+			tokens = append(tokens[:i+1], tokens[i+2:]...)
+		}
+	}
+	return tokens
 }
 
 //

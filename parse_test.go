@@ -122,6 +122,18 @@ func TestParse(t *testing.T) {
 			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
 			Want:        fftest.Vars{S: " three ", X: []string{"one", " two", " three "}},
 		},
+		{
+			Name:        "env var split escaping",
+			Environment: map[string]string{"TEST_PARSE_S": `a\,b`, "TEST_PARSE_X": `one,two\,three`},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit(",")},
+			Want:        fftest.Vars{S: `a,b`, X: []string{`one`, `two,three`}},
+		},
+		{
+			Name:        "env var split escaping multichar",
+			Environment: map[string]string{"TEST_PARSE_S": `a\xxb`, "TEST_PARSE_X": `onexxtwo\xxthree`},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit("xx")},
+			Want:        fftest.Vars{S: `axxb`, X: []string{`one`, `twoxxthree`}},
+		},
 	}
 
 	testcases.Run(t)
