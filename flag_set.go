@@ -1015,6 +1015,39 @@ func (fs *FlagSet) IntConfig(cfg FlagConfig, def int) *int {
 	return &value
 }
 
+// Int64Var defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Int64Var(pointer *int64, short rune, long string, def int64, usage string) Flag {
+	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
+}
+
+// Int64 defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Int64(short rune, long string, def int64, usage string) *int64 {
+	var value int64
+	fs.Int64Var(&value, short, long, def, usage)
+	return &value
+}
+
+// Int64Short defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Int64Short(short rune, def int64, usage string) *int64 {
+	return fs.Int64(short, "", def, usage)
+}
+
+// Int64Long defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Int64Long(long string, def int64, usage string) *int64 {
+	return fs.Int64(0, long, def, usage)
+}
+
+// Int64Config defines a new flag in the flag set, and panics on any error.
+// The value field of the provided config is overwritten.
+func (fs *FlagSet) Int64Config(cfg FlagConfig, def int64) *int64 {
+	var value int64
+	cfg.Value = ffval.NewValueDefault(&value, def)
+	if _, err := fs.AddFlag(cfg); err != nil {
+		panic(err)
+	}
+	return &value
+}
+
 // UintVar defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) UintVar(pointer *uint, short rune, long string, def uint, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
