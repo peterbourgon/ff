@@ -20,6 +20,8 @@ type ParseContext struct {
 	configOpenFunc             func(string) (iofs.File, error)
 	configAllowMissingFile     bool
 	configIgnoreUndefinedFlags bool
+
+	getenvFunc func(string) string // alternate implementation of os.Getenv
 }
 
 // ConfigFileParseFunc is a function that consumes the provided reader as a config
@@ -135,5 +137,17 @@ func WithEnvVarSplit(delimiter string) Option {
 func WithFilesystem(fs iofs.FS) Option {
 	return func(pc *ParseContext) {
 		pc.configOpenFunc = fs.Open
+	}
+}
+
+// WithGetenvFunc is like [WithEnvVars], but with a controlled environment lookup
+// The provided function will be used rather than os.Getenv when looking up env vars
+// This allows tests to be run using t.Parallel with a controlled environment state
+//
+// By default os.Getenv is used
+func WithGetenvFunc(f func(string) string) Option {
+	return func(pc *ParseContext) {
+		pc.envVarEnabled = true
+		pc.getenvFunc = f
 	}
 }
