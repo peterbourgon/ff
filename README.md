@@ -16,6 +16,11 @@ Building a command-line application in the style of `kubectl` or `docker`?
 [ff.Command](#ffcommand) offers a declarative approach that may be simpler to
 write, and easier to maintain, than many common alternatives.
 
+## Note
+
+This README describes the pre-release version v4 of ff. For the stable version,
+see [ff/v3](https://pkg.go.dev/github.com/peterbourgon/ff/v3).
+
 ## Usage
 
 ### Parse a flag.FlagSet
