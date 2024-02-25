@@ -91,7 +91,7 @@ func parse(fs Flags, args []string, options ...Option) error {
 					key := getEnvVarKey(name, pc.envVarPrefix)
 
 					// Look up the value from the environment.
-					val := os.Getenv(key)
+					val := getenv(pc.getenvFunc, key)
 					if val == "" {
 						continue
 					}
@@ -200,6 +200,15 @@ func parse(fs Flags, args []string, options ...Option) error {
 	}
 
 	return nil
+}
+
+// getenv returns the value of the environment variable with the given key.
+// If fn is nil, os.Getenv is used.  This is mostly used to inject non-global state from tests.
+func getenv(fn func(string) string, key string) string {
+	if fn != nil {
+		return fn(key)
+	}
+	return os.Getenv(key)
 }
 
 //

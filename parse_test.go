@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -426,5 +427,45 @@ func TestParse_stdfs(t *testing.T) {
 
 	if want, have := "hello", *foo; want != have {
 		t.Errorf("foo: want %q, have %q", want, have)
+	}
+}
+
+func TestParse_Getenv(t *testing.T) {
+	t.Parallel()
+	// purpose of this test is to be able to provide a custom Getenv func
+	// this allows for cleaner tests which can control the env without mutating global state
+	var (
+		expectAddr      = "foo"
+		expectCompress  = true
+		expectTransform = true
+		expectLogLevel  = "error"
+		envMap          = map[string]string{
+			"X_ADDR":      expectAddr,
+			"X_COMPRESS":  strconv.FormatBool(expectCompress),
+			"X_TRANSFORM": strconv.FormatBool(expectTransform),
+			"X_LOG":       expectLogLevel,
+		}
+		prefixOption = ff.WithEnvVarPrefix("X")
+		envOption    = ff.WithGetenvFunc(func(key string) string { return envMap[key] })
+	)
+	fs := ff.NewFlagSet(t.Name())
+	var (
+		addr      = fs.String('a', "addr", "", "remote address (repeatable)")
+		compress  = fs.Bool('c', "compress", "enable compression")
+		transform = fs.Bool('t', "transform", "enable transformation")
+		loglevel  = fs.StringEnum('l', "log", "log level: debug, info, error", "info", "debug", "error")
+	)
+	if err := ff.Parse(fs, nil, prefixOption, envOption); err != nil {
+		t.Fatal(err)
+	}
+	assertEqual(t, expectAddr, *addr)
+	assertEqual(t, expectCompress, *compress)
+	assertEqual(t, expectTransform, *transform)
+	assertEqual(t, expectLogLevel, *loglevel)
+}
+func assertEqual(t *testing.T, expected, actual interface{}) {
+	t.Helper()
+	if expected != actual {
+		t.Errorf("Values not equal \nWant: %v \t%T\nGot:  %v \t%T\n", expected, expected, actual, actual)
 	}
 }
