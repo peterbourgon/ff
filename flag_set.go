@@ -458,16 +458,17 @@ func (cfg FlagConfig) getPlaceholder() string {
 	}
 
 	// Otherwise, use a transformation of the flag value type name.
-	var typeName string
-	{
-		typeName = strings.ToUpper(fmt.Sprintf("%T", cfg.Value))
-		typeName = genericTypeNameRegexp.ReplaceAllString(typeName, "$1")
-		typeName = strings.TrimSuffix(typeName, "VALUE")
-		if lastDot := strings.LastIndex(typeName, "."); lastDot > 0 {
-			typeName = typeName[lastDot+1:]
-		}
+	return reflectPlaceholder(cfg.Value)
+}
+
+func reflectPlaceholder(v flag.Value) (typeName string) {
+	typeName = strings.ToUpper(fmt.Sprintf("%T", v))
+	typeName = genericTypeNameRegexp.ReplaceAllString(typeName, "$1")
+	typeName = strings.TrimSuffix(typeName, "VALUE")
+	if lastDot := strings.LastIndex(typeName, "."); lastDot > 0 {
+		typeName = typeName[lastDot+1:]
 	}
-	return typeName
+	return
 }
 
 func (cfg FlagConfig) getHelpDefault() string {
@@ -721,7 +722,7 @@ func (fs *FlagSet) AddStruct(val any) error {
 			)
 			if fieldValAddrTyp.Implements(flagValueElemTyp) {
 				// The field implements flag.Value, we can use it directly.
-				cfg.Value = fieldValAddrIface.(flag.Value)
+				cfg.Value = &defaultValue{Value: fieldValAddrIface.(flag.Value), def: def}
 			} else {
 				// Try to construct a new flag value.
 				v, err := ffval.NewValueReflect(fieldValAddrIface, def)
@@ -743,6 +744,34 @@ func (fs *FlagSet) AddStruct(val any) error {
 		}
 	}
 
+	return nil
+}
+
+type defaultValue struct {
+	flag.Value
+
+	isSet bool
+	def   string
+}
+
+func (d *defaultValue) GetPlaceholder() string {
+	return reflectPlaceholder(d.Value)
+}
+
+func (d *defaultValue) String() string {
+	if d.isSet {
+		return d.Value.String()
+	}
+
+	return d.def
+}
+
+func (d *defaultValue) Set(s string) error {
+	if err := d.Value.Set(s); err != nil {
+		return err
+	}
+
+	d.isSet = true
 	return nil
 }
 

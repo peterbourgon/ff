@@ -317,9 +317,10 @@ func TestFlagSet_structs(t *testing.T) {
 		Beta  int    `ff:"          long: beta,  placeholder: β,         usage: beta int"`
 		Delta bool   `ff:"short: d,              nodefault,              usage: delta bool"`
 
-		Epsilon bool    `ff:"| short=e | long=epsilon | nodefault    | usage: epsilon bool          |"`
-		Gamma   string  `ff:"| short=g | long=gamma   |              | usage: 'usage, with a comma' |"`
-		Iota    float64 `ff:"|         | long=iota    | default=0.43 | usage: iota float            |"`
+		Epsilon bool        `ff:"| short=e | long=epsilon | nodefault    | usage: epsilon bool              |"`
+		Gamma   string      `ff:"| short=g | long=gamma   |              | usage: 'usage, with a comma'     |"`
+		Iota    float64     `ff:"|         | long=iota    | default=0.43 | usage: iota float                |"`
+		Value   customValue `ff:"|         | long=value   | default=abcd | usage: some value implementation |"`
 	}
 
 	var flags myFlags
@@ -336,6 +337,7 @@ func TestFlagSet_structs(t *testing.T) {
 		  -e, --epsilon        epsilon bool
 		  -g, --gamma STRING   usage, with a comma
 		      --iota FLOAT64   iota float (default: 0.43)
+		      --value CUSTOM   some value implementation (default: abcd)
 	`), fftest.UnindentString(ffhelp.Flags(fs).String()); want != have {
 		t.Error(fftest.DiffString(want, have))
 	}
@@ -346,15 +348,19 @@ func TestFlagSet_structs(t *testing.T) {
 	}{
 		{
 			args: "--alpha=x",
-			want: myFlags{Alpha: "x", Iota: 0.43},
+			want: myFlags{Alpha: "x", Iota: 0.43, Value: "abcd"},
 		},
 		{
 			args: "-e --iota=1.23",
-			want: myFlags{Alpha: "alpha-default", Epsilon: true, Iota: 1.23},
+			want: myFlags{Alpha: "alpha-default", Epsilon: true, Iota: 1.23, Value: "abcd"},
 		},
 		{
 			args: "-gabc -d",
-			want: myFlags{Alpha: "alpha-default", Delta: true, Gamma: "abc", Iota: 0.43},
+			want: myFlags{Alpha: "alpha-default", Delta: true, Gamma: "abc", Iota: 0.43, Value: "abcd"},
+		},
+		{
+			args: "--value=bcde",
+			want: myFlags{Alpha: "alpha-default", Iota: 0.43, Value: "bcde"},
 		},
 	} {
 		t.Run(testcase.args, func(t *testing.T) {
@@ -592,4 +598,15 @@ func TestFlagSet_Std(t *testing.T) {
 	if want, have := []string{"--b", "--foo"}, flagNames; !reflect.DeepEqual(want, have) {
 		t.Errorf("flag names: want %v, have %v", want, have)
 	}
+}
+
+type customValue string
+
+func (v *customValue) String() string {
+	return (string)(*v)
+}
+
+func (v *customValue) Set(s string) error {
+	*v = customValue(s)
+	return nil
 }
