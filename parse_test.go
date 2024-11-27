@@ -449,10 +449,10 @@ func TestParse_shortSameCase(t *testing.T) {
 	})
 	t.Run("WithEnv", func(t *testing.T) {
 		t.Parallel()
-		if err := ff.Parse(newFS(), args, ff.WithEnvVars()); err == nil {
-			t.Error("wanted ErrDuplicateFlage, got nil")
-		} else if !errors.Is(err, ff.ErrDuplicateFlag) {
-			t.Errorf("wanted ErrDuplicateFlage, got %+v", err)
+		if err := ff.Parse(
+			newFS(), args, ff.WithEnvVars(),
+		); err == nil || !errors.Is(err, ff.ErrDuplicateFlag) {
+			t.Errorf("wanted ErrDuplicateFlag, got %+v", err)
 		}
 	})
 }
