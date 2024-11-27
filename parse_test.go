@@ -452,7 +452,7 @@ func TestParse_shortSameCase(t *testing.T) {
 		if err := ff.Parse(newFS(), args, ff.WithEnvVars()); err == nil {
 			t.Error("wanted ErrDuplicateFlage, got nil")
 		} else if !errors.Is(err, ff.ErrDuplicateFlag) {
-			t.Errorf("wanted ErrDuplicateFlage, got %+v", err)
+			t.Errorf("wanted ErrDuplicateFlag, got %+v", err)
 		}
 	})
 }
