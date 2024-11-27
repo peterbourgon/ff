@@ -2,6 +2,7 @@ package ff_test
 
 import (
 	"embed"
+	"errors"
 	"flag"
 	"os"
 	"path/filepath"
@@ -427,4 +428,31 @@ func TestParse_stdfs(t *testing.T) {
 	if want, have := "hello", *foo; want != have {
 		t.Errorf("foo: want %q, have %q", want, have)
 	}
+}
+
+func TestParse_shortSameCase(t *testing.T) {
+	t.Parallel()
+
+	newFS := func() *ff.FlagSet {
+		fs := ff.NewFlagSet(t.Name())
+		_ = fs.String('a', "apple", "", "foo string")
+		_ = fs.String('A', "apricot", "", "FOO string")
+		return fs
+	}
+	args := []string{"-a", "-A"}
+
+	t.Run("no env", func(t *testing.T) {
+		t.Parallel()
+		if err := ff.Parse(newFS(), args); err != nil {
+			t.Error(err)
+		}
+	})
+	t.Run("WithEnv", func(t *testing.T) {
+		t.Parallel()
+		if err := ff.Parse(newFS(), args, ff.WithEnvVars()); err == nil {
+			t.Error("wanted ErrDuplicateFlage, got nil")
+		} else if !errors.Is(err, ff.ErrDuplicateFlag) {
+			t.Errorf("wanted ErrDuplicateFlage, got %+v", err)
+		}
+	})
 }
