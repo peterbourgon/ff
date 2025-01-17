@@ -83,6 +83,7 @@ func TestFlagSet_Bool(t *testing.T) {
 		{args: []string{"--help"}, wantX: false, wantY: true, wantErr: ff.ErrHelp},
 		{args: []string{"--xflag", "-h"}, wantX: true, wantY: true, wantErr: ff.ErrHelp},
 		{args: []string{"-y", "--help"}, wantX: false, wantY: false, wantErr: ff.ErrHelp},
+		{args: []string{"--xflag=", "--help"}, wantX: true, wantY: true, wantErr: ff.ErrHelp},
 	} {
 		t.Run(strings.Join(test.args, " "), func(t *testing.T) {
 			fs := ff.NewFlagSet(t.Name())

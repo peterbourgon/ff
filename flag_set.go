@@ -241,16 +241,8 @@ func (fs *FlagSet) parseShortFlag(arg string, args []string) ([]string, error) {
 }
 
 func (fs *FlagSet) parseLongFlag(arg string, args []string) ([]string, error) {
-	var (
-		name  string
-		value string
-	)
-
-	if equals := strings.IndexRune(arg, '='); equals > 0 {
-		arg, value = arg[:equals], arg[equals+1:]
-	}
-
-	name = strings.TrimPrefix(arg, "--")
+	name, value, eqFound := strings.Cut(arg, "=")
+	name = strings.TrimPrefix(name, "--")
 
 	f := fs.findLongFlag(name)
 	if f == nil {
@@ -264,22 +256,24 @@ func (fs *FlagSet) parseLongFlag(arg string, args []string) ([]string, error) {
 		}
 	}
 
-	if value == "" {
+	if eqFound && f.isBoolFlag && value == "" {
+		value = "true" // `--debug=` amounts to `--debug=true`
+	}
+
+	if value == "" && !eqFound {
 		switch {
 		case f.isBoolFlag:
-			value = "true" // `-b` or `--foo` default to true
+			value = "true" // `--foo` defaults to true
 			if len(args) > 0 {
 				if _, err := strconv.ParseBool(args[0]); err == nil {
-					value = args[0] // `-b true` or `--foo false` should also work
+					value = args[0] // `--foo false` should also work
 					args = args[1:]
 				}
 			}
-		case !f.isBoolFlag && len(args) > 0:
+		case len(args) > 0:
 			value, args = args[0], args[1:]
-		case !f.isBoolFlag && len(args) <= 0:
-			return nil, fmt.Errorf("missing value")
 		default:
-			panic("unreachable")
+			return nil, fmt.Errorf("missing value")
 		}
 	}
 

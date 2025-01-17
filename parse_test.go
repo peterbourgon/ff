@@ -234,6 +234,12 @@ func TestParse_FlagSet(t *testing.T) {
 			Want:         fftest.Vars{S: "foo", B: false, WantParseErrorIs: ff.ErrHelp},
 		},
 		{
+			Name:         "--str= -a",
+			Constructors: []fftest.Constructor{fftest.CoreConstructor},
+			Args:         []string{`--str=`, `-a`},
+			Want:         fftest.Vars{S: "", A: true},
+		},
+		{
 			Name:         "-s foo -f 1.23",
 			Constructors: []fftest.Constructor{fftest.CoreConstructor},
 			Args:         []string{"-s", "foo", "-f", "1.23"},
