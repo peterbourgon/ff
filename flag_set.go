@@ -242,12 +242,14 @@ func (fs *FlagSet) parseShortFlag(arg string, args []string) ([]string, error) {
 
 func (fs *FlagSet) parseLongFlag(arg string, args []string) ([]string, error) {
 	var (
-		name  string
-		value string
+		name         string
+		value        string
+		hasEqualSign bool
 	)
 
 	if equals := strings.IndexRune(arg, '='); equals > 0 {
 		arg, value = arg[:equals], arg[equals+1:]
+		hasEqualSign = true
 	}
 
 	name = strings.TrimPrefix(arg, "--")
@@ -264,7 +266,7 @@ func (fs *FlagSet) parseLongFlag(arg string, args []string) ([]string, error) {
 		}
 	}
 
-	if value == "" {
+	if value == "" && (f.isBoolFlag || !hasEqualSign) {
 		switch {
 		case f.isBoolFlag:
 			value = "true" // `-b` or `--foo` default to true

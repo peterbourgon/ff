@@ -25,12 +25,14 @@ func TestFlagSet_Basics(t *testing.T) {
 		"-b -d250ms",
 		"-bd250ms",
 		"--duration 250ms --string=nondefault",
+		"--empty-string=",
 	} {
 		t.Run(argstr, func(t *testing.T) {
 			fs := ff.NewFlagSet("myset")
 			fs.Bool('b', "boolean", "boolean flag")
 			fs.StringLong("string", "default", "string flag")
 			fs.Duration('d', "duration", 250*time.Millisecond, "duration flag")
+			fs.StringLong("empty-string", "", "empty string")
 			fftest.ValidateFlags(t, fs, strings.Fields(argstr))
 		})
 	}
@@ -70,6 +72,7 @@ func TestFlagSet_Bool(t *testing.T) {
 	}{
 		{args: []string{"--xflag"}, wantX: true, wantY: true},
 		{args: []string{"--xflag=true"}, wantX: true, wantY: true},
+		{args: []string{"--xflag="}, wantX: true, wantY: true},
 		{args: []string{"--xflag", "true"}, wantX: true, wantY: true},
 		{args: []string{"-x=true"}, wantX: false, wantY: true, wantErr: ff.ErrUnknownFlag}, // = interpreted as flag
 		{args: []string{"-x"}, wantX: true, wantY: true},
@@ -122,6 +125,7 @@ func TestStdFlags_Bool(t *testing.T) {
 	}{
 		{args: []string{"-xflag"}, wantX: true, wantY: true},
 		{args: []string{"-xflag=true"}, wantX: true, wantY: true},
+		{args: []string{"-xflag="}, wantX: true, wantY: true},
 		{args: []string{"-xflag", "true"}, wantX: true, wantY: true},
 		{args: []string{"--xflag", "true"}, wantX: true, wantY: true},
 		{args: []string{"--xflag=true"}, wantX: true, wantY: true},
@@ -349,6 +353,10 @@ func TestFlagSet_structs(t *testing.T) {
 			want: myFlags{Alpha: "x", Iota: 0.43},
 		},
 		{
+			args: "--alpha=",
+			want: myFlags{Alpha: "", Iota: 0.43},
+		},
+		{
 			args: "-e --iota=1.23",
 			want: myFlags{Alpha: "alpha-default", Epsilon: true, Iota: 1.23},
 		},
@@ -417,11 +425,11 @@ func TestFlagSet_structs(t *testing.T) {
 			t.Fatalf("AddStruct: %v", err)
 		}
 
-		if err := ff.Parse(fs, []string{"--foo=a", "--foo", "b"}); err != nil {
+		if err := ff.Parse(fs, []string{"--foo=a", "--foo", "b", "--foo="}); err != nil {
 			t.Fatalf("Parse: %v", err)
 		}
 
-		if want, have := []string{"a", "b"}, flags.Foo.Get(); !reflect.DeepEqual(want, have) {
+		if want, have := []string{"a", "b", ""}, flags.Foo.Get(); !reflect.DeepEqual(want, have) {
 			t.Errorf("foo: want %#+v, have %#+v", want, have)
 		}
 	})
@@ -494,7 +502,7 @@ func TestFlagSet_StructIgnoreReset(t *testing.T) {
 	}
 
 	{
-		args := []string{"--foo=abc", "--bar=def", "--baz=ghi"}
+		args := []string{"--foo=abc", "--bar=def", "--baz=ghi", "--qux="}
 		if err := fs.Parse(args); err == nil {
 			t.Errorf("ff.Parse(%v): want error, have none", args)
 		}
