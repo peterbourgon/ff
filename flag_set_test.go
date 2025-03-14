@@ -571,6 +571,59 @@ func TestFlagSet_StructEmbedded(t *testing.T) {
 	}
 }
 
+func TestFlagSet_StructCustom(t *testing.T) {
+	t.Parallel()
+
+	type A struct {
+		Foo fftest.Custom  `ff:"long=foo, default=abc"`
+		Bar *fftest.Custom `ff:"long=bar, default=def"`
+	}
+
+	t.Run("valid no args", func(t *testing.T) {
+		fs := ff.NewFlagSet(t.Name())
+		aflags := A{Bar: &fftest.Custom{}}
+		if err := fs.AddStruct(&aflags); err != nil {
+			t.Fatalf("AddStruct(&aflags): %v", err)
+		}
+		if err := ff.Parse(fs, []string{}); err != nil {
+			t.Fatal(err)
+		}
+		if want, have := "abc", aflags.Foo.String(); want != have {
+			t.Errorf("Foo: want %q, have %q", want, have)
+		}
+		if want, have := "def", aflags.Bar.String(); want != have {
+			t.Errorf("Bar: want %q, have %q", want, have)
+		}
+	})
+
+	t.Run("valid with args", func(t *testing.T) {
+		fs := ff.NewFlagSet(t.Name())
+		aflags := A{Bar: &fftest.Custom{}}
+		if err := fs.AddStruct(&aflags); err != nil {
+			t.Fatalf("AddStruct(&aflags): %v", err)
+		}
+		if err := ff.Parse(fs, []string{"--foo=123", "--bar", "456"}); err != nil {
+			t.Fatal(err)
+		}
+		if want, have := "123", aflags.Foo.String(); want != have {
+			t.Errorf("Foo: want %q, have %q", want, have)
+		}
+		if want, have := "456", aflags.Bar.String(); want != have {
+			t.Errorf("Bar: want %q, have %q", want, have)
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		fs := ff.NewFlagSet(t.Name())
+		aflags := A{} // nil Bar
+		if err := fs.AddStruct(&aflags); err == nil {
+			t.Fatalf("AddStruct(&aflags): wanted err, got none")
+		} else {
+			t.Logf("AddStruct(&aflags): got expected error (%v)", err)
+		}
+	})
+}
+
 func TestFlagSet_Std(t *testing.T) {
 	t.Parallel()
 

@@ -713,18 +713,26 @@ func (fs *FlagSet) AddStruct(val any) error {
 
 		// Produce a flag.Value representing the field.
 		{
-			var (
-				fieldValAddr      = fieldVal.Addr()
-				fieldValAddrTyp   = fieldValAddr.Type()
-				fieldValAddrIface = fieldValAddr.Interface()
-				flagValueElemTyp  = reflect.TypeOf((*flag.Value)(nil)).Elem()
-			)
-			if fieldValAddrTyp.Implements(flagValueElemTyp) {
-				// The field implements flag.Value, we can use it directly.
-				cfg.Value = fieldValAddrIface.(flag.Value)
+			flagValueElemTyp := reflect.TypeOf((*flag.Value)(nil)).Elem()
+			if fieldVal.IsValid() && fieldVal.CanAddr() && fieldVal.Addr().Type().Implements(flagValueElemTyp) {
+				cfg.Value = fieldVal.Addr().Interface().(flag.Value)
+				if def != "" {
+					if err := cfg.Value.Set(def); err != nil {
+						return fmt.Errorf("%s: set default: %w", fieldName, err)
+					}
+				}
+			} else if fieldVal.IsValid() && fieldVal.Type().Implements(flagValueElemTyp) && fieldVal.CanInterface() {
+				if fieldVal.IsNil() {
+					return fmt.Errorf("%s: nil value for otherwise valid type (%s)", fieldName, fieldTyp.Type.String())
+				}
+				cfg.Value = fieldVal.Interface().(flag.Value)
+				if def != "" {
+					if err := cfg.Value.Set(def); err != nil {
+						return fmt.Errorf("%s: set default: %w", fieldName, err)
+					}
+				}
 			} else {
-				// Try to construct a new flag value.
-				v, err := ffval.NewValueReflect(fieldValAddrIface, def)
+				v, err := ffval.NewValueReflect(fieldVal.Addr().Interface(), def)
 				if err != nil {
 					return fmt.Errorf("%s: %w", fieldName, err)
 				}

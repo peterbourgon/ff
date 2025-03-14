@@ -2,6 +2,7 @@ package fftest
 
 import (
 	"errors"
+	"flag"
 	"reflect"
 	"strings"
 	"testing"
@@ -92,4 +93,19 @@ func Compare(t *testing.T, want, have *Vars) {
 			t.Errorf("post-parse args: want %v, have %v", want.Args, have.Args)
 		}
 	}
+}
+
+type Custom struct {
+	v string
+}
+
+var _ flag.Value = (*Custom)(nil)
+
+func (c *Custom) Set(s string) error {
+	c.v = s
+	return nil
+}
+
+func (c *Custom) String() string {
+	return c.v
 }
