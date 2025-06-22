@@ -68,6 +68,7 @@ jobs:
         run: staticcheck ./...
 
       - name: Run gofumpt
+        if: matrix.platform != 'windows-latest' # :<
         run: gofumpt -d -e -l .
 
       - name: Run revive
