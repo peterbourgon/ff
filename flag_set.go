@@ -24,8 +24,10 @@ type FlagSet struct {
 	parent        *FlagSet
 }
 
-var _ Flags = (*FlagSet)(nil)
-var _ Resetter = (*FlagSet)(nil)
+var (
+	_ Flags    = (*FlagSet)(nil)
+	_ Resetter = (*FlagSet)(nil)
+)
 
 // NewFlagSet returns a new flag set with the given name.
 func NewFlagSet(name string) *FlagSet {
@@ -1182,8 +1184,10 @@ type coreFlag struct {
 	helpDefault string // string used in help text
 }
 
-var _ Flag = (*coreFlag)(nil)
-var _ Resetter = (*coreFlag)(nil)
+var (
+	_ Flag     = (*coreFlag)(nil)
+	_ Resetter = (*coreFlag)(nil)
+)
 
 func (f *coreFlag) GetFlags() Flags {
 	return f.flagSet

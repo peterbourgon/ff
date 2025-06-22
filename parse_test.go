@@ -405,7 +405,7 @@ func TestParse_stdfs(t *testing.T) {
 	t.Parallel()
 
 	configFile := filepath.Join(t.TempDir(), "config.conf")
-	if err := os.WriteFile(configFile, []byte(`foo hello`), 0655); err != nil {
+	if err := os.WriteFile(configFile, []byte(`foo hello`), 0o655); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
