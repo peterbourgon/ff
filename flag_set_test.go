@@ -593,3 +593,101 @@ func TestFlagSet_Std(t *testing.T) {
 		t.Errorf("flag names: want %v, have %v", want, have)
 	}
 }
+
+type testFlagSetShortLongVars struct {
+	alpha   bool
+	beta    string
+	gamma   []string
+	delta   []string
+	epsilon string
+	dseta   float64
+	eta     int
+	zeta    int64
+	iota    uint
+	kappa   uint64
+	lambda  time.Duration
+}
+
+func TestFlagSet_ShortVar(t *testing.T) {
+	t.Parallel()
+
+	v := &testFlagSetShortLongVars{}
+	fs := ff.NewFlagSet("foo")
+	fs.BoolShortVar(&v.alpha, 'a', false, "alpha bool short var")
+	fs.StringShortVar(&v.beta, 'b', "beta", "beta string short var")
+	fs.StringListShortVar(&v.gamma, 'g', "gamma string list short var")
+	fs.StringSetShortVar(&v.delta, 'd', "delta string set short var")
+	fs.StringEnumShortVar(&v.epsilon, 'e', "epsilon string enum short var", "foo", "bar", "baz")
+	fs.Float64ShortVar(&v.dseta, 's', 0, "dseta float64 short var")
+	fs.IntShortVar(&v.eta, 't', 0, "eta int short var")
+	fs.Int64ShortVar(&v.zeta, 'z', 0, "zeta int64 short var")
+	fs.UintShortVar(&v.iota, 'i', 0, "iota uint short var")
+	fs.Uint64ShortVar(&v.kappa, 'k', 0, "kappa uint64 short var")
+	fs.DurationShortVar(&v.lambda, 'l', 0, "lambda duration short var")
+
+	if err := ff.Parse(fs, []string{
+		"-a", "-bfoo", "-gfoo", "-gbar", "-dfoo", "-dbar", "-efoo",
+		"-s42.23", "-t42", "-z123", "-i456", "-k789", "-l1s",
+	}); err != nil {
+		t.Fatalf("want no error, got error (%v)", err)
+	}
+
+	want := &testFlagSetShortLongVars{
+		alpha:   true,
+		beta:    "foo",
+		gamma:   []string{"foo", "bar"},
+		delta:   []string{"foo", "bar"},
+		epsilon: "foo",
+		dseta:   42.23,
+		eta:     42,
+		zeta:    123,
+		iota:    456,
+		kappa:   789,
+		lambda:  1 * time.Second,
+	}
+	if have := v; !reflect.DeepEqual(want, have) {
+		t.Errorf("flag set short var values: want %v, have %v", want, have)
+	}
+}
+
+func TestFlagSet_LongVar(t *testing.T) {
+	t.Parallel()
+
+	v := &testFlagSetShortLongVars{}
+	fs := ff.NewFlagSet("foo")
+	fs.BoolLongVar(&v.alpha, "alpha", false, "alpha bool long var")
+	fs.StringLongVar(&v.beta, "beta", "beta", "beta string long var")
+	fs.StringListLongVar(&v.gamma, "gamma", "gamma string list long var")
+	fs.StringSetLongVar(&v.delta, "delta", "delta string set long var")
+	fs.StringEnumLongVar(&v.epsilon, "epsilon", "epsilon string enum long var", "foo", "bar", "baz")
+	fs.Float64LongVar(&v.dseta, "dseta", 0, "dseta float64 long var")
+	fs.IntLongVar(&v.eta, "eta", 0, "eta int long var")
+	fs.Int64LongVar(&v.zeta, "zeta", 0, "zeta int64 long var")
+	fs.UintLongVar(&v.iota, "iota", 0, "iota uint long var")
+	fs.Uint64LongVar(&v.kappa, "kappa", 0, "kappa uint64 long var")
+	fs.DurationLongVar(&v.lambda, "lambda", 0, "lambda duration long var")
+
+	if err := ff.Parse(fs, []string{
+		"--alpha=true", "--beta=foo", "--gamma=foo", "--gamma=bar", "--delta=foo", "--delta=bar", "--epsilon=foo",
+		"--dseta=42.23", "--eta=42", "--zeta=123", "--iota=456", "--kappa=789", "--lambda=1s",
+	}); err != nil {
+		t.Fatalf("want no error, got error (%v)", err)
+	}
+
+	want := &testFlagSetShortLongVars{
+		alpha:   true,
+		beta:    "foo",
+		gamma:   []string{"foo", "bar"},
+		delta:   []string{"foo", "bar"},
+		epsilon: "foo",
+		dseta:   42.23,
+		eta:     42,
+		zeta:    123,
+		iota:    456,
+		kappa:   789,
+		lambda:  1 * time.Second,
+	}
+	if have := v; !reflect.DeepEqual(want, have) {
+		t.Errorf("flag set long var values: want %v, have %v", want, have)
+	}
+}

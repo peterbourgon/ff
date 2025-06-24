@@ -778,6 +778,18 @@ func (fs *FlagSet) BoolVar(pointer *bool, short rune, long string, usage string)
 	return fs.BoolVarDefault(pointer, short, long, false, usage)
 }
 
+// BoolShortVar defines a new bool flag in the flag set, and panics on any
+// error.
+func (fs *FlagSet) BoolShortVar(pointer *bool, short rune, def bool, usage string) Flag {
+	return fs.Value(short, "", ffval.NewValueDefault(pointer, def), usage)
+}
+
+// BoolLongVar defines a new bool flag in the flag set, and panics on any
+// error.
+func (fs *FlagSet) BoolLongVar(pointer *bool, long string, def bool, usage string) Flag {
+	return fs.Value(0, long, ffval.NewValueDefault(pointer, def), usage)
+}
+
 // BoolVarDefault defines a new bool flag in the flag set, and panics on any
 // error. Bool flags should almost always be default false; prefer BoolVar to
 // BoolVarDefault.
@@ -841,6 +853,16 @@ func (fs *FlagSet) StringVar(pointer *string, short rune, long string, def strin
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
+// StringShortVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) StringShortVar(pointer *string, short rune, def string, usage string) Flag {
+	return fs.Value(short, "", ffval.NewValueDefault(pointer, def), usage)
+}
+
+// StringLongVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) StringLongVar(pointer *string, long string, def string, usage string) Flag {
+	return fs.Value(0, long, ffval.NewValueDefault(pointer, def), usage)
+}
+
 // String defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) String(short rune, long string, def string, usage string) *string {
 	var value string
@@ -877,6 +899,22 @@ func (fs *FlagSet) StringListVar(pointer *[]string, short rune, long string, usa
 	return fs.Value(short, long, ffval.NewList(pointer), usage)
 }
 
+// StringListShortVar defines a new flag in the flag set, and panics on any error.
+//
+// The flag represents a list of strings, where each call to Set adds a new
+// value to the list. Duplicate values are permitted.
+func (fs *FlagSet) StringListShortVar(pointer *[]string, short rune, usage string) Flag {
+	return fs.Value(short, "", ffval.NewList(pointer), usage)
+}
+
+// StringListLongVar defines a new flag in the flag set, and panics on any error.
+//
+// The flag represents a list of strings, where each call to Set adds a new
+// value to the list. Duplicate values are permitted.
+func (fs *FlagSet) StringListLongVar(pointer *[]string, long string, usage string) Flag {
+	return fs.Value(0, long, ffval.NewList(pointer), usage)
+}
+
 // StringList defines a new flag in the flag set, and panics on any error.
 // See [FlagSet.StringListVar] for more details.
 func (fs *FlagSet) StringList(short rune, long string, usage string) *[]string {
@@ -905,6 +943,22 @@ func (fs *FlagSet) StringSetVar(pointer *[]string, short rune, long string, usag
 	return fs.Value(short, long, ffval.NewUniqueList(pointer), usage)
 }
 
+// StringSetShortVar defines a new flag in the flag set, and panics on any error.
+//
+// The flag represents a unique list of strings, where each call to Set adds a
+// new value to the list. Duplicate values are silently dropped.
+func (fs *FlagSet) StringSetShortVar(pointer *[]string, short rune, usage string) Flag {
+	return fs.Value(short, "", ffval.NewUniqueList(pointer), usage)
+}
+
+// StringSetLongVar defines a new flag in the flag set, and panics on any error.
+//
+// The flag represents a unique list of strings, where each call to Set adds a
+// new value to the list. Duplicate values are silently dropped.
+func (fs *FlagSet) StringSetLongVar(pointer *[]string, long string, usage string) Flag {
+	return fs.Value(0, long, ffval.NewUniqueList(pointer), usage)
+}
+
 // StringSet defines a new flag in the flag set, and panics on any error.
 // See [FlagSet.StringSetVar] for more details.
 func (fs *FlagSet) StringSet(short rune, long string, usage string) *[]string {
@@ -931,6 +985,18 @@ func (fs *FlagSet) StringEnumVar(pointer *string, short rune, long string, usage
 	return fs.Value(short, long, ffval.NewEnum(pointer, valid...), usage)
 }
 
+// StringEnumShortVar defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *FlagSet) StringEnumShortVar(pointer *string, short rune, usage string, valid ...string) Flag {
+	return fs.Value(short, "", ffval.NewEnum(pointer, valid...), usage)
+}
+
+// StringEnumLongVar defines a new enum in the flag set, and panics on any error.
+// The default is the first valid value. At least one valid value is required.
+func (fs *FlagSet) StringEnumLongVar(pointer *string, long string, usage string, valid ...string) Flag {
+	return fs.Value(0, long, ffval.NewEnum(pointer, valid...), usage)
+}
+
 // StringEnum defines a new enum in the flag set, and panics on any error.
 // The default is the first valid value. At least one valid value is required.
 func (fs *FlagSet) StringEnum(short rune, long string, usage string, valid ...string) *string {
@@ -954,6 +1020,16 @@ func (fs *FlagSet) StringEnumLong(long string, usage string, valid ...string) *s
 // Float64Var defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) Float64Var(pointer *float64, short rune, long string, def float64, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
+}
+
+// Float64ShortVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Float64ShortVar(pointer *float64, short rune, def float64, usage string) Flag {
+	return fs.Value(short, "", ffval.NewValueDefault(pointer, def), usage)
+}
+
+// Float64LongVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Float64LongVar(pointer *float64, long string, def float64, usage string) Flag {
+	return fs.Value(0, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Float64 defines a new flag in the flag set, and panics on any error.
@@ -989,6 +1065,16 @@ func (fs *FlagSet) IntVar(pointer *int, short rune, long string, def int, usage 
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
+// IntShortVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) IntShortVar(pointer *int, short rune, def int, usage string) Flag {
+	return fs.Value(short, "", ffval.NewValueDefault(pointer, def), usage)
+}
+
+// IntLongVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) IntLongVar(pointer *int, long string, def int, usage string) Flag {
+	return fs.Value(0, long, ffval.NewValueDefault(pointer, def), usage)
+}
+
 // Int defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) Int(short rune, long string, def int, usage string) *int {
 	var value int
@@ -1020,6 +1106,16 @@ func (fs *FlagSet) IntConfig(cfg FlagConfig, def int) *int {
 // Int64Var defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) Int64Var(pointer *int64, short rune, long string, def int64, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
+}
+
+// Int64ShortVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Int64ShortVar(pointer *int64, short rune, def int64, usage string) Flag {
+	return fs.Value(short, "", ffval.NewValueDefault(pointer, def), usage)
+}
+
+// Int64LongVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Int64LongVar(pointer *int64, long string, def int64, usage string) Flag {
+	return fs.Value(0, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Int64 defines a new flag in the flag set, and panics on any error.
@@ -1055,6 +1151,16 @@ func (fs *FlagSet) UintVar(pointer *uint, short rune, long string, def uint, usa
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
+// UintShortVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) UintShortVar(pointer *uint, short rune, def uint, usage string) Flag {
+	return fs.Value(short, "", ffval.NewValueDefault(pointer, def), usage)
+}
+
+// UintLongVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) UintLongVar(pointer *uint, long string, def uint, usage string) Flag {
+	return fs.Value(0, long, ffval.NewValueDefault(pointer, def), usage)
+}
+
 // Uint defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) Uint(short rune, long string, def uint, usage string) *uint {
 	var value uint
@@ -1088,6 +1194,16 @@ func (fs *FlagSet) Uint64Var(pointer *uint64, short rune, long string, def uint6
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
+// Uint64ShortVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Uint64ShortVar(pointer *uint64, short rune, def uint64, usage string) Flag {
+	return fs.Value(short, "", ffval.NewValueDefault(pointer, def), usage)
+}
+
+// Uint64LongVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) Uint64LongVar(pointer *uint64, long string, def uint64, usage string) Flag {
+	return fs.Value(0, long, ffval.NewValueDefault(pointer, def), usage)
+}
+
 // Uint64 defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) Uint64(short rune, long string, def uint64, usage string) *uint64 {
 	var value uint64
@@ -1119,6 +1235,16 @@ func (fs *FlagSet) Uint64Config(cfg FlagConfig, def uint64) *uint64 {
 // DurationVar defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) DurationVar(pointer *time.Duration, short rune, long string, def time.Duration, usage string) Flag {
 	return fs.Value(short, long, ffval.NewValueDefault(pointer, def), usage)
+}
+
+// DurationShortVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) DurationShortVar(pointer *time.Duration, short rune, def time.Duration, usage string) Flag {
+	return fs.Value(short, "", ffval.NewValueDefault(pointer, def), usage)
+}
+
+// DurationLongVar defines a new flag in the flag set, and panics on any error.
+func (fs *FlagSet) DurationLongVar(pointer *time.Duration, long string, def time.Duration, usage string) Flag {
+	return fs.Value(0, long, ffval.NewValueDefault(pointer, def), usage)
 }
 
 // Duration defines a new flag in the flag set, and panics on any error.
