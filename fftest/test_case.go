@@ -59,6 +59,7 @@ func (tc *ParseTest) Run(t *testing.T) {
 			parseFunc = fftoml.Parse
 		case ".env":
 			parseFunc = ffenv.Parse
+			opts = append(opts, ff.WithEnvVars())
 		default:
 			parseFunc = ff.PlainParser
 		}
