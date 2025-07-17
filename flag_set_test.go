@@ -317,9 +317,10 @@ func TestFlagSet_structs(t *testing.T) {
 		Beta  int    `ff:"          long: beta,  placeholder: β,         usage: beta int"`
 		Delta bool   `ff:"short: d,              nodefault,              usage: delta bool"`
 
-		Epsilon bool    `ff:"| short=e | long=epsilon | nodefault    | usage: epsilon bool          |"`
-		Gamma   string  `ff:"| short=g | long=gamma   |              | usage: 'usage, with a comma' |"`
-		Iota    float64 `ff:"|         | long=iota    | default=0.43 | usage: iota float            |"`
+		Epsilon bool          `ff:"| short=e | long=epsilon | nodefault    | usage: epsilon bool          |"`
+		Gamma   string        `ff:"| short=g | long=gamma   |              | usage: 'usage, with a comma' |"`
+		Iota    float64       `ff:"|         | long=iota    | default=0.43 | usage: iota float            |"`
+		Kappa   time.Duration `ff:"|         | long=kappa   | default=10s  | usage: kappa duration        |"`
 	}
 
 	var flags myFlags
@@ -330,12 +331,13 @@ func TestFlagSet_structs(t *testing.T) {
 		  TestFlagSet_structs
 
 		FLAGS
-		  -a, --alpha STRING   alpha string (default: alpha-default)
-		      --beta β         beta int (default: 0)
-		  -d                   delta bool
-		  -e, --epsilon        epsilon bool
-		  -g, --gamma STRING   usage, with a comma
-		      --iota FLOAT64   iota float (default: 0.43)
+		  -a, --alpha STRING     alpha string (default: alpha-default)
+		      --beta β           beta int (default: 0)
+		  -d                     delta bool
+		  -e, --epsilon          epsilon bool
+		  -g, --gamma STRING     usage, with a comma
+		      --iota FLOAT64     iota float (default: 0.43)
+		      --kappa DURATION   kappa duration (default: 10s)
 	`), fftest.UnindentString(ffhelp.Flags(fs).String()); want != have {
 		t.Error(fftest.DiffString(want, have))
 	}
@@ -346,15 +348,15 @@ func TestFlagSet_structs(t *testing.T) {
 	}{
 		{
 			args: "--alpha=x",
-			want: myFlags{Alpha: "x", Iota: 0.43},
+			want: myFlags{Alpha: "x", Iota: 0.43, Kappa: 10 * time.Second},
 		},
 		{
 			args: "-e --iota=1.23",
-			want: myFlags{Alpha: "alpha-default", Epsilon: true, Iota: 1.23},
+			want: myFlags{Alpha: "alpha-default", Epsilon: true, Iota: 1.23, Kappa: 10 * time.Second},
 		},
 		{
 			args: "-gabc -d",
-			want: myFlags{Alpha: "alpha-default", Delta: true, Gamma: "abc", Iota: 0.43},
+			want: myFlags{Alpha: "alpha-default", Delta: true, Gamma: "abc", Iota: 0.43, Kappa: 10 * time.Second},
 		},
 	} {
 		t.Run(testcase.args, func(t *testing.T) {
@@ -408,8 +410,8 @@ func TestFlagSet_structs(t *testing.T) {
 
 	t.Run("implements", func(t *testing.T) {
 		var flags struct {
-			Foo ffval.UniqueList[string] `ff:"longname=foo , usage=foo strings"`
-			Bar ffval.Value[int]         `ff:"longname=bar , usage=bar int"`
+			Foo ffval.UniqueList[string] `ff:"longname=foo,             usage=foo strings"`
+			Bar ffval.Value[int]         `ff:"longname=bar, default=-3, usage=bar int"`
 		}
 
 		fs := ff.NewFlagSet(t.Name())
@@ -423,6 +425,10 @@ func TestFlagSet_structs(t *testing.T) {
 
 		if want, have := []string{"a", "b"}, flags.Foo.Get(); !reflect.DeepEqual(want, have) {
 			t.Errorf("foo: want %#+v, have %#+v", want, have)
+		}
+
+		if want, have := -3, flags.Bar.Get(); want != have {
+			t.Errorf("bar: want %d, have %d", want, have)
 		}
 	})
 
@@ -593,3 +599,45 @@ func TestFlagSet_Std(t *testing.T) {
 		t.Errorf("flag names: want %v, have %v", want, have)
 	}
 }
+
+func TestStructFieldCustomDefault(t *testing.T) {
+	t.Parallel()
+
+	type myFlags struct {
+		Roots customStringSlice `ff:"long: roots, default:'.,/home/me', usage:'Search path'"`
+	}
+
+	var flags myFlags
+	fs := ff.NewFlagSetFrom(t.Name(), &flags)
+
+	if want, have := fftest.UnindentString(`
+		NAME
+		  TestStructFieldCustomDefault
+
+		FLAGS
+		      --roots CUSTOMSTRINGSLICE   Search path (default: .,/home/me)
+	`), fftest.UnindentString(ffhelp.Flags(fs).String()); want != have {
+		t.Error(fftest.DiffString(want, have))
+	}
+
+	if want, have := []string{".", "/home/me"}, []string(flags.Roots); !reflect.DeepEqual(want, have) {
+		t.Errorf("Roots: want %#+v, have %#+v", want, have)
+	}
+}
+
+type customStringSlice []string
+
+func (ss *customStringSlice) Set(s string) error {
+	for _, v := range strings.Split(s, ",") {
+		if vv := strings.TrimSpace(v); vv != "" {
+			*ss = append(*ss, vv)
+		}
+	}
+	return nil
+}
+
+func (ss *customStringSlice) String() string {
+	return strings.Join(*ss, ",")
+}
+
+var _ flag.Value = (*customStringSlice)(nil)
