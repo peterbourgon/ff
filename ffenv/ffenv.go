@@ -46,10 +46,6 @@ func Parse(r io.Reader, set func(name, value string) error) error {
 			return fmt.Errorf("%w: %s", ErrInvalidLine, line)
 		}
 
-		if len(value) <= 0 {
-			return fmt.Errorf("%w: %s", ErrInvalidLine, line)
-		}
-
 		if unquoted, err := strconv.Unquote(value); err == nil {
 			value = unquoted
 		}

@@ -91,8 +91,8 @@ func parse(fs Flags, args []string, options ...Option) error {
 					key := getEnvVarKey(name, pc.envVarPrefix)
 
 					// Look up the value from the environment.
-					val := os.Getenv(key)
-					if val == "" {
+					val, ok := os.LookupEnv(key)
+					if !ok {
 						continue
 					}
 

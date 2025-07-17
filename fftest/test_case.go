@@ -1,7 +1,6 @@
 package fftest
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -76,8 +75,7 @@ func (tc *ParseTest) Run(t *testing.T) {
 	// be run in parallel.
 	if len(tc.Environment) > 0 {
 		for k, v := range tc.Environment {
-			defer os.Setenv(k, os.Getenv(k))
-			os.Setenv(k, v)
+			t.Setenv(k, v)
 		}
 	}
 
