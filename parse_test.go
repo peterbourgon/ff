@@ -16,6 +16,8 @@ import (
 var testdataConfigFS embed.FS
 
 func TestParse(t *testing.T) {
+	// t.Parallel() not possible
+
 	testcases := fftest.TestCases{
 		{
 			Name: "empty",
@@ -145,6 +147,8 @@ func TestParse(t *testing.T) {
 }
 
 func TestParse_FlagSet(t *testing.T) {
+	// t.Parallel() not possible
+
 	testcases := fftest.TestCases{
 		{
 			Name:         "long args",
@@ -274,6 +278,8 @@ func TestParse_FlagSet(t *testing.T) {
 }
 
 func TestParse_StdFlagSetAdapter(t *testing.T) {
+	// t.Parallel() not possible
+
 	testcases := fftest.TestCases{
 		{
 			Name:         "-singledash space values",
@@ -313,6 +319,8 @@ func TestParse_StdFlagSetAdapter(t *testing.T) {
 }
 
 func TestParse_PlainParser(t *testing.T) {
+	// t.Parallel() not possible
+
 	testcases := fftest.TestCases{
 		{
 			Name:       "solo bool",
