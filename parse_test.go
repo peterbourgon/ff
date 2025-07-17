@@ -16,8 +16,6 @@ import (
 var testdataConfigFS embed.FS
 
 func TestParse(t *testing.T) {
-	t.Parallel()
-
 	testcases := fftest.TestCases{
 		{
 			Name: "empty",
@@ -134,14 +132,19 @@ func TestParse(t *testing.T) {
 			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE"), ff.WithEnvVarSplit("xx")},
 			Want:        fftest.Vars{S: `axxb`, X: []string{`one`, `twoxxthree`}},
 		},
+		{
+			Name:        "env var provided but empty",
+			Default:     fftest.Vars{S: "non-empty-default", I: 42, F: 1.23},
+			Environment: map[string]string{"TEST_PARSE_S": ""},
+			Options:     []ff.Option{ff.WithEnvVarPrefix("TEST_PARSE")},
+			Want:        fftest.Vars{S: "", I: 42, F: 1.23},
+		},
 	}
 
 	testcases.Run(t)
 }
 
 func TestParse_FlagSet(t *testing.T) {
-	t.Parallel()
-
 	testcases := fftest.TestCases{
 		{
 			Name:         "long args",
@@ -271,8 +274,6 @@ func TestParse_FlagSet(t *testing.T) {
 }
 
 func TestParse_StdFlagSetAdapter(t *testing.T) {
-	t.Parallel()
-
 	testcases := fftest.TestCases{
 		{
 			Name:         "-singledash space values",
@@ -312,8 +313,6 @@ func TestParse_StdFlagSetAdapter(t *testing.T) {
 }
 
 func TestParse_PlainParser(t *testing.T) {
-	t.Parallel()
-
 	testcases := fftest.TestCases{
 		{
 			Name:       "solo bool",
