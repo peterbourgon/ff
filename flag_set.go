@@ -714,7 +714,7 @@ func (fs *FlagSet) AddStruct(val any) error {
 		}
 
 		// Produce a flag.Value representing the field.
-		{
+		v, err := func() (flag.Value, error) {
 			var (
 				fieldValAddr      = fieldVal.Addr()
 				fieldValAddrTyp   = fieldValAddr.Type()
@@ -722,17 +722,25 @@ func (fs *FlagSet) AddStruct(val any) error {
 				flagValueElemTyp  = reflect.TypeOf((*flag.Value)(nil)).Elem()
 			)
 			if fieldValAddrTyp.Implements(flagValueElemTyp) {
-				// The field implements flag.Value, we can use it directly.
-				cfg.Value = fieldValAddrIface.(flag.Value)
-			} else {
-				// Try to construct a new flag value.
-				v, err := ffval.NewValueReflect(fieldValAddrIface, def)
-				if err != nil {
-					return fmt.Errorf("%s: %w", fieldName, err)
+				v := fieldValAddrIface.(flag.Value)
+				if def != "" {
+					if err := v.Set(def); err != nil {
+						return nil, fmt.Errorf("%s: set default (%s): %w", fieldName, def, err)
+					}
 				}
-				cfg.Value = v
+				return v, nil
 			}
+			if v, err := ffval.NewValueReflect(fieldValAddrIface, def); err == nil {
+				return v, nil
+			}
+			return nil, fmt.Errorf("%s: unsupported type %s", fieldName, fieldVal.Type())
+		}()
+		if err != nil {
+			return err
 		}
+
+		// Assign that flag.Value to the config.
+		cfg.Value = v
 
 		// Save the config to add later, after the struct is fully parsed.
 		flagConfigs = append(flagConfigs, cfg)
