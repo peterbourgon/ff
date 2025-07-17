@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/peterbourgon/ff/v4"
-	"github.com/peterbourgon/ff/v4/ffenv"
 	"github.com/peterbourgon/ff/v4/fftest"
 )
 
@@ -38,7 +37,7 @@ func TestEnvFileParser(t *testing.T) {
 		},
 		{
 			ConfigFile: "testdata/no-value.env",
-			Want:       fftest.Vars{WantParseErrorIs: ffenv.ErrInvalidLine},
+			Want:       fftest.Vars{WantParseErrorString: "D: parse error"},
 		},
 		{
 			ConfigFile: "testdata/spaces.env",
