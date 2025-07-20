@@ -1,6 +1,6 @@
 module github.com/peterbourgon/ff/v4
 
-go 1.20
+go 1.21.0
 
 require (
 	github.com/pelletier/go-toml/v2 v2.0.9

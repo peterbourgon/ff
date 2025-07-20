@@ -235,3 +235,21 @@ func (v *reflectValue) Set(s string) error     { return v.set(s) }
 func (v *reflectValue) String() string         { return v.get() }
 func (v *reflectValue) IsBoolFlag() bool       { return v.isBoolFlag }
 func (v *reflectValue) GetPlaceholder() string { return v.placeholder }
+
+//
+//
+//
+
+// Func implements [flag.Value] for a function that takes a string and returns
+// an error. It has essentially the same behavior as a stdlib [flag.Func].
+type Func func(string) error
+
+var _ flag.Value = (*Func)(nil)
+
+func (fn Func) Set(s string) error {
+	return fn(s)
+}
+
+func (fn Func) String() string {
+	return ""
+}

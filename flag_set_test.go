@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/netip"
 	"reflect"
 	"strings"
 	"testing"
@@ -641,3 +642,98 @@ func (ss *customStringSlice) String() string {
 }
 
 var _ flag.Value = (*customStringSlice)(nil)
+
+func TestFlagSet_Func(t *testing.T) {
+	t.Parallel()
+
+	var ipFlag netip.Addr
+
+	ipFlagFunc := func(s string) error {
+		ip, err := netip.ParseAddr(s)
+		if err != nil {
+			return err
+		}
+		ipFlag = ip
+		return nil
+	}
+
+	var (
+		longName    = "ip"
+		placeholder = "IPADDR"
+		usage       = "`IP` address to check" // explicit placeholder takes precedence
+	)
+
+	check := func(t *testing.T, fs *ff.FlagSet, f ff.Flag) {
+		t.Helper()
+
+		// Pre-parse flag checks.
+		if want, have := "", f.GetDefault(); want != have {
+			t.Errorf("GetDefault: want %q, have %q", want, have)
+		}
+
+		if want, have := placeholder, f.GetPlaceholder(); want != have {
+			t.Errorf("GetPlaceholder: want %q, have %q", want, have)
+		}
+
+		if want, have := usage, f.GetUsage(); want != have {
+			t.Errorf("GetUsage: want %q, have %q", want, have)
+		}
+
+		if want, have := false, f.IsSet(); want != have {
+			t.Errorf("IsSet: want %v, have %v", want, have)
+		}
+
+		// Parse.
+		if err := fs.Parse([]string{"--ip", "192.168.2.1"}); err != nil {
+			t.Fatalf("Parse: %v", err)
+		}
+
+		// Post-parse flag and ipAddr checks.
+		if want, have := true, f.IsSet(); want != have {
+			t.Errorf("IsSet: want %v, have %v", want, have)
+		}
+		if want, have := true, ipFlag.IsValid(); want != have {
+			t.Errorf("IsValid: want %v, have %v", want, have)
+		}
+		if want, have := "192.168.2.1", ipFlag.String(); want != have {
+			t.Errorf("String: want %q, have %q", want, have)
+		}
+		if want, have := true, ipFlag.Is4(); want != have {
+			t.Errorf("Is4: want %v, have %v", want, have)
+		}
+		if want, have := true, ipFlag.IsPrivate(); want != have {
+			t.Errorf("IsPrivate: want %v, have %v", want, have)
+		}
+		if want, have := false, ipFlag.IsLoopback(); want != have {
+			t.Errorf("IsLoopback: want %v, have %v", want, have)
+		}
+	}
+
+	t.Run("FuncConfigVar", func(t *testing.T) {
+		ipFlag = netip.Addr{}
+		fs := ff.NewFlagSet(t.Name())
+		flagConfig := ff.FlagConfig{
+			LongName:    longName,
+			Placeholder: placeholder,
+			Usage:       usage,
+		}
+		f := fs.FuncConfigVar(flagConfig, ipFlagFunc)
+		check(t, fs, f)
+	})
+
+	t.Run("AddFlag", func(t *testing.T) {
+		ipFlag = netip.Addr{}
+		fs := ff.NewFlagSet(t.Name())
+		flagConfig := ff.FlagConfig{
+			LongName:    longName,
+			Placeholder: placeholder,
+			Usage:       usage,
+			Value:       ffval.Func(ipFlagFunc),
+		}
+		f, err := fs.AddFlag(flagConfig)
+		if err != nil {
+			t.Fatalf("AddFlag: %v", err)
+		}
+		check(t, fs, f)
+	})
+}
