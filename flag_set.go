@@ -15,6 +15,61 @@ import (
 
 // FlagSet is a standard implementation of [Flags]. It's broadly similar to a
 // flag.FlagSet, but with additional capabilities inspired by getopt(3).
+//
+// # Defining
+//
+// Flags can be defined in the flag set in a variety of ways, including:
+//
+//   - [FlagSet.AddFlag] with a [FlagConfig]
+//   - [FlagSet.AddStruct] with a pointer to a "config" struct
+//   - [FlagSet.Value] with anything implementing the stdlib [flag.Value]
+//   - Helper methods like [FlagSet.Bool], [FlagSet.StringEnum], etc.
+//
+// See package [ffval] for more on flag value types and their implementations.
+//
+// Flags can have a short name, a long name, or both. Short names are single
+// runes and specified by a single dash (-) prefix, like `-f`. Long names are
+// strings and specified by a double dash (--) prefix, like `--foo`. Both short
+// and long names must be unique within a flag set. See [FlagConfig] for the
+// complete set of flag attributes.
+//
+// # Parsing
+//
+// Flag sets can be parsed with either [FlagSet.Parse], or by passing the flag
+// set to [Parse]. Parse behavior can be customized with [Option] parameters.
+// Notably, [WithEnvVarPrefix] allows flags to be set from (prefixed)
+// environment variables.
+//
+// After a successful parse, the flag set is marked as parsed, and subsequent
+// calls to parse fail with [ErrAlreadyParsed], until and unless the
+// [FlagSet.Reset] method is called.
+//
+// # Help and usage
+//
+// Unlike the stdlib package flag, [FlagSet] does not automatically print help
+// or usage information after a failed parse. Instead, it returns an error,
+// which is expected to be handled by the caller. Package [ffhelp] provides a
+// variety of helpers for defining and emitting help and usage information. Most
+// users can call [ffhelp.Flags] with their flag set to get a good default help
+// text. And it's easy for users with more sophisticated needs to define their
+// own help text generators.
+//
+// Here is a common pattern for parsing a flag set:
+//
+//	fs := ff.NewFlagSet("myprogram")
+//	// ...add/define flags...
+//	if err := fs.Parse(os.Args[1:], ff.WithEnvVarPrefix("MYPROGRAM")); err != nil {
+//	    if errors.Is(err, ff.ErrHelp) {
+//	        ffhelp.Flags(fs).WriteTo(os.Stdout)
+//	    }
+//	    return fmt.Errorf("parse flags: %w", err)
+//	}
+//
+// # Errata
+//
+// Like the stdlib package flag, the first `backtick quoted substring` in a
+// flag's usage string is used as the flag's placeholder, if a placeholder is
+// not otherwise explicitly provided.
 type FlagSet struct {
 	name          string
 	flags         []*coreFlag
@@ -1157,11 +1212,17 @@ func (fs *FlagSet) DurationConfig(cfg FlagConfig, def time.Duration) *time.Durat
 	return &value
 }
 
-// Func defines a new flag in the flag set, and panics on any error.
+// Func defines a new function flag in the flag set, and panics on any error.
+//
+// Function flags are different than normal flags in that they do not represent
+// a value. Instead, they define a function, similar to a ParseFunc, that gets
+// called every time the flag is set. That function receives the value of the
+// flag as a string argument, and is expected to validate that value. If
+// validation fails, the function should return an error, which will be returned
+// to the user. If validation succeeds, the function should process the value
+// and return nil.
 func (fs *FlagSet) Func(short rune, long string, fn func(string) error, usage string) {
-	stdfs := flag.NewFlagSet("flagset-name", flag.ContinueOnError)
-	stdfs.Func("flag-name", "flag-usage", fn)
-	value := stdfs.Lookup("flag-name").Value
+	value := ffval.Func(fn)
 	fs.Value(short, long, value, usage)
 }
 
@@ -1173,6 +1234,21 @@ func (fs *FlagSet) FuncShort(short rune, fn func(string) error, usage string) {
 // FuncLong defines a new flag in the flag set, and panics on any error.
 func (fs *FlagSet) FuncLong(long string, fn func(string) error, usage string) {
 	fs.Func(0, long, fn, usage)
+}
+
+// FuncConfigVar defines a new flag in the flag set, and panics on any error.
+// The Value field of the provided config is overwritten, and the NoDefault
+// field is set to true.
+//
+// For more information on function flags, see [FlagSet.Func].
+func (fs *FlagSet) FuncConfigVar(cfg FlagConfig, fn func(string) error) Flag {
+	cfg.Value = ffval.Func(fn)
+	cfg.NoDefault = true // function flags should not have a default value
+	f, err := fs.AddFlag(cfg)
+	if err != nil {
+		panic(err)
+	}
+	return f
 }
 
 //
