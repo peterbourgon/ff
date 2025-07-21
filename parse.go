@@ -38,20 +38,23 @@ func parse(fs Flags, args []string, options ...Option) error {
 		option(&pc)
 	}
 
-	// Index valid flags by env var key, to support .env config files (below).
-	env2flag := map[string]Flag{}
-	{
-		if err := fs.WalkFlags(func(f Flag) error {
-			for _, name := range getNameStrings(f) {
-				key := getEnvVarKey(name, pc.envVarPrefix)
-				if existing, ok := env2flag[key]; ok {
-					return fmt.Errorf("%s: %w (%s)", getNameString(f), ErrDuplicateFlag, getNameString(existing))
+	var env2flag map[string]Flag
+	if pc.envVarEnabled {
+		// Index valid flags by env var key, to support .env config files (below).
+		env2flag = map[string]Flag{}
+		{
+			if err := fs.WalkFlags(func(f Flag) error {
+				for _, name := range getNameStrings(f) {
+					key := getEnvVarKey(name, pc.envVarPrefix)
+					if existing, ok := env2flag[key]; ok {
+						return fmt.Errorf("%s: %w (%s)", getNameString(f), ErrDuplicateFlag, getNameString(existing))
+					}
+					env2flag[key] = f
 				}
-				env2flag[key] = f
+				return nil
+			}); err != nil {
+				return err
 			}
-			return nil
-		}); err != nil {
-			return err
 		}
 	}
 

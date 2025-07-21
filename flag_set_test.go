@@ -296,6 +296,19 @@ func TestFlagSet_invalid(t *testing.T) {
 		_ = fs.Bool('a', "apple", "this should panic")
 	})
 
+	t.Run("same fold short name", func(t *testing.T) {
+		defer func() {
+			if x := recover(); x == nil {
+				t.Logf("have not expected panic (%v)", x)
+			} else {
+				t.Errorf("want peace, have panic")
+			}
+		}()
+		fs := ff.NewFlagSet(t.Name())
+		_ = fs.Bool('a', "alpha", "this should be OK")
+		_ = fs.Bool('A', "apple", "this should be OK")
+	})
+
 	t.Run("duplicate long name", func(t *testing.T) {
 		defer func() {
 			if x := recover(); x == nil {
