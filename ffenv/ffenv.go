@@ -10,16 +10,29 @@ import (
 	"strings"
 )
 
-// Parse is a parser for .env files. Each line is tokenized on the first `=`
-// character. The first token is interpreted as the env var representation of
-// the flag name, and the second token is interpreted as the value. Both tokens
-// are trimmed of leading and trailing whitespace. If the value is "double
-// quoted", control characters like `\n` are expanded. Lines beginning with `#`
-// are interpreted as comments. End-of-line comments are not supported.
+// Parse is a parser for .env files.
 //
-// The parser respects the [ff.WithEnvVarPrefix] option. For example, if parse
-// is called with an env var prefix MYPROG, then both FOO=bar and MYPROG_FOO=bar
-// would set a flag named foo.
+// Each line in the .env file is tokenized on the first `=` character. The first
+// token is interpreted as the env var representation of the flag name, and the
+// second token is interpreted as the value. Both tokens are trimmed of leading
+// and trailing whitespace. If the value is "double quoted", control characters
+// like `\n` are expanded. Lines beginning with `#` are interpreted as comments.
+// End-of-line comments are not supported.
+//
+// Parse options related to environment variables, like [ff.WithEnvVarPrefix],
+// [ff.WithEnvVarShortNames], and [ff.WithEnvVarCaseSensitive], also apply to
+// .env files. For example, WithEnvVarPrefix("MYPROG") means that the keys in an
+// .env file must begin with MYPROG_.
+//
+// If for any reason any key in an .env file matches multiple flags, parse will
+// return [ff.ErrDuplicateFlag]. This can happen if you have flags with names
+// that differ only in capitalization, e.g. `-v` and `-V`. If you want to
+// support setting these flags from an .env file, either use discrete long
+// names, or [ff.WithEnvVarCaseSensitive].
+//
+// Using the .env config file parser doesn't automatically enable parsing of
+// actual environment variables. To do so, callers must still explicitly provide
+// e.g. [ff.WithEnvVars] or [ff.WithEnvVarPrefix].
 func Parse(r io.Reader, set func(name, value string) error) error {
 	s := bufio.NewScanner(r)
 	for s.Scan() {

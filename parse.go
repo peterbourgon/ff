@@ -39,19 +39,32 @@ func parse(fs Flags, args []string, options ...Option) error {
 	}
 
 	// Index valid flags by env var key, to support .env config files (below).
-	env2flag := map[string]Flag{}
+	env2flags := map[string][]Flag{}
 	{
+		// First, collect flags by env var key.
 		if err := fs.WalkFlags(func(f Flag) error {
-			for _, name := range getNameStrings(f) {
-				key := getEnvVarKey(name, pc.envVarPrefix)
-				if existing, ok := env2flag[key]; ok {
-					return fmt.Errorf("%s: %w (%s)", getNameString(f), ErrDuplicateFlag, getNameString(existing))
-				}
-				env2flag[key] = f
+			for _, key := range getEnvVarKeys(f, pc) {
+				env2flags[key] = append(env2flags[key], f)
 			}
 			return nil
 		}); err != nil {
 			return err
+		}
+
+		// If env var support is enabled, to prevent ambiguity, we need to
+		// ensure that no two flags share the same env var key.
+		//
+		// Arguably this check should also be performed if we're using an .env
+		// config file parser, but we have no way of knowing that, and special
+		// casing *our* ffenv parser isn't a good solution. But this is fine: if
+		// a config file specifies a key that maps to more than 1 flag, we can
+		// return an error at that point.
+		if pc.envVarEnabled {
+			for key, flags := range env2flags {
+				if len(flags) > 1 {
+					return fmt.Errorf("%s: %w (%s) (%s)", getNameString(flags[0]), ErrDuplicateFlag, getNameString(flags[1]), key)
+				}
+			}
 		}
 	}
 
@@ -85,11 +98,8 @@ func parse(fs Flags, args []string, options ...Option) error {
 					return nil
 				}
 
-				// Look in the environment for each of the flag names.
-				for _, name := range getNameStrings(f) {
-					// Transform the flag name to an env var key.
-					key := getEnvVarKey(name, pc.envVarPrefix)
-
+				// Look in the environment for each of the flag's keys.
+				for _, key := range getEnvVarKeys(f, pc) {
 					// Look up the value from the environment.
 					val, ok := os.LookupEnv(key)
 					if !ok {
@@ -153,23 +163,29 @@ func parse(fs Flags, args []string, options ...Option) error {
 			case err == nil:
 				defer configFile.Close()
 				if err := pc.configParseFunc(configFile, func(name, value string) error {
-					// The parser calls us with a name=value pair. We want to
-					// allow the name to be either the actual flag name, or its
-					// env var representation (to support .env files).
 					var (
-						setFlag, fromSet = fs.GetFlag(name)
-						envFlag, fromEnv = env2flag[name]
-						target           Flag
+						setFlag, fromSet  = fs.GetFlag(name)
+						envFlags, fromEnv = env2flags[name]
+						target            Flag
 					)
 					switch {
-					case fromSet:
+					case !pc.configKeyIgnoreFlagNames && fromSet: // found in the flag set
 						target = setFlag
-					case !fromSet && fromEnv:
-						target = envFlag
-					case !fromSet && !fromEnv && pc.configIgnoreUndefinedFlags:
+					case !pc.configKeyIgnoreEnvVars && fromEnv: // found in the environment
+						switch len(envFlags) {
+						case 0:
+							panic(fmt.Errorf("invalid env flag state for %s", name))
+						case 1:
+							target = envFlags[0]
+						default:
+							return fmt.Errorf("%s: %w", name, ErrAmbiguousFlag)
+						}
+					case pc.configIgnoreUndefinedFlags: // not found, but that's OK
 						return nil
-					case !fromSet && !fromEnv && !pc.configIgnoreUndefinedFlags:
+					case !pc.configIgnoreUndefinedFlags: // not found, and that's not OK
 						return fmt.Errorf("%s: %w", name, ErrUnknownFlag)
+					default:
+						panic(fmt.Errorf("unexpected unreachable case for %s", name))
 					}
 
 					// If the flag was already provided by commandline args or
@@ -274,19 +290,34 @@ var envVarSeparators = strings.NewReplacer(
 	"/", "_",
 )
 
-func getEnvVarKey(flagName, envVarPrefix string) string {
+func getEnvVarKeys(f Flag, pc ParseContext) []string {
+	var keys []string
+	if longName, ok := f.GetLongName(); ok {
+		keys = append(keys, getEnvVarKey(longName, pc))
+	}
+	if shortName, ok := f.GetShortName(); ok && pc.envVarShortNames {
+		keys = append(keys, getEnvVarKey(string(shortName), pc))
+	}
+	return keys
+}
+
+func getEnvVarKey(flagName string, pc ParseContext) string {
 	var key string
 	key = flagName
 	key = strings.TrimLeft(key, "-")
-	key = strings.ToUpper(key)
 	key = envVarSeparators.Replace(key)
-	key = maybePrefix(key, envVarPrefix)
+	if pc.envVarCaseSensitive {
+		key = maybePrefix(key, pc.envVarPrefix)
+	} else {
+		key = maybePrefix(key, strings.ToUpper(pc.envVarPrefix))
+		key = strings.ToUpper(key)
+	}
 	return key
 }
 
 func maybePrefix(key string, prefix string) string {
 	if prefix != "" {
-		key = strings.ToUpper(prefix) + "_" + key
+		key = prefix + "_" + key
 	}
 	return key
 }

@@ -737,3 +737,85 @@ func TestFlagSet_Func(t *testing.T) {
 		check(t, fs, f)
 	})
 }
+
+func TestFlagSet_duplicates(t *testing.T) {
+	t.Parallel()
+
+	// --foo; --Foo = OK
+	// --foo; --Foo + WithEnvVar = error
+	// --foo; --Foo + WithEnvVar + WithEnvVarCaseSensitive = OK
+	// -v, --verbose; -V, --version = OK
+	// -v, --verbose; -V, --version + WithEnvVar = OK
+	// -v, --verbose; -V, --version + WithEnvVar + WithEnvVarShortNames = error
+	// -v, --verbose; -V, --version + WithEnvVar + WithEnvVarShortNames + WithEnvVarCaseSensitive = OK
+
+	var (
+		fooFlag     = ff.FlagConfig{LongName: "foo", Value: &ffval.String{}}
+		FooFlag     = ff.FlagConfig{LongName: "Foo", Value: &ffval.String{}}
+		verboseFlag = ff.FlagConfig{ShortName: 'v', LongName: "verbose", Value: &ffval.Bool{}}
+		versionFlag = ff.FlagConfig{ShortName: 'V', LongName: "version", Value: &ffval.Bool{}}
+	)
+
+	_, _ = verboseFlag, versionFlag
+
+	type testcase struct {
+		name    string
+		configs []ff.FlagConfig
+		options []ff.Option
+		wantErr bool
+	}
+
+	tests := []testcase{
+		{
+			name:    "--foo; --Foo",
+			configs: []ff.FlagConfig{fooFlag, FooFlag},
+		},
+		{
+			name:    "--foo; --Foo + WithEnvVars",
+			configs: []ff.FlagConfig{fooFlag, FooFlag},
+			options: []ff.Option{ff.WithEnvVars()},
+			wantErr: true,
+		},
+		{
+			name:    "--foo; --Foo + WithEnvVars + WithEnvVarCaseSensitive",
+			configs: []ff.FlagConfig{fooFlag, FooFlag},
+			options: []ff.Option{ff.WithEnvVars(), ff.WithEnvVarCaseSensitive()},
+		},
+		{
+			name:    "-v, --verbose; -V, --version",
+			configs: []ff.FlagConfig{verboseFlag, versionFlag},
+		},
+		{
+			name:    "-v, --verbose; -V, --version + WithEnvVars",
+			configs: []ff.FlagConfig{verboseFlag, versionFlag},
+			options: []ff.Option{ff.WithEnvVars()},
+		},
+		{
+			name:    "-v, --verbose; -V, --version + WithEnvVars + WithEnvVarShortNames",
+			configs: []ff.FlagConfig{verboseFlag, versionFlag},
+			options: []ff.Option{ff.WithEnvVars(), ff.WithEnvVarShortNames()},
+			wantErr: true,
+		},
+		{
+			name:    "-v, --verbose; -V, --version + WithEnvVars + WithEnvVarShortNames + WithEnvVarCaseSensitive",
+			configs: []ff.FlagConfig{verboseFlag, versionFlag},
+			options: []ff.Option{ff.WithEnvVars(), ff.WithEnvVarShortNames(), ff.WithEnvVarCaseSensitive()},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			fs := ff.NewFlagSet(t.Name())
+			for _, config := range tc.configs {
+				if _, err := fs.AddFlag(config); err != nil {
+					t.Errorf("AddFlag(%+v): %v", config, err)
+				}
+			}
+			err := ff.Parse(fs, []string{"--"}, tc.options...)
+			t.Logf("error: %v", err)
+			if want, have := tc.wantErr, err != nil; want != have {
+				t.Errorf("Parse: error: want %v, have %v", want, have)
+			}
+		})
+	}
+}
