@@ -40,17 +40,6 @@ func isValidLongName(long string) bool {
 	return isValid
 }
 
-func getNameStrings(f Flag) []string {
-	var names []string
-	if short, ok := f.GetShortName(); ok {
-		names = append(names, string(short))
-	}
-	if long, ok := f.GetLongName(); ok {
-		names = append(names, long)
-	}
-	return names
-}
-
 func getNameString(f Flag) string {
 	var names []string
 	if short, ok := f.GetShortName(); ok {

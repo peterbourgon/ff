@@ -14,6 +14,10 @@ var (
 	// add a flag with the same name as a pre-existing flag.
 	ErrDuplicateFlag = errors.New("duplicate flag")
 
+	// ErrAmbiguousFlag should be returned when a flag name is ambiguous and
+	// matches more than one defined flag.
+	ErrAmbiguousFlag = errors.New("ambiguous flag")
+
 	// ErrNotParsed may be returned by flag set methods which require the flag
 	// set to have been successfully parsed, and that condition isn't satisfied.
 	ErrNotParsed = errors.New("not parsed")
