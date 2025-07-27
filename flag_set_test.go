@@ -509,6 +509,16 @@ func TestFlagSet_StructIgnoreReset(t *testing.T) {
 
 	{
 		args := []string{"--foo=1", "--baz=2"}
+		if err := fs.Parse(args); !errors.Is(err, ff.ErrAlreadyParsed) {
+			t.Errorf("ff.Parse(...): want %v, have %v", ff.ErrAlreadyParsed, err)
+		}
+		if err := fs.Reset(); err != nil {
+			t.Errorf("fs.Reset(): error: %v", err)
+		}
+	}
+
+	{
+		args := []string{"--foo=1", "--baz=2"}
 		if err := fs.Parse(args); err != nil {
 			t.Errorf("ff.Parse(%v): %v", args, err)
 		}

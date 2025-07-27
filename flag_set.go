@@ -152,30 +152,33 @@ func (fs *FlagSet) GetName() string {
 
 // Parse the provided args against the flag set, assigning flag values as
 // appropriate. Args are matched to flags defined in this flag set, and, if a
-// parent is set, all parent flag sets, recursively. If a specified flag can't
-// be found, parse fails with [ErrUnknownFlag]. After a successful parse,
-// subsequent calls to parse fail with [ErrAlreadyParsed], until and unless the
-// flag set is reset.
+// parent is set, all parent flag sets, recursively.
+//
+// Parse returns a nil error when it runs out of args to parse, or when it
+// encounters the first non-flag argument. It returns a non-nil error when it
+// encounters an unknown flag, or when setting a flag fails. Regardless of final
+// outcome, once parse returns, any successfully-parsed args will have updated
+// their corresponding flags, the flag set is marked as parsed, and any
+// un-parsed args are made available via [FlagSet.GetArgs].
+//
+// Use [FlagSet.Reset] to reset a parsed flag set back to its un-parsed state,
+// including resetting all flags back to their defaults.
 func (fs *FlagSet) Parse(args []string) error {
 	if fs.isParsed {
 		return ErrAlreadyParsed
 	}
 
-	err := fs.parseArgs(args)
-	switch {
-	case err == nil:
-		fs.isParsed = true
-	case err != nil:
-		fs.postParseArgs = []string{}
-	}
+	leftover, err := fs.parseArgs(args)
+	fs.postParseArgs = leftover
+	fs.isParsed = true
 	return err
 }
 
-func (fs *FlagSet) parseArgs(args []string) (err error) {
+func (fs *FlagSet) parseArgs(args []string) ([]string, error) {
 	// Credit where credit is due: this implementation is adapted from
 	// https://pkg.go.dev/github.com/pborman/getopt/v2.
 
-	fs.postParseArgs = args
+	leftover := args
 
 	for len(args) > 0 {
 		arg := args[0]
@@ -187,12 +190,12 @@ func (fs *FlagSet) parseArgs(args []string) (err error) {
 			parseDone = isEmpty || noDash
 		)
 		if parseDone {
-			return nil // fs.postParseArgs should include arg
+			return leftover, nil // leftover should include arg
 		}
 
 		if arg == "--" {
-			fs.postParseArgs = args // fs.postParseArgs should not include "--"
-			return nil
+			leftover = args // leftover should not include "--"
+			return leftover, nil
 		}
 
 		var (
@@ -217,13 +220,13 @@ func (fs *FlagSet) parseArgs(args []string) (err error) {
 			args, parseErr = fs.parseLongFlag(arg, args)
 		}
 		if parseErr != nil {
-			return parseErr
+			return leftover, parseErr
 		}
 
-		fs.postParseArgs = args // we parsed arg, so update fs.postParseArgs with the remainder
+		leftover = args // we parsed arg, so update leftover with the remainder
 	}
 
-	return nil
+	return leftover, nil
 }
 
 // findFlag finds the first matching flag in the flags hierarchy.
