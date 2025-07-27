@@ -268,7 +268,7 @@ func (fs *FlagSet) parseShortFlag(arg string, args []string) ([]string, error) {
 			case r == 'h':
 				return args, ErrHelp
 			default:
-				return args, fmt.Errorf("%w %q", ErrUnknownFlag, string(r))
+				return args, newUnknownFlagError("-" + string(r))
 			}
 		}
 
@@ -320,7 +320,7 @@ func (fs *FlagSet) parseLongFlag(arg string, args []string) ([]string, error) {
 		case fs.isStdAdapter && strings.EqualFold(name, "h"):
 			return nil, ErrHelp
 		default:
-			return nil, fmt.Errorf("%w %q", ErrUnknownFlag, name)
+			return nil, newUnknownFlagError("--" + name)
 		}
 	}
 
