@@ -3,6 +3,8 @@ package ff
 import (
 	"errors"
 	"flag"
+	"fmt"
+	"strings"
 )
 
 var (
@@ -34,3 +36,38 @@ var (
 	// ErrNoExec is returned when a command without an exec function is run.
 	ErrNoExec = errors.New("no exec function")
 )
+
+//
+
+// UnknownFlagError is an [ErrUnknownFlag] that wraps the name of the flag.
+type UnknownFlagError struct {
+	flagName string // ideally includes leading -/-- but not required
+}
+
+var _ error = (*UnknownFlagError)(nil)
+
+func newUnknownFlagError(flagName string) *UnknownFlagError {
+	return &UnknownFlagError{
+		flagName: flagName,
+	}
+}
+
+// Error implements the error interface.
+func (e *UnknownFlagError) Error() string {
+	return fmt.Sprintf("%q: %v", e.flagName, ErrUnknownFlag)
+}
+
+// Unwrap returns [ErrUnknownFlag].
+func (e *UnknownFlagError) Unwrap() error {
+	return ErrUnknownFlag
+}
+
+// GetFlagName returns the unknown flag name, maybe including leading hyphens.
+func (e *UnknownFlagError) GetFlagName() string {
+	return e.flagName
+}
+
+// GetName returns the unknown flag name, trimmed of leading hyphens.
+func (e *UnknownFlagError) GetName() string {
+	return strings.TrimPrefix(e.flagName, "-")
+}

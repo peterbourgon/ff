@@ -18,15 +18,21 @@ func TestCommandNoFlags(t *testing.T) {
 		cmd = &ff.Command{Name: "root"}
 		ctx = context.Background()
 	)
+
 	if err := cmd.ParseAndRun(ctx, []string{"-h"}); !errors.Is(err, ff.ErrHelp) {
 		t.Errorf("err: want %v, have %v", ff.ErrHelp, err)
 	}
+	cmd.Reset()
+
 	if err := cmd.ParseAndRun(ctx, []string{"--help"}); !errors.Is(err, ff.ErrHelp) {
 		t.Errorf("err: want %v, have %v", ff.ErrHelp, err)
 	}
+	cmd.Reset()
+
 	if err := cmd.ParseAndRun(ctx, []string{}); !errors.Is(err, ff.ErrNoExec) {
 		t.Errorf("err: want %v, have %v", ff.ErrNoExec, err)
 	}
+	cmd.Reset()
 }
 
 func TestCommandReset(t *testing.T) {

@@ -183,7 +183,7 @@ func parse(fs Flags, args []string, options ...Option) error {
 					case pc.configIgnoreUndefinedFlags: // not found, but that's OK
 						return nil
 					case !pc.configIgnoreUndefinedFlags: // not found, and that's not OK
-						return fmt.Errorf("%s: %w", name, ErrUnknownFlag)
+						return newUnknownFlagError(name)
 					default:
 						panic(fmt.Errorf("unexpected unreachable case for %s", name))
 					}
