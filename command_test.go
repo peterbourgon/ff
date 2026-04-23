@@ -38,7 +38,7 @@ func TestCommandNoFlags(t *testing.T) {
 func TestCommandReset(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	rootcmd, testvars := makeTestCommand(t)
 	defaults := *testvars
 
@@ -80,6 +80,53 @@ func TestCommandReset(t *testing.T) {
 		want.Alpha = 3
 
 		compareTestCommandVars(t, want, *testvars)
+	})
+}
+
+func TestCommandParseInterspersedFlags(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	t.Run("terminal flag after positional", func(t *testing.T) {
+		cmd, vars := makeTestCommand(t)
+		if err := cmd.ParseAndRun(ctx, []string{"foo", "x", "-b"}); err != nil {
+			t.Fatalf("ParseAndRun: %v", err)
+		}
+		if !vars.Beta {
+			t.Fatalf("beta: want true, have false")
+		}
+	})
+
+	t.Run("parent flag after positional", func(t *testing.T) {
+		cmd, vars := makeTestCommand(t)
+		if err := cmd.ParseAndRun(ctx, []string{"foo", "x", "--verbose"}); err != nil {
+			t.Fatalf("ParseAndRun: %v", err)
+		}
+		if !vars.Verbose {
+			t.Fatalf("verbose: want true, have false")
+		}
+	})
+
+	t.Run("unknown flag after positional", func(t *testing.T) {
+		cmd, _ := makeTestCommand(t)
+		err := cmd.Parse([]string{"foo", "x", "--nope"})
+		if !errors.Is(err, ff.ErrUnknownFlag) {
+			t.Fatalf("err: want %v, have %v", ff.ErrUnknownFlag, err)
+		}
+	})
+
+	t.Run("double dash disables interspersed parsing", func(t *testing.T) {
+		cmd, vars := makeTestCommand(t)
+		if err := cmd.ParseAndRun(ctx, []string{"foo", "x", "--", "-b", "--verbose"}); err != nil {
+			t.Fatalf("ParseAndRun: %v", err)
+		}
+		if vars.Beta {
+			t.Fatalf("beta: want false, have true")
+		}
+		if vars.Verbose {
+			t.Fatalf("verbose: want false, have true")
+		}
 	})
 }
 

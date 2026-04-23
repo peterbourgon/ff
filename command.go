@@ -59,7 +59,7 @@ type Command struct {
 	//
 	// Optional. If not provided, an empty flag set will be constructed and used
 	// so that the -h, --help flag works as expected.
-	Flags Flags
+	Flags *FlagSet
 
 	// Subcommands which are available underneath (i.e. after) this command.
 	// Selecting a subcommand is done via a case-insensitive comparison of the
@@ -72,7 +72,6 @@ type Command struct {
 	isParsed bool
 	selected *Command
 	parent   *Command
-	args     []string
 
 	// Exec is invoked by Run (or ParseAndRun) if this command was selected as
 	// the terminal command during the parse phase. The args passed to Exec are
@@ -110,22 +109,27 @@ func (cmd *Command) Parse(args []string, options ...Option) error {
 	cmd.isParsed = true
 
 	// Set this command's args to the args left over after parsing.
-	cmd.args = cmd.Flags.GetArgs()
+	commandArgs := cmd.Flags.GetArgs()
 
 	// If there were any args, we might need to descend to a subcommand.
-	if len(cmd.args) > 0 {
-		first := cmd.args[0]
+	if len(commandArgs) > 0 {
+		first := commandArgs[0]
 		for _, subcommand := range cmd.Subcommands {
 			if strings.EqualFold(first, subcommand.Name) {
 				cmd.selected = subcommand
 				subcommand.parent = cmd
-				return subcommand.Parse(cmd.args[1:], options...)
+				return subcommand.Parse(commandArgs[1:], options...)
 			}
 		}
 	}
 
 	// We didn't find a matching subcommand, so we selected ourselves.
 	cmd.selected = cmd
+
+	// The terminal command args may include flags, which we parse out.
+	if _, err := cmd.Flags.reparse(commandArgs); err != nil {
+		return fmt.Errorf("%s: reparse args: %w", cmd.Name, err)
+	}
 
 	// Parse complete.
 	return nil
@@ -143,7 +147,7 @@ func (cmd *Command) Run(ctx context.Context) error {
 	case cmd.isParsed && cmd.selected == cmd && cmd.Exec == nil:
 		return fmt.Errorf("%s: %w", cmd.Name, ErrNoExec)
 	case cmd.isParsed && cmd.selected == cmd && cmd.Exec != nil:
-		return cmd.Exec(ctx, cmd.args)
+		return cmd.Exec(ctx, cmd.Flags.GetArgs())
 	default:
 		return cmd.selected.Run(ctx)
 	}
@@ -184,35 +188,10 @@ func (cmd *Command) GetParent() *Command {
 }
 
 // Reset every command in the command tree to its initial state, including all
-// flag sets. Every flag set must implement [Resetter], or else reset will
-// return an error.
+// flag sets.
 func (cmd *Command) Reset() error {
-	var check func(*Command) error
-
-	check = func(c *Command) error {
-		if c.Flags != nil {
-			if _, ok := c.Flags.(Resetter); !ok {
-				return fmt.Errorf("flag set (%T) doesn't implement Resetter", c.Flags)
-			}
-		}
-		for _, sc := range c.Subcommands {
-			if err := check(sc); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	if err := check(cmd); err != nil {
-		return err
-	}
-
 	if cmd.Flags != nil {
-		r, ok := cmd.Flags.(Resetter)
-		if !ok {
-			panic(fmt.Errorf("flag set (%T) doesn't implement Resetter, even after check (programmer error)", cmd.Flags))
-		}
-		if err := r.Reset(); err != nil {
+		if err := cmd.Flags.Reset(); err != nil {
 			return fmt.Errorf("reset flags: %w", err)
 		}
 	}
@@ -226,7 +205,6 @@ func (cmd *Command) Reset() error {
 	cmd.isParsed = false
 	cmd.selected = nil
 	cmd.parent = nil
-	cmd.args = []string{}
 
 	return nil
 }

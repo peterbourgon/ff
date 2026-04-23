@@ -9,9 +9,11 @@ import (
 // Flags describes a collection of flags, typically associated with a specific
 // command (or sub-command) executed by an end user.
 //
-// Any valid Flags can be provided to [Parse], or used as the Flags field in a
-// [Command]. This allows consumers to use their own flag set implementation(s)
-// while still taking advantage of the primary features of the module.
+// Any valid Flags can be provided to [Parse], allowing consumers to use their
+// own flag set implementation(s) while still taking advantage of the primary
+// features of the module.
+//
+// [Command] currently uses [*FlagSet] directly for command tree parsing.
 //
 // Implementations are not expected to be safe for concurrent use.
 type Flags interface {

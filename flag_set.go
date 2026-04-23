@@ -168,39 +168,36 @@ func (fs *FlagSet) Parse(args []string) error {
 		return ErrAlreadyParsed
 	}
 
-	leftover, err := fs.parseArgs(args)
+	leftover, err := fs.parseArgs(args, true)
 	fs.postParseArgs = leftover
 	fs.isParsed = true
 	return err
 }
 
-func (fs *FlagSet) parseArgs(args []string) ([]string, error) {
+func (fs *FlagSet) reparse(args []string) ([]string, error) {
+	leftover, err := fs.parseArgs(args, false)
+	fs.postParseArgs = leftover
+	return leftover, err
+}
+
+func (fs *FlagSet) parseArgs(args []string, stopOnFirstNonFlag bool) ([]string, error) {
 	// Credit where credit is due: this implementation is adapted from
 	// https://pkg.go.dev/github.com/pborman/getopt/v2.
 
-	leftover := args
+	leftover := make([]string, 0, len(args))
 
 	for len(args) > 0 {
-		arg := args[0]
-		args = args[1:]
+		head := args[0]
+		tail := args[1:]
 
-		var (
-			isEmpty   = arg == ""
-			noDash    = !isEmpty && arg[0] != '-'
-			parseDone = isEmpty || noDash
-		)
-		if parseDone {
-			return leftover, nil // leftover should include arg
-		}
-
-		if arg == "--" {
-			leftover = args // leftover should not include "--"
+		if head == "--" {
+			leftover = append(leftover, tail...)
 			return leftover, nil
 		}
 
 		var (
-			isLongFlag  = len(arg) > 2 && arg[0:2] == "--"
-			isShortFlag = len(arg) > 1 && arg[0] == '-' && !isLongFlag
+			isLongFlag  = len(head) > 2 && head[0:2] == "--"
+			isShortFlag = len(head) > 1 && head[0] == '-' && !isLongFlag
 		)
 
 		// The stdlib package flag parses -abc and --abc the same. If we want to
@@ -209,21 +206,39 @@ func (fs *FlagSet) parseArgs(args []string) ([]string, error) {
 		if isShortFlag && fs.isStdAdapter {
 			isShortFlag = false
 			isLongFlag = true
-			arg = "-" + arg
+			head = "-" + head
 		}
 
-		var parseErr error
+		if !isShortFlag && !isLongFlag {
+			leftover = append(leftover, head)
+			if stopOnFirstNonFlag {
+				leftover = append(leftover, tail...)
+				return leftover, nil
+			} else {
+				args = tail
+				continue
+			}
+		}
+
+		var (
+			next []string
+			err  error
+		)
 		switch {
 		case isShortFlag:
-			args, parseErr = fs.parseShortFlag(arg, args)
+			next, err = fs.parseShortFlag(head, tail)
 		case isLongFlag:
-			args, parseErr = fs.parseLongFlag(arg, args)
+			next, err = fs.parseLongFlag(head, tail)
 		}
-		if parseErr != nil {
-			return leftover, parseErr
+		if err != nil {
+			if stopOnFirstNonFlag {
+				leftover = append(leftover, head)
+				leftover = append(leftover, tail...)
+			}
+			return leftover, err
 		}
 
-		leftover = args // we parsed arg, so update leftover with the remainder
+		args = next
 	}
 
 	return leftover, nil
@@ -263,8 +278,6 @@ func (fs *FlagSet) parseShortFlag(arg string, args []string) ([]string, error) {
 		f := fs.findShortFlag(r)
 		if f == nil {
 			switch {
-			case arg == "-": // `-` == `--`
-				return args, nil
 			case r == 'h':
 				return args, ErrHelp
 			default:
