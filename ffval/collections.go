@@ -242,7 +242,7 @@ func (v *UniqueList[T]) Set(s string) error {
 		return err
 	}
 
-	for _, existing := range *(v.Pointer) {
+	for _, existing := range *v.Pointer {
 		if value == existing {
 			return v.ErrDuplicate
 		}
