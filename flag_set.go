@@ -187,7 +187,7 @@ func (fs *FlagSet) parseArgs(args []string) ([]string, error) {
 		var (
 			isEmpty   = arg == ""
 			noDash    = !isEmpty && arg[0] != '-'
-			parseDone = isEmpty || noDash
+			parseDone = isEmpty || noDash || arg == "-"
 		)
 		if parseDone {
 			return leftover, nil // leftover should include arg
