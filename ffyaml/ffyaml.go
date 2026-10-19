@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/peterbourgon/ff/v4/internal/ffdata"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v2"
 )
 
 // Parse is a helper function that uses a default parser.
@@ -29,7 +29,7 @@ func (p Parser) Parse(r io.Reader, set func(name, value string) error) error {
 		p.Delimiter = "."
 	}
 
-	var m map[string]interface{}
+	var m map[string]any
 	if err := yaml.NewDecoder(r).Decode(&m); err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}

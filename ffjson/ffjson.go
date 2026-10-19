@@ -31,7 +31,7 @@ func (p Parser) Parse(r io.Reader, set func(name, value string) error) error {
 	d := json.NewDecoder(r)
 	d.UseNumber() // required for stringifying values
 
-	var m map[string]interface{}
+	var m map[string]any
 	if err := d.Decode(&m); err != nil {
 		return err
 	}
