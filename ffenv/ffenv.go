@@ -67,7 +67,7 @@ func Parse(r io.Reader, set func(name, value string) error) error {
 			return err
 		}
 	}
-	return nil
+	return s.Err()
 }
 
 // ErrInvalidLine is returned when the parser encounters an invalid line.
