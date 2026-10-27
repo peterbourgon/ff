@@ -328,6 +328,11 @@ func TestParse_PlainParser(t *testing.T) {
 			Want:       fftest.Vars{S: "x", B: true},
 		},
 		{
+			Name:       "solo bool with comment",
+			ConfigFile: "testdata/solo_bool_comment.conf",
+			Want:       fftest.Vars{S: "x", B: true},
+		},
+		{
 			Name:       "string with spaces",
 			ConfigFile: "testdata/spaces.conf",
 			Want:       fftest.Vars{S: "i am the very model of a modern major general"},

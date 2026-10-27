@@ -259,18 +259,21 @@ func PlainParser(r io.Reader, set func(name, value string) error) error {
 		}
 
 		var (
-			name  string
+			name  = line
 			value string
 			index = strings.IndexRune(line, ' ')
 		)
-		if index < 0 {
-			name, value = line, "true" // boolean option
-		} else {
-			name, value = line[:index], strings.TrimSpace(line[index:])
+		if index >= 0 {
+			name, value = line[:index], line[index:]
 		}
 
 		if i := strings.Index(value, " #"); i >= 0 {
-			value = strings.TrimSpace(value[:i])
+			value = value[:i]
+		}
+
+		value = strings.TrimSpace(value)
+		if value == "" {
+			value = "true" // boolean option
 		}
 
 		if err := set(name, value); err != nil {
