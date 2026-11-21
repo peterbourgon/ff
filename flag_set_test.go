@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/netip"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -33,6 +34,37 @@ func TestFlagSet_Basics(t *testing.T) {
 			fs.StringLong("string", "default", "string flag")
 			fs.Duration('d', "duration", 250*time.Millisecond, "duration flag")
 			fftest.ValidateFlags(t, fs, strings.Fields(argstr))
+		})
+	}
+}
+
+func TestFlagSet_UintRange(t *testing.T) {
+	t.Parallel()
+
+	const defaultValue = 7
+	maxUint := ^uint(0)
+	overflow := "18446744073709551616"
+	if strconv.IntSize == 32 {
+		overflow = "4294967296"
+	}
+
+	for _, tt := range []struct {
+		name    string
+		arg     string
+		want    uint
+		wantErr error
+	}{
+		{"max", strconv.FormatUint(uint64(maxUint), 10), maxUint, nil},
+		{"max hex", fmt.Sprintf("%#x", maxUint), maxUint, nil},
+		{"overflow", overflow, defaultValue, strconv.ErrRange},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := ff.NewFlagSet(t.Name())
+			value := fs.UintLong("count", defaultValue, "the item count")
+			err := ff.Parse(fs, []string{"--count", tt.arg})
+			if !errors.Is(err, tt.wantErr) || *value != tt.want {
+				t.Errorf("count %q: got %d, %v; want %d, %v", tt.arg, *value, err, tt.want, tt.wantErr)
+			}
 		})
 	}
 }
