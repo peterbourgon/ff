@@ -3,6 +3,7 @@ package ffjson
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 
 	"github.com/peterbourgon/ff/v4/internal/ffdata"
@@ -33,6 +34,13 @@ func (p Parser) Parse(r io.Reader, set func(name, value string) error) error {
 
 	var m map[string]interface{}
 	if err := d.Decode(&m); err != nil {
+		return err
+	}
+
+	var extra interface{}
+	if err := d.Decode(&extra); err == nil {
+		return errors.New("multiple JSON documents")
+	} else if !errors.Is(err, io.EOF) {
 		return err
 	}
 
